@@ -4,7 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { MapView } from '../lib/geo/projection';
 import { findNewlyDiscovered } from '../lib/poi/discovery';
-import { createPoiLoader, fetchTileFromOverpass } from '../lib/poi/poiCache';
+import { createPoiLoader } from '../lib/poi/poiCache';
+import { createTileFetcher } from '../lib/poi/proxy';
 import { tileForLngLat, tileKey, tilesForViewport } from '../lib/poi/tiles';
 import type { DiscoveredPlace, Poi } from '../lib/poi/types';
 import { fetchDiscoveredPlaces, upsertDiscoveredPlaces } from '../lib/supabase/discoveredPlaces';
@@ -49,8 +50,8 @@ export function usePlaces({ client, userId, view, livePosition }: UsePlacesOptio
   const [ready, setReady] = useState(false);
 
   const loader = useMemo(
-    () => createPoiLoader({ storage: AsyncStorage, fetchTile: fetchTileFromOverpass }),
-    []
+    () => createPoiLoader({ storage: AsyncStorage, fetchTile: createTileFetcher(client) }),
+    [client]
   );
   const requestedTiles = useRef(new Map<string, number>());
   const requestChain = useRef<Promise<void>>(Promise.resolve());
