@@ -17,12 +17,15 @@ import { stopForegroundTracking } from '../services/locationTracker';
 import MapScreen from './MapScreen';
 import NearbyScreen from './NearbyScreen';
 import ProfileScreen from './ProfileScreen';
+import CollectionScreen from './CollectionScreen';
+import { useStats } from '../hooks/useStats';
 
-type TabKey = 'map' | 'nearby' | 'profile';
+type TabKey = 'map' | 'nearby' | 'collection' | 'profile';
 
 const TABS: Array<TabItem<TabKey>> = [
   { key: 'map', label: 'Карта', icon: 'map' },
   { key: 'nearby', label: 'Рядом', icon: 'compass' },
+  { key: 'collection', label: 'Коллекция', icon: 'award' },
   { key: 'profile', label: 'Профиль', icon: 'user' },
 ];
 
@@ -58,6 +61,8 @@ export default function MainScreen({
     view,
     livePosition,
   });
+
+  const stats = useStats(points, discovered, tab === 'collection' || tab === 'profile');
 
   useEffect(() => {
     void getFogStyle(AsyncStorage).then(setFogStyleState);
@@ -96,6 +101,7 @@ export default function MainScreen({
         {tab === 'nearby' && (
           <NearbyScreen pois={pois} discoveredIds={discoveredIds} origin={livePosition} />
         )}
+        {tab === 'collection' && <CollectionScreen stats={stats} discovered={discovered} />}
         {tab === 'profile' && (
           <ProfileScreen
             email={email}
