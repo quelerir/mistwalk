@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "tmp-scaffold",
-    "slug": "tmp-scaffold",
+    "name": "Fog of War Map",
+    "slug": "fog-of-war-map",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
