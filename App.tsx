@@ -28,6 +28,8 @@ try {
   console.warn('[App] failed to initialize Supabase client', err);
 }
 
+const LIVE_POSITION_INTERVAL_METERS = 5;
+
 export default function App() {
   if (!client) {
     return (
@@ -45,6 +47,7 @@ export default function App() {
 function AuthenticatedApp({ client }: { client: SupabaseClient }) {
   const [session, setSession] = useState<Session | null>(null);
   const [points, setPoints] = useState<VisitedPoint[]>([]);
+  const [livePosition, setLivePosition] = useState<{ lat: number; lng: number } | null>(null);
   const { stage, requestForeground, requestBackground } = useLocationPermissions();
   const subscriptionRef = useRef<LocationSubscription | null>(null);
 
@@ -113,12 +116,14 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
       if (!cancelled && foregroundOk) {
         subscriptionRef.current = await startForegroundTracking(
           {
-            onPoint: (coord, accuracy) =>
+            onPoint: (coord, accuracy) => {
+              setLivePosition({ lat: coord.lat, lng: coord.lng });
               void store.useProgressStore
                 .getState()
-                .addPoint(coord, Math.max(accuracy || 0, distanceInterval)),
+                .addPoint(coord, Math.max(accuracy || 0, distanceInterval));
+            },
           },
-          distanceInterval
+          Math.min(distanceInterval, LIVE_POSITION_INTERVAL_METERS)
         );
 
         const backgroundOk = await requestBackground();
@@ -149,6 +154,8 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
         <LocationPermissionBanner stage={stage} onRequestForeground={requestForeground} />
         <MapScreen
           points={points}
+          livePosition={livePosition}
+          userId={session?.user.id ?? ''}
           client={client}
           subscription={subscriptionRef.current}
           onSignedOut={() => setSession(null)}

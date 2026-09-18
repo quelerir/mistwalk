@@ -1,0 +1,36 @@
+import React from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { greetingFor, KIND_ICON } from '../lib/poi/greeting';
+import type { Poi } from '../lib/poi/types';
+
+export interface DiscoveryCardProps {
+  place: Poi | null;
+  onDismiss: () => void;
+}
+
+export default function DiscoveryCard({ place, onDismiss }: DiscoveryCardProps) {
+  if (!place) return null;
+  return (
+    <Pressable style={styles.wrapper} onPress={onDismiss}>
+      <View style={styles.card}>
+        <Text style={styles.title}>
+          {KIND_ICON[place.kind]} Вы нашли: {place.name}
+        </Text>
+        <Text style={styles.text}>{greetingFor(place.kind)}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  wrapper: { position: 'absolute', top: 56, left: 16, right: 16 },
+  card: {
+    backgroundColor: 'rgba(20, 24, 40, 0.94)',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 200, 60, 0.8)',
+  },
+  title: { color: '#ffc83c', fontSize: 18, fontWeight: '800', marginBottom: 6 },
+  text: { color: 'white', fontSize: 15 },
+});
