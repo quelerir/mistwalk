@@ -14,7 +14,7 @@ export function setBackgroundLocationHandler(fn: BackgroundLocationHandler): voi
   handler = fn;
 }
 
-TaskManager.defineTask(BACKGROUND_LOCATION_TASK, ({ data, error }) => {
+TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
   if (error) {
     console.warn('[backgroundLocationTask]', error.message);
     return;
