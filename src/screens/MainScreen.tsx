@@ -34,6 +34,8 @@ export interface MainScreenProps {
   client: SupabaseClient;
   subscription: LocationSubscription | null;
   onSignedOut: () => void;
+  backgroundEnabled: boolean;
+  onEnableBackground: () => Promise<boolean>;
 }
 
 export default function MainScreen({
@@ -44,6 +46,8 @@ export default function MainScreen({
   client,
   subscription,
   onSignedOut,
+  backgroundEnabled,
+  onEnableBackground,
 }: MainScreenProps) {
   const [tab, setTab] = useState<TabKey>('map');
   const [view, setView] = useState<MapView | null>(null);
@@ -99,6 +103,8 @@ export default function MainScreen({
             fogStyle={fogStyle}
             onFogStyleChange={handleFogStyleChange}
             onSignOut={handleSignOut}
+            backgroundEnabled={backgroundEnabled}
+            onEnableBackground={onEnableBackground}
           />
         )}
         <DiscoveryCard place={greeting} onDismiss={dismissGreeting} />

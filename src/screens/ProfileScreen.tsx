@@ -19,6 +19,8 @@ export interface ProfileScreenProps {
   fogStyle: FogStyle;
   onFogStyleChange: (style: FogStyle) => void;
   onSignOut: () => Promise<void>;
+  backgroundEnabled: boolean;
+  onEnableBackground: () => Promise<boolean>;
 }
 
 const ACCURACY_OPTIONS: Array<{ key: AccuracyProfile; label: string }> = [
@@ -32,6 +34,8 @@ export default function ProfileScreen({
   fogStyle,
   onFogStyleChange,
   onSignOut,
+  backgroundEnabled,
+  onEnableBackground,
 }: ProfileScreenProps) {
   const [accuracy, setAccuracy] = useState<AccuracyProfile>('battery-saver');
   const [signingOut, setSigningOut] = useState(false);
@@ -108,6 +112,20 @@ export default function ProfileScreen({
       </View>
       <Text style={styles.hint}>Применится после перезапуска приложения. Точный режим чаще обновляет позицию и быстрее расходует батарею.</Text>
 
+      <Text style={styles.sectionTitle}>Работа в фоне</Text>
+      <View style={styles.backgroundRow}>
+        <Text style={styles.backgroundText}>
+          {backgroundEnabled
+            ? 'Включена: туман открывается при заблокированном экране'
+            : 'Выключена: туман открывается только при открытом приложении'}
+        </Text>
+        {!backgroundEnabled && (
+          <Pressable style={styles.enableButton} onPress={() => void onEnableBackground()}>
+            <Text style={styles.enableText}>Включить</Text>
+          </Pressable>
+        )}
+      </View>
+
       <Pressable
         style={[styles.signOut, signingOut && styles.signOutBusy]}
         onPress={() => void handleSignOut()}
@@ -155,6 +173,10 @@ const styles = StyleSheet.create({
   segmentItemSelected: { backgroundColor: '#ffffff' },
   segmentText: { color: '#8e8e8e', fontWeight: '600' },
   segmentTextSelected: { color: '#262626' },
+  backgroundRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  backgroundText: { flex: 1, color: '#262626' },
+  enableButton: { backgroundColor: '#262626', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 14 },
+  enableText: { color: 'white', fontWeight: '700' },
   hint: { marginTop: 8, color: '#8e8e8e', fontSize: 12 },
   signOut: {
     marginTop: 32,

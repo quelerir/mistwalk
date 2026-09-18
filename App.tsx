@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
+import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { getEnvSupabaseClient } from './src/lib/supabase/client';
 import { getSession } from './src/lib/supabase/auth';
@@ -17,6 +18,7 @@ import {
 import { useLocationPermissions } from './src/hooks/useLocationPermissions';
 import RootNavigator from './src/navigation/RootNavigator';
 import MainScreen from './src/screens/MainScreen';
+import BackgroundPermissionPrompt from './src/components/BackgroundPermissionPrompt';
 import OfflineBanner from './src/components/OfflineBanner';
 import LocationPermissionBanner from './src/components/LocationPermissionBanner';
 import type { LocationSubscription } from 'expo-location';
@@ -30,6 +32,8 @@ try {
 }
 
 const LIVE_POSITION_INTERVAL_METERS = 5;
+const BACKGROUND_PERMISSION_POLLS = 12;
+const BACKGROUND_PROMPT_DISMISSED_KEY = 'permissions.backgroundPrompt.dismissed.v1';
 
 export default function App() {
   if (!client) {
@@ -53,6 +57,45 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
   const [livePosition, setLivePosition] = useState<{ lat: number; lng: number } | null>(null);
   const { stage, requestForeground, requestBackground } = useLocationPermissions();
   const subscriptionRef = useRef<LocationSubscription | null>(null);
+  const startBackgroundRef = useRef<(() => Promise<void>) | null>(null);
+  const [backgroundEnabled, setBackgroundEnabled] = useState(false);
+  const [showBackgroundPrompt, setShowBackgroundPrompt] = useState(false);
+
+  // iOS resolves the "Always" upgrade prompt asynchronously, so the status right
+  // after requestBackground() can still be stale; re-check for a few seconds.
+  async function awaitBackgroundPermission(): Promise<boolean> {
+    if (await requestBackground()) return true;
+    for (let i = 0; i < BACKGROUND_PERMISSION_POLLS; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const { status } = await Location.getBackgroundPermissionsAsync();
+      if (status === 'granted') return true;
+    }
+    return false;
+  }
+
+  async function activateBackground(): Promise<boolean> {
+    if (!(await awaitBackgroundPermission())) return false;
+    await startBackgroundRef.current?.();
+    setBackgroundEnabled(true);
+    return true;
+  }
+
+  async function enableBackground(): Promise<boolean> {
+    const granted = await activateBackground();
+    // iOS shows the system prompt only once; afterwards the user must use Settings.
+    if (!granted) await Linking.openSettings();
+    return granted;
+  }
+
+  async function handleAcceptPrompt() {
+    setShowBackgroundPrompt(false);
+    await activateBackground();
+  }
+
+  function handleDeclinePrompt() {
+    setShowBackgroundPrompt(false);
+    void AsyncStorage.setItem(BACKGROUND_PROMPT_DISMISSED_KEY, '1');
+  }
 
   useEffect(() => {
     getSession(client).then(setSession).catch(() => setSession(null));
@@ -129,14 +172,22 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
           Math.min(distanceInterval, LIVE_POSITION_INTERVAL_METERS)
         );
 
-        const backgroundOk = await requestBackground();
-        if (backgroundOk) {
+        startBackgroundRef.current = async () => {
           setBackgroundLocationHandler((coord, accuracy) =>
             store.useProgressStore
               .getState()
               .addPoint(coord, Math.max(accuracy || 0, distanceInterval))
           );
           await startBackgroundTracking(distanceInterval);
+        };
+
+        const existing = await Location.getBackgroundPermissionsAsync();
+        if (existing.status === 'granted') {
+          await startBackgroundRef.current();
+          if (!cancelled) setBackgroundEnabled(true);
+        } else {
+          const dismissed = await AsyncStorage.getItem(BACKGROUND_PROMPT_DISMISSED_KEY);
+          if (!cancelled && !dismissed) setShowBackgroundPrompt(true);
         }
       }
     })();
@@ -156,7 +207,14 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
       <RootNavigator client={client} session={session} onSignedIn={() => getSession(client).then(setSession)}>
         <OfflineBanner />
         <LocationPermissionBanner stage={stage} onRequestForeground={requestForeground} />
+        <BackgroundPermissionPrompt
+          visible={showBackgroundPrompt}
+          onAccept={() => void handleAcceptPrompt()}
+          onDecline={handleDeclinePrompt}
+        />
         <MainScreen
+          backgroundEnabled={backgroundEnabled}
+          onEnableBackground={enableBackground}
           points={points}
           livePosition={livePosition}
           userId={session?.user.id ?? ''}
