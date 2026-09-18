@@ -14,18 +14,38 @@ interface VisitedPointRow {
   created_at: string;
 }
 
+const FETCH_PAGE_SIZE = 1000;
+
 export async function fetchVisitedPoints(
   client: SupabaseClient,
   userId: string
 ): Promise<VisitedPoint[]> {
-  const { data, error } = await client
-    .from('visited_points')
-    .select('lat, lng, radius, created_at')
-    .eq('user_id', userId);
+  const rows: VisitedPointRow[] = [];
+  let offset = 0;
 
-  if (error) throw error;
+  // PostgREST caps unbounded selects (commonly at 1000 rows), which would
+  // silently truncate a long-term user's history in arbitrary order. Order
+  // deterministically and page through in fixed-size batches until a batch
+  // comes back short.
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const { data, error } = await client
+      .from('visited_points')
+      .select('lat, lng, radius, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+      .range(offset, offset + FETCH_PAGE_SIZE - 1);
 
-  return (data as VisitedPointRow[]).map((row) => ({
+    if (error) throw error;
+
+    const page = (data ?? []) as VisitedPointRow[];
+    rows.push(...page);
+
+    if (page.length < FETCH_PAGE_SIZE) break;
+    offset += FETCH_PAGE_SIZE;
+  }
+
+  return rows.map((row) => ({
     lat: row.lat,
     lng: row.lng,
     radius: row.radius,

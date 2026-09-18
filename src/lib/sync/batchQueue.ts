@@ -21,13 +21,13 @@ export class SyncQueue<T> {
     this.buffer.push(item);
 
     if (this.buffer.length >= this.maxBatchSize) {
-      this.flush().catch(() => {});
+      this.flush().catch((err) => console.warn('[SyncQueue] auto-flush failed', err));
       return;
     }
 
     if (this.timerHandle === null) {
       this.timerHandle = setTimeout(() => {
-        this.flush().catch(() => {});
+        this.flush().catch((err) => console.warn('[SyncQueue] auto-flush failed', err));
       }, this.maxWaitMs);
     }
   }

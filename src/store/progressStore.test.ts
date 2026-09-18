@@ -12,7 +12,9 @@ function makeFakeStorage() {
 }
 
 function makeFakeClient(remotePoints: Array<{ lat: number; lng: number; radius: number; created_at: string }>) {
-  const eq = jest.fn().mockResolvedValue({ data: remotePoints, error: null });
+  const range = jest.fn().mockResolvedValue({ data: remotePoints, error: null });
+  const order = jest.fn().mockReturnValue({ range });
+  const eq = jest.fn().mockReturnValue({ order });
   const select = jest.fn().mockReturnValue({ eq });
   const insert = jest.fn().mockResolvedValue({ error: null });
   const from = jest.fn().mockReturnValue({ select, insert });

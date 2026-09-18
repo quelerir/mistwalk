@@ -39,11 +39,17 @@ export default function FogOverlay({ points, mapRef, regionVersion }: FogOverlay
 
       const zoom = (await map.getZoom()) ?? 16;
       const metersPerPixel = groundResolutionMetersPerPixel(zoom);
-      const results: ProjectedCircle[] = [];
 
-      for (const point of points) {
-        const screenPoint = await map.getPointInView([point.lng, point.lat]);
-        if (!screenPoint) continue;
+      // Project every point in parallel rather than one bridge call at a
+      // time; cull against the viewport afterward on the results.
+      const screenPoints = await Promise.all(
+        points.map((point) => map.getPointInView([point.lng, point.lat]))
+      );
+
+      const results: ProjectedCircle[] = [];
+      points.forEach((point, i) => {
+        const screenPoint = screenPoints[i];
+        if (!screenPoint) return;
         const [x, y] = screenPoint;
         if (
           x < -OFFSCREEN_MARGIN_PX ||
@@ -51,10 +57,10 @@ export default function FogOverlay({ points, mapRef, regionVersion }: FogOverlay
           y < -OFFSCREEN_MARGIN_PX ||
           y > height + OFFSCREEN_MARGIN_PX
         ) {
-          continue;
+          return;
         }
         results.push({ x, y, radiusPx: point.radius / metersPerPixel });
-      }
+      });
 
       if (!cancelled) setCircles(results);
     }
