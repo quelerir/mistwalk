@@ -45,4 +45,23 @@ describe('useLocationPermissions', () => {
 
     expect(result.current.stage).toBe('background-granted');
   });
+
+  it('leaves stage unchanged and returns false when background permission is denied', async () => {
+    (Location.requestForegroundPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
+    (Location.requestBackgroundPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'denied' });
+    const { result } = renderHook(() => useLocationPermissions());
+
+    await act(async () => {
+      await result.current.requestForeground();
+    });
+    expect(result.current.stage).toBe('foreground-granted');
+
+    let returnValue: boolean | undefined;
+    await act(async () => {
+      returnValue = await result.current.requestBackground();
+    });
+
+    expect(returnValue).toBe(false);
+    expect(result.current.stage).toBe('foreground-granted'); // unchanged, not reset to 'denied'
+  });
 });
