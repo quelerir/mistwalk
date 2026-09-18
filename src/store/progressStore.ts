@@ -35,10 +35,16 @@ export interface CreateProgressStoreOptions {
 }
 
 function mergePoints(local: VisitedPoint[], remote: VisitedPoint[]): VisitedPoint[] {
-  const seen = new Set(local.map((p) => `${p.lat},${p.lng},${p.ts}`));
+  // Dedupe on lat/lng only (not ts): a locally-recorded point's ts (Date.now()
+  // at capture time) never matches the ts it gets back from Supabase
+  // (Date.parse(created_at), server-assigned on insert). lat/lng round-trip
+  // byte-exact through Postgres double precision <-> JS number, and Task 3's
+  // throttle already guarantees genuinely distinct points are >=25m apart, so
+  // lat/lng equality alone is a safe identity key here.
+  const seen = new Set(local.map((p) => `${p.lat},${p.lng}`));
   const merged = [...local];
   for (const point of remote) {
-    const key = `${point.lat},${point.lng},${point.ts}`;
+    const key = `${point.lat},${point.lng}`;
     if (!seen.has(key)) {
       merged.push(point);
       seen.add(key);

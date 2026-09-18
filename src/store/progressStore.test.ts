@@ -20,6 +20,14 @@ function makeFakeClient(remotePoints: Array<{ lat: number; lng: number; radius: 
 }
 
 describe('createProgressStore', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('starts empty and not hydrated', () => {
     const { useProgressStore } = createProgressStore({
       client: makeFakeClient([]),
@@ -92,5 +100,30 @@ describe('createProgressStore', () => {
     await useProgressStore.getState().loadFromDisk();
 
     expect(useProgressStore.getState().points).toEqual([{ lat: 5, lng: 6, radius: 30, ts: 1 }]);
+  });
+
+  it('hydrateFromRemote merges a remote point with a matching local point instead of duplicating it', async () => {
+    const storage = makeFakeStorage();
+    const client = makeFakeClient([
+      { lat: 1, lng: 2, radius: 30, created_at: '2026-01-01T00:00:00.000Z' },
+    ]);
+    const { useProgressStore } = createProgressStore({
+      client,
+      userId: 'u1',
+      storage,
+      throttleMeters: 30,
+      batchSize: 10,
+      batchWaitMs: 60000,
+    });
+
+    // Same physical point as the "remote" one above, but recorded locally
+    // with a client-side ts (Date.now()) that will never equal the
+    // server-assigned created_at ts.
+    await useProgressStore.getState().addPoint({ lat: 1, lng: 2 }, 30);
+    await useProgressStore.getState().hydrateFromRemote();
+
+    const state = useProgressStore.getState();
+    expect(state.points).toHaveLength(1);
+    expect(state.hydrated).toBe(true);
   });
 });
