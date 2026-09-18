@@ -1,4 +1,4 @@
-import { signUp, signIn, signOut, getSession } from './auth';
+import { signUp, signIn, signOut, signOutLocal, getSession } from './auth';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 function makeFakeClient(overrides: Partial<SupabaseClient['auth']> = {}) {
@@ -38,6 +38,15 @@ describe('auth wrappers', () => {
   it('signOut resolves on success', async () => {
     const client = makeFakeClient();
     await expect(signOut(client)).resolves.toBeUndefined();
+  });
+
+  it('signOutLocal clears only the local session and throws on error', async () => {
+    const client = makeFakeClient();
+    await signOutLocal(client);
+    expect(client.auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
+
+    const failing = makeFakeClient({ signOut: jest.fn().mockResolvedValue({ error: new Error('nope') }) });
+    await expect(signOutLocal(failing)).rejects.toThrow('nope');
   });
 
   it('getSession returns the session', async () => {

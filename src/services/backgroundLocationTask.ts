@@ -1,6 +1,7 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { routeBackgroundLocations } from '../lib/location/routeBackgroundLocations';
 
 export const BACKGROUND_LOCATION_TASK = 'background-location-task';
 
@@ -63,26 +64,20 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
   const { locations } = data as { locations: Location.LocationObject[] };
   if (!locations || locations.length === 0) return;
 
-  // Persist directly to a durable buffer first: this task can run in a
-  // headless JS context (OS-relaunched app, no App.tsx mount yet) where the
-  // module-level `handler` below has never been set. Persistence must not
-  // depend on the runtime handler being registered.
-  await appendPendingPoints(
+  // The live handler only exists while the app is mounted; in a headless
+  // relaunch it is null, so unhandled points go to the durable buffer that the
+  // foreground app drains on next launch. Points the live handler took are NOT
+  // buffered, otherwise they would be recorded twice.
+  await routeBackgroundLocations(
     locations.map((location) => ({
       lat: location.coords.latitude,
       lng: location.coords.longitude,
+      accuracy: location.coords.accuracy ?? 0,
       ts: Date.now(),
-    }))
+    })),
+    handler,
+    appendPendingPoints
   );
-
-  if (handler) {
-    for (const location of locations) {
-      void handler(
-        { lat: location.coords.latitude, lng: location.coords.longitude },
-        location.coords.accuracy ?? 0
-      );
-    }
-  }
 });
 
 export async function startBackgroundTracking(distanceIntervalMeters: number): Promise<void> {

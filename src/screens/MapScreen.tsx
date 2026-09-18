@@ -29,7 +29,8 @@ import type { MapView } from '../lib/geo/projection';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
 import { stopForegroundTracking } from '../services/locationTracker';
 import { stopBackgroundTracking } from '../services/backgroundLocationTask';
-import { signOut } from '../lib/supabase/auth';
+import { signOut, signOutLocal } from '../lib/supabase/auth';
+import { performSignOut } from '../lib/session/signOutFlow';
 
 const FOLLOW_ZOOM = 16;
 const FOLLOW_EASE_MS = 900;
@@ -100,10 +101,14 @@ export default function MapScreen({ points, livePosition, userId, client, subscr
   }
 
   async function handleSignOut() {
-    stopForegroundTracking(subscription);
-    await stopBackgroundTracking();
-    await signOut(client);
-    onSignedOut();
+    await performSignOut({
+      stopForeground: () => stopForegroundTracking(subscription),
+      stopBackground: stopBackgroundTracking,
+      signOutRemote: () => signOut(client),
+      signOutLocal: () => signOutLocal(client),
+      onSignedOut,
+      onWarn: (message, err) => console.warn('[sign-out]', message, err),
+    });
   }
 
   return (

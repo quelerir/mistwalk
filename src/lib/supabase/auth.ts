@@ -17,6 +17,11 @@ export async function signOut(client: SupabaseClient) {
   if (error) throw error;
 }
 
+export async function signOutLocal(client: SupabaseClient) {
+  const { error } = await client.auth.signOut({ scope: 'local' });
+  if (error) throw error;
+}
+
 export async function getSession(client: SupabaseClient) {
   const { data, error } = await client.auth.getSession();
   if (error) throw error;

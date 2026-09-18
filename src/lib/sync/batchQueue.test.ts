@@ -33,6 +33,7 @@ describe('SyncQueue', () => {
   });
 
   it('re-buffers items if onFlush rejects, for the next flush attempt', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const onFlush = jest
       .fn()
       .mockRejectedValueOnce(new Error('network down'))
@@ -46,6 +47,8 @@ describe('SyncQueue', () => {
     await Promise.resolve();
 
     expect(onFlush).toHaveBeenLastCalledWith([1, 2]);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it('does nothing on flush() when the buffer is empty', async () => {
