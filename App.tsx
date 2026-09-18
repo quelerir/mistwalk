@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
@@ -15,7 +16,7 @@ import {
 } from './src/services/backgroundLocationTask';
 import { useLocationPermissions } from './src/hooks/useLocationPermissions';
 import RootNavigator from './src/navigation/RootNavigator';
-import MapScreen from './src/screens/MapScreen';
+import MainScreen from './src/screens/MainScreen';
 import OfflineBanner from './src/components/OfflineBanner';
 import LocationPermissionBanner from './src/components/LocationPermissionBanner';
 import type { LocationSubscription } from 'expo-location';
@@ -33,11 +34,13 @@ const LIVE_POSITION_INTERVAL_METERS = 5;
 export default function App() {
   if (!client) {
     return (
+      <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Ошибка конфигурации: проверьте .env файл (Supabase)</Text>
         </View>
       </SafeAreaView>
+      </SafeAreaProvider>
     );
   }
 
@@ -148,20 +151,23 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
   }, [session]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaProvider>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <RootNavigator client={client} session={session} onSignedIn={() => getSession(client).then(setSession)}>
         <OfflineBanner />
         <LocationPermissionBanner stage={stage} onRequestForeground={requestForeground} />
-        <MapScreen
+        <MainScreen
           points={points}
           livePosition={livePosition}
           userId={session?.user.id ?? ''}
+          email={session?.user.email ?? ''}
           client={client}
           subscription={subscriptionRef.current}
           onSignedOut={() => setSession(null)}
         />
       </RootNavigator>
     </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
