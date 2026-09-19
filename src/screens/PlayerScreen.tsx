@@ -7,6 +7,7 @@ import { flagUrl } from '../lib/geo/countries';
 import { formatPercent } from '../lib/geo/countryStats';
 import { formatKm2 } from '../lib/geo/cityStats';
 import { avatarUrl, fetchPlayerProfile, reportPlayer, type PlayerProfile, type ReportReason } from '../lib/social/profiles';
+import PlayerCountryScreen from './PlayerCountryScreen';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 
@@ -26,6 +27,7 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   const [player, setPlayer] = useState<PlayerProfile | null>(null);
+  const [countryCode, setCountryCode] = useState<string | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'hidden' | 'error'>('loading');
 
   useEffect(() => {
@@ -57,6 +59,10 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
       { text: 'Другое', onPress: () => void send('other') },
       { text: 'Отмена', style: 'cancel' },
     ]);
+  }
+
+  if (player && countryCode) {
+    return <PlayerCountryScreen player={player} countryCode={countryCode} onBack={() => setCountryCode(null)} />;
   }
 
   return (
@@ -100,13 +106,19 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
           <Text style={styles.sectionTitle}>Страны · {player.countries.length}</Text>
           {player.countries.length === 0 && <Text style={styles.muted}>Пока нет данных.</Text>}
           {player.countries.map((country) => (
-            <View key={country.code} style={styles.row}>
+            <Pressable
+              key={country.code}
+              style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+              onPress={() => setCountryCode(country.code)}
+              accessibilityRole="button"
+            >
               <Image source={{ uri: flagUrl(country.code) }} style={styles.flag} resizeMode="contain" />
               <Text style={styles.name} numberOfLines={1}>
                 {country.name}
               </Text>
               <Text style={styles.value}>{formatPercent(country.percent)}</Text>
-            </View>
+              <Text style={styles.chevron}>›</Text>
+            </Pressable>
           ))}
 
           {player.cities.length > 0 && <Text style={styles.sectionTitle}>Города · {player.cities.length}</Text>}
@@ -148,6 +160,8 @@ const makeStyles = (c: Colors) =>
     header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
     back: { fontSize: 36, lineHeight: 36, color: c.text, marginRight: 12, marginTop: -4 },
     avatar: { marginRight: 12 },
+    pressed: { opacity: 0.5 },
+    chevron: { fontSize: 24, color: c.chevron, marginLeft: 8 },
     report: { color: c.danger, fontWeight: '600', marginLeft: 8 },
     headerText: { flex: 1 },
     title: { fontSize: 24, fontWeight: '800', color: c.text },

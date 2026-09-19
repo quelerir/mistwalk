@@ -12,7 +12,12 @@ type CityCells = Record<string, CityRef | null>;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Cities are looked up lazily (only while a country screen is open) and cached per ~5 km cell.
-export function useCityStats(points: VisitedPoint[], found: DiscoveredPlace[], enabled: boolean) {
+export function useCityStats(
+  points: VisitedPoint[],
+  found: DiscoveredPlace[],
+  enabled: boolean,
+  countryAt?: (lat: number, lng: number) => string | null
+) {
   const [cells, setCells] = useState<CityCells>({});
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -74,9 +79,9 @@ export function useCityStats(points: VisitedPoint[], found: DiscoveredPlace[], e
   }, [enabled, ready, work]);
 
   const cities: CityStat[] = useMemo(
-    () => (ready ? buildCityList(points, found, cells) : []),
-    [points, found, cells, ready]
+    () => (ready ? buildCityList(points, found, cells, countryAt) : []),
+    [points, found, cells, ready, countryAt]
   );
   const pending = enabled && (!ready || unresolved.length > 0) && !failed;
-  return { cities, pending, failed };
+  return { cities, cells, pending, failed };
 }

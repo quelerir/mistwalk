@@ -11,7 +11,7 @@ import {
   uploadAvatar,
 } from './profiles';
 
-const snapshot = { distanceKm: 3.4, countries: [], cities: [] };
+const snapshot = { distanceKm: 3.4, countries: [], cities: [], placeRegions: {} };
 
 describe('buildSnapshot', () => {
   it('keeps only visited countries and rounds the distance', () => {
@@ -21,11 +21,13 @@ describe('buildSnapshot', () => {
         { code: 'AT', name: 'Австрия', exploredKm2: 1, totalKm2: 100, percent: 1 },
         { code: 'FR', name: 'Франция', exploredKm2: 0, totalKm2: 100, percent: 0 },
       ],
-      [{ name: 'Вена', exploredKm2: 0.3, totalKm2: 412, percent: 0.07, found: 5 }]
+      [{ name: 'Вена', country: 'AT', exploredKm2: 0.3, totalKm2: 412, percent: 0.07, found: 5 }],
+      { 'node/1': { c: 'AT', t: 'Вена' } }
     );
     expect(s.distanceKm).toBe(3.5);
     expect(s.countries).toEqual([{ code: 'AT', name: 'Австрия', percent: 1 }]);
-    expect(s.cities).toEqual([{ name: 'Вена', percent: 0.07, exploredKm2: 0.3 }]);
+    expect(s.cities).toEqual([{ name: 'Вена', country: 'AT', percent: 0.07, exploredKm2: 0.3 }]);
+    expect(s.placeRegions).toEqual({ 'node/1': { c: 'AT', t: 'Вена' } });
   });
 });
 
@@ -55,14 +57,19 @@ describe('fetchPlayerProfile', () => {
         distance_km: 5,
         found_count: 2,
         countries: [{ code: 'AT', name: 'Австрия', percent: 0.1 }],
-        cities: [{ name: 'Вена', percent: null, explored_km2: 0.2 }],
-        places: [{ name: 'Опера', kind: 'attraction', discovered_at: '2026-09-19T10:00:00Z' }],
+        cities: [{ name: 'Вена', country: 'AT', percent: null, explored_km2: 0.2 }],
+        places: [
+          { name: 'Опера', kind: 'attraction', discovered_at: '2026-09-19T10:00:00Z', country: 'AT', city: 'Вена' },
+          { name: 'Старое', kind: 'monument', discovered_at: '2026-09-18T10:00:00Z' },
+        ],
       },
       error: null,
     });
     const p = await fetchPlayerProfile({ rpc } as unknown as SupabaseClient, 'u1');
     expect(p?.foundCount).toBe(2);
-    expect(p?.cities[0]).toEqual({ name: 'Вена', percent: null, exploredKm2: 0.2 });
+    expect(p?.cities[0]).toEqual({ name: 'Вена', country: 'AT', percent: null, exploredKm2: 0.2 });
+    expect(p?.places[0]).toMatchObject({ country: 'AT', city: 'Вена' });
+    expect(p?.places[1]).toMatchObject({ country: null, city: null });
     expect(p?.places[0].discoveredAt).toBe(Date.parse('2026-09-19T10:00:00Z'));
   });
 });

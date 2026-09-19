@@ -9,6 +9,7 @@ export interface CityRef {
 
 export interface CityStat {
   name: string;
+  country: string | null;
   exploredKm2: number;
   totalKm2: number | null;
   percent: number | null;
@@ -92,28 +93,34 @@ export async function fetchCityAt(
 export function buildCityList(
   points: TimedPoint[],
   found: DiscoveredPlace[],
-  cityCells: Readonly<Record<string, CityRef | null>>
+  cityCells: Readonly<Record<string, CityRef | null>>,
+  countryAt?: (lat: number, lng: number) => string | null
 ): CityStat[] {
-  const byCity = new Map<string, { points: TimedPoint[]; found: number; areaKm2: number | null }>();
-  const entry = (city: CityRef) => {
-    const existing = byCity.get(city.name) ?? { points: [], found: 0, areaKm2: null };
+  const byCity = new Map<
+    string,
+    { points: TimedPoint[]; found: number; areaKm2: number | null; country: string | null }
+  >();
+  const entry = (city: CityRef, lat: number, lng: number) => {
+    const existing = byCity.get(city.name) ?? { points: [], found: 0, areaKm2: null, country: null };
+    existing.country = existing.country ?? countryAt?.(lat, lng) ?? null;
     existing.areaKm2 = existing.areaKm2 ?? city.areaKm2;
     byCity.set(city.name, existing);
     return existing;
   };
   for (const point of points) {
     const city = cityCells[cityCellKey(point.lat, point.lng)];
-    if (city) entry(city).points.push(point);
+    if (city) entry(city, point.lat, point.lng).points.push(point);
   }
   for (const place of found) {
     const city = cityCells[cityCellKey(place.lat, place.lng)];
-    if (city) entry(city).found += 1;
+    if (city) entry(city, place.lat, place.lng).found += 1;
   }
   return [...byCity.entries()]
     .map(([name, group]) => {
       const exploredKm2 = computeAreaKm2(group.points);
       return {
         name,
+        country: group.country,
         exploredKm2,
         totalKm2: group.areaKm2,
         percent: group.areaKm2 ? (exploredKm2 / group.areaKm2) * 100 : null,

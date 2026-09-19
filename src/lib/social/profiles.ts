@@ -3,10 +3,17 @@ import type { CityStat } from '../geo/cityStats';
 import type { CountryStat } from '../geo/countryStats';
 import type { PoiKind } from '../poi/types';
 
+export interface PlaceRegion {
+  c: string;
+  t: string | null;
+}
+
 export interface ProfileSnapshot {
   distanceKm: number;
   countries: Array<{ code: string; name: string; percent: number }>;
-  cities: Array<{ name: string; percent: number | null; exploredKm2: number }>;
+  cities: Array<{ name: string; country: string | null; percent: number | null; exploredKm2: number }>;
+  // Found place id -> its country (ISO code) and city, for browsing a player's page by country.
+  placeRegions: Record<string, PlaceRegion>;
 }
 
 export interface MyProfile {
@@ -23,12 +30,12 @@ export interface LeaderboardEntry {
   rank: number;
 }
 
-export interface PlayerProfile extends ProfileSnapshot {
+export interface PlayerProfile extends Omit<ProfileSnapshot, 'placeRegions'> {
   userId: string;
   displayName: string;
   avatarPath: string | null;
   foundCount: number;
-  places: Array<{ name: string; kind: PoiKind; discoveredAt: number }>;
+  places: Array<{ name: string; kind: PoiKind; discoveredAt: number; country: string | null; city: string | null }>;
 }
 
 export class NameTakenError extends Error {
@@ -42,7 +49,8 @@ const MAX_CITIES = 30;
 export function buildSnapshot(
   distanceKm: number,
   countries: CountryStat[],
-  cities: CityStat[]
+  cities: CityStat[],
+  placeRegions: Record<string, PlaceRegion> = {}
 ): ProfileSnapshot {
   return {
     distanceKm: Math.round(distanceKm * 10) / 10,
@@ -51,9 +59,11 @@ export function buildSnapshot(
       .map((c) => ({ code: c.code, name: c.name, percent: c.percent })),
     cities: cities.slice(0, MAX_CITIES).map((c) => ({
       name: c.name,
+      country: c.country,
       percent: c.percent,
       exploredKm2: c.exploredKm2,
     })),
+    placeRegions,
   };
 }
 
@@ -83,6 +93,7 @@ export async function saveMyProfile(
       distance_km: snapshot.distanceKm,
       countries: snapshot.countries,
       cities: snapshot.cities,
+      place_regions: snapshot.placeRegions,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'user_id' }
@@ -132,8 +143,14 @@ interface PlayerRow {
   distance_km: number;
   found_count: number | string;
   countries: Array<{ code: string; name: string; percent: number }>;
-  cities: Array<{ name: string; percent: number | null; exploredKm2?: number; explored_km2?: number }>;
-  places: Array<{ name: string; kind: PoiKind; discovered_at: string }>;
+  cities: Array<{
+    name: string;
+    country?: string | null;
+    percent: number | null;
+    exploredKm2?: number;
+    explored_km2?: number;
+  }>;
+  places: Array<{ name: string; kind: PoiKind; discovered_at: string; country?: string | null; city?: string | null }>;
 }
 
 export async function fetchPlayerProfile(
@@ -153,6 +170,7 @@ export async function fetchPlayerProfile(
     countries: row.countries ?? [],
     cities: (row.cities ?? []).map((c) => ({
       name: c.name,
+      country: c.country ?? null,
       percent: c.percent,
       exploredKm2: c.exploredKm2 ?? c.explored_km2 ?? 0,
     })),
@@ -160,6 +178,8 @@ export async function fetchPlayerProfile(
       name: p.name,
       kind: p.kind,
       discoveredAt: Date.parse(p.discovered_at),
+      country: p.country ?? null,
+      city: p.city ?? null,
     })),
   };
 }

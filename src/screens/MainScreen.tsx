@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -29,11 +29,12 @@ import type { DiscoveredPlace, Poi } from '../lib/poi/types';
 import { useStats } from '../hooks/useStats';
 import { useCountryStats } from '../hooks/useCountryStats';
 import { useCityStats } from '../hooks/useCityStats';
+import { cityCellKey } from '../lib/geo/cityStats';
 import LeaderboardScreen from './LeaderboardScreen';
 import PlayerScreen from './PlayerScreen';
 import { useProfileSync } from '../hooks/useProfileSync';
 import { pickAvatar } from '../lib/social/pickAvatar';
-import { avatarUrl, buildSnapshot, type LeaderboardEntry } from '../lib/social/profiles';
+import { avatarUrl, buildSnapshot, type LeaderboardEntry, type PlaceRegion } from '../lib/social/profiles';
 
 const NO_PLACES: DiscoveredPlace[] = [];
 
@@ -133,10 +134,26 @@ export default function MainScreen({
   );
 
   // The public profile needs every city, so resolve them all in the background.
-  const allCityStats = useCityStats(points, discovered, true);
+  const countryAt = useCallback(
+    (lat: number, lng: number) => countryStats.cells[cellKey(lat, lng)]?.code ?? null,
+    [countryStats.cells]
+  );
+  const allCityStats = useCityStats(points, discovered, true, countryAt);
+  const placeRegions = useMemo(() => {
+    const regions: Record<string, PlaceRegion> = {};
+    for (const place of discovered) {
+      const country = countryAt(place.lat, place.lng);
+      if (!country) continue;
+      regions[place.id] = {
+        c: country,
+        t: allCityStats.cells[cityCellKey(place.lat, place.lng)]?.name ?? null,
+      };
+    }
+    return regions;
+  }, [discovered, countryAt, allCityStats.cells]);
   const snapshot = useMemo(
-    () => buildSnapshot(stats.distanceKm, countryStats.countries, allCityStats.cities),
-    [stats.distanceKm, countryStats.countries, allCityStats.cities]
+    () => buildSnapshot(stats.distanceKm, countryStats.countries, allCityStats.cities, placeRegions),
+    [stats.distanceKm, countryStats.countries, allCityStats.cities, placeRegions]
   );
   const profileSync = useProfileSync(client, userId, snapshot);
   const avatarUri = avatarUrl(client, profileSync.profile?.avatarPath ?? null);
