@@ -4,6 +4,7 @@ import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { projectToScreen, type MapView, type Size } from '../lib/geo/projection';
 import { readView, type ViewShared } from '../lib/map/viewShared';
 import { KIND_LABEL } from '../lib/poi/greeting';
+import { pickMarkers, type MarkerCandidate } from '../lib/poi/markerPicker';
 import KindIcon from './KindIcon';
 import type { Poi } from '../lib/poi/types';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
@@ -21,7 +22,9 @@ export interface PoiMarkersProps {
   onOpenFound?: (poi: Poi) => void;
 }
 
-const MAX_MARKERS = 60;
+const MAX_MARKERS = 90;
+// One marker per cell of this many pixels (a marker is 30 px wide), so places do not pile on each other.
+const CELL_PX = 34;
 // Wide, because the list is refreshed a few times a second while the map keeps moving under the markers.
 const MARGIN_PX = 400;
 
@@ -65,22 +68,28 @@ export default function PoiMarkers({
 
   const visible = useMemo(() => {
     if (!view || size.width === 0) return [];
-    const result: Array<{ poi: Poi; x: number; y: number; showLabel: boolean }> = [];
-    const placed: Array<{ l: number; t: number; r: number; b: number }> = [];
+    const byId = new Map<string, Poi>();
+    const candidates: MarkerCandidate[] = [];
     for (const poi of pois) {
       const { x, y } = projectToScreen(poi.lng, poi.lat, view, size);
-      if (x < -MARGIN_PX || x > size.width + MARGIN_PX || y < -MARGIN_PX || y > size.height + MARGIN_PX) {
-        continue;
-      }
+      if (x < -MARGIN_PX || x > size.width + MARGIN_PX || y < -MARGIN_PX || y > size.height + MARGIN_PX) continue;
+      byId.set(poi.id, poi);
+      candidates.push({ id: poi.id, x, y, found: discoveredIds.has(poi.id) });
+    }
+
+    // Spread over the whole view, not "the first ones loaded" (those are the places next to you).
+    const result: Array<{ poi: Poi; x: number; y: number; showLabel: boolean }> = [];
+    const placed: Array<{ l: number; t: number; r: number; b: number }> = [];
+    for (const m of pickMarkers(candidates, size, { cell: CELL_PX, max: MAX_MARKERS })) {
+      const poi = byId.get(m.id)!;
       let showLabel = false;
-      if (discoveredIds.has(poi.id)) {
+      if (m.found) {
         const w = Math.min(120, poi.name.length * 7 + 8);
-        const rect = { l: x - w / 2, t: y + 18, r: x + w / 2, b: y + 34 };
+        const rect = { l: m.x - w / 2, t: m.y + 18, r: m.x + w / 2, b: m.y + 34 };
         showLabel = !placed.some((o) => rect.l < o.r && rect.r > o.l && rect.t < o.b && rect.b > o.t);
         if (showLabel) placed.push(rect);
       }
-      result.push({ poi, x, y, showLabel });
-      if (result.length >= MAX_MARKERS) break;
+      result.push({ poi, x: m.x, y: m.y, showLabel });
     }
     return result;
   }, [pois, discoveredIds, view, size]);

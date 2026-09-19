@@ -14,6 +14,7 @@ const TILE_DEBOUNCE_MS = 500;
 const RETRY_AFTER_MS = 30_000;
 const GREETING_MS = 6000;
 const MIN_POI_ZOOM = 12;
+const PREFETCH_FACTOR = 1.8;
 const BETWEEN_REQUESTS_MS = 400;
 const RATE_LIMIT_PAUSE_MS = 5000;
 
@@ -117,7 +118,8 @@ export function usePlaces({ client, userId, view, livePosition }: UsePlacesOptio
     if (!view || view.zoom < MIN_POI_ZOOM) return;
     const timer = setTimeout(() => {
       const { width, height } = Dimensions.get('window');
-      loadTiles(tilesForViewport(view, { width, height }));
+      // A wider window than the screen, so the neighbouring tiles are already loaded when you drag the map there.
+      loadTiles(tilesForViewport(view, { width: width * PREFETCH_FACTOR, height: height * PREFETCH_FACTOR }));
     }, TILE_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [view, loadTiles]);
