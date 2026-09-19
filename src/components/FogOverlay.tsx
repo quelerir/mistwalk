@@ -96,7 +96,12 @@ function FogClouds({ view, size, fog }: FogCloudsProps) {
     CLOUD_MAX_SCALE,
     Math.max(CLOUD_MIN_SCALE, 2 ** (view.zoom - CLOUD_REFERENCE_ZOOM))
   );
-  const extent = Math.hypot(size.width, size.height) / scale;
+  // The cloud rect is centred on the anchor, so it must reach the farthest screen corner.
+  const reach = Math.hypot(
+    Math.max(Math.abs(at.x), Math.abs(at.x - size.width)),
+    Math.max(Math.abs(at.y), Math.abs(at.y - size.height))
+  );
+  const extent = reach / scale;
   const mapTransform = [
     { translateX: at.x },
     { translateY: at.y },
