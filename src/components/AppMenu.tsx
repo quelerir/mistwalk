@@ -1,0 +1,88 @@
+import React, { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import MenuSheet, { type MenuItem } from './MenuSheet';
+import { FOG_STYLE_LABELS, nextFogStyle, type FogStyle } from '../lib/settings/fogStyle';
+import {
+  getAccuracyProfile,
+  setAccuracyProfile,
+  type AccuracyProfile,
+} from '../lib/settings/accuracyProfile';
+
+export interface AppMenuProps {
+  visible: boolean;
+  onClose: () => void;
+  fogStyle: FogStyle;
+  onFogStyleChange: (style: FogStyle) => void;
+  backgroundEnabled: boolean;
+  onEnableBackground: () => Promise<boolean>;
+  onOpenCollection: () => void;
+  onOpenNearby: () => void;
+  onSignOut: () => Promise<void>;
+}
+
+export default function AppMenu({
+  visible,
+  onClose,
+  fogStyle,
+  onFogStyleChange,
+  backgroundEnabled,
+  onEnableBackground,
+  onOpenCollection,
+  onOpenNearby,
+  onSignOut,
+}: AppMenuProps) {
+  const [accuracy, setAccuracy] = useState<AccuracyProfile>('battery-saver');
+
+  useEffect(() => {
+    void getAccuracyProfile(AsyncStorage).then(setAccuracy);
+  }, []);
+
+  function chooseAccuracy(next: AccuracyProfile) {
+    setAccuracy(next);
+    void setAccuracyProfile(AsyncStorage, next);
+  }
+
+  function closeThen(action: () => void) {
+    return () => {
+      onClose();
+      action();
+    };
+  }
+
+  const items: MenuItem[] = [
+    { key: 'collection', icon: 'award', label: 'Коллекция', onPress: closeThen(onOpenCollection) },
+    { key: 'nearby', icon: 'compass', label: 'Что рядом', onPress: closeThen(onOpenNearby) },
+    {
+      key: 'fog',
+      icon: 'cloud',
+      label: 'Стиль тумана',
+      value: FOG_STYLE_LABELS[fogStyle],
+      onPress: () => onFogStyleChange(nextFogStyle(fogStyle)),
+    },
+    {
+      key: 'accuracy',
+      icon: 'locate',
+      label: 'Точность GPS',
+      value: accuracy === 'precise' ? 'Точный' : 'Экономия',
+      onPress: () => chooseAccuracy(accuracy === 'precise' ? 'battery-saver' : 'precise'),
+    },
+    {
+      key: 'background',
+      icon: 'moon',
+      label: 'Работа в фоне',
+      value: backgroundEnabled ? 'Включена' : 'Включить',
+      onPress: () => {
+        if (!backgroundEnabled) void onEnableBackground();
+      },
+    },
+    {
+      key: 'signout',
+      icon: 'logout',
+      label: 'Выйти',
+      destructive: true,
+      onPress: closeThen(() => void onSignOut()),
+    },
+  ];
+
+  return <MenuSheet visible={visible} items={items} onClose={onClose} />;
+}

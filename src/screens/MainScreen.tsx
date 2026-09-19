@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { LocationSubscription } from 'expo-location';
+import AppMenu from '../components/AppMenu';
 import DiscoveryCard from '../components/DiscoveryCard';
 import TabBar, { type TabItem } from '../components/TabBar';
 import type { LivePosition } from '../components/FogOverlay';
@@ -16,17 +17,16 @@ import { stopBackgroundTracking } from '../services/backgroundLocationTask';
 import { stopForegroundTracking } from '../services/locationTracker';
 import MapScreen from './MapScreen';
 import NearbyScreen from './NearbyScreen';
-import ProfileScreen from './ProfileScreen';
 import CollectionScreen from './CollectionScreen';
 import { useStats } from '../hooks/useStats';
 
-type TabKey = 'map' | 'nearby' | 'collection' | 'profile';
+type TabKey = 'map' | 'nearby' | 'collection' | 'menu';
 
 const TABS: Array<TabItem<TabKey>> = [
   { key: 'map', label: 'Карта', icon: 'map' },
   { key: 'nearby', label: 'Рядом', icon: 'compass' },
   { key: 'collection', label: 'Коллекция', icon: 'award' },
-  { key: 'profile', label: 'Профиль', icon: 'user' },
+  { key: 'menu', label: 'Меню', icon: 'menu' },
 ];
 
 export interface MainScreenProps {
@@ -52,7 +52,8 @@ export default function MainScreen({
   backgroundEnabled,
   onEnableBackground,
 }: MainScreenProps) {
-  const [tab, setTab] = useState<TabKey>('map');
+  const [tab, setTab] = useState<Exclude<TabKey, 'menu'>>('map');
+  const [menuOpen, setMenuOpen] = useState(false);
   const [view, setView] = useState<MapView | null>(null);
   const [fogStyle, setFogStyleState] = useState<FogStyle>('ink');
   const { pois, discovered, discoveredIds, greeting, dismissGreeting } = usePlaces({
@@ -62,7 +63,7 @@ export default function MainScreen({
     livePosition,
   });
 
-  const stats = useStats(points, discovered, tab === 'collection' || tab === 'profile');
+  const stats = useStats(points, discovered, tab === 'collection');
 
   useEffect(() => {
     void getFogStyle(AsyncStorage).then(setFogStyleState);
@@ -102,22 +103,24 @@ export default function MainScreen({
           <NearbyScreen pois={pois} discoveredIds={discoveredIds} origin={livePosition} />
         )}
         {tab === 'collection' && <CollectionScreen stats={stats} discovered={discovered} />}
-        {tab === 'profile' && (
-          <ProfileScreen
-            email={email}
-            discoveredCount={discovered.length}
-            fogStyle={fogStyle}
-            onFogStyleChange={handleFogStyleChange}
-            onSignOut={handleSignOut}
-            backgroundEnabled={backgroundEnabled}
-            onEnableBackground={onEnableBackground}
-            onOpenCollection={() => setTab('collection')}
-            onOpenNearby={() => setTab('nearby')}
-          />
-        )}
         <DiscoveryCard place={greeting} onDismiss={dismissGreeting} />
       </View>
-      <TabBar tabs={TABS} active={tab} onChange={setTab} />
+      <TabBar
+        tabs={TABS}
+        active={tab}
+        onChange={(key) => (key === 'menu' ? setMenuOpen(true) : setTab(key))}
+      />
+      <AppMenu
+        visible={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        fogStyle={fogStyle}
+        onFogStyleChange={handleFogStyleChange}
+        backgroundEnabled={backgroundEnabled}
+        onEnableBackground={onEnableBackground}
+        onOpenCollection={() => setTab('collection')}
+        onOpenNearby={() => setTab('nearby')}
+        onSignOut={handleSignOut}
+      />
     </View>
   );
 }
