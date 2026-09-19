@@ -1,4 +1,4 @@
-import { computeAreaKm2, computeDistanceKm, computeStreakDays } from './coverage';
+import { computeAreaKm2, computeDistanceKm } from './coverage';
 
 const at = (lat: number, lng: number, ts = 0) => ({ lat, lng, ts });
 
@@ -42,31 +42,5 @@ describe('computeAreaKm2', () => {
     const b = at(41.7171, 44.8271, 2); // about 220 m north
     const line = computeAreaKm2([a, b]);
     expect(line).toBeGreaterThan(computeAreaKm2([a]) * 1.8);
-  });
-});
-
-describe('computeStreakDays', () => {
-  const DAY = 86_400_000;
-  const now = Date.UTC(2026, 8, 19, 12, 0, 0);
-  const on = (daysAgo: number) => at(0, 0, now - daysAgo * DAY);
-
-  it('counts consecutive days including today', () => {
-    expect(computeStreakDays([on(0), on(1), on(2)], now, 0)).toBe(3);
-  });
-
-  it('keeps the streak alive if you have not walked yet today', () => {
-    expect(computeStreakDays([on(1), on(2)], now, 0)).toBe(2);
-  });
-
-  it('breaks on a gap and is zero when the last walk was two days ago', () => {
-    expect(computeStreakDays([on(0), on(2)], now, 0)).toBe(1);
-    expect(computeStreakDays([on(2), on(3)], now, 0)).toBe(0);
-  });
-
-  it('respects the timezone offset when deciding the day', () => {
-    const lateEvening = at(0, 0, Date.UTC(2026, 8, 19, 22, 30));
-    const justAfterMidnightUtc = Date.UTC(2026, 8, 20, 0, 30);
-    // At UTC+3 both moments are on the same local day (Sep 20 01:30 and Sep 20 03:30).
-    expect(computeStreakDays([lateEvening], justAfterMidnightUtc, 180)).toBe(1);
   });
 });

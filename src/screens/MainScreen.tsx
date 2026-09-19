@@ -94,7 +94,7 @@ export default function MainScreen({
     setRouting(false);
   }
 
-  const stats = useStats(points, discovered, tab === 'collection');
+  const stats = useStats(points, discovered.length, tab === 'collection');
 
   const countryStats = useCountryStats(points, tab === 'collection');
   const placesByCountry = useMemo(
@@ -181,7 +181,6 @@ export default function MainScreen({
           ) : (
             <CollectionScreen
               stats={stats}
-              discovered={discovered}
               countries={countryStats.countries}
               onOpenCountries={() => setShowCountries(true)}
             />

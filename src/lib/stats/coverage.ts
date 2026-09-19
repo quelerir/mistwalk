@@ -78,23 +78,3 @@ export function computeAreaKm2(points: TimedPoint[]): number {
 
   return (cells.size * CELL_METERS * CELL_METERS) / 1_000_000;
 }
-
-const DAY_MS = 86_400_000;
-
-export function computeStreakDays(
-  points: TimedPoint[],
-  now: number = Date.now(),
-  tzOffsetMinutes: number = -new Date(now).getTimezoneOffset()
-): number {
-  const dayOf = (ts: number) => Math.floor((ts + tzOffsetMinutes * 60_000) / DAY_MS);
-  const days = new Set(points.map((p) => dayOf(p.ts)));
-  const today = dayOf(now);
-
-  let day = days.has(today) ? today : today - 1;
-  let streak = 0;
-  while (days.has(day)) {
-    streak++;
-    day--;
-  }
-  return streak;
-}
