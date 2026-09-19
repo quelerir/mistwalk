@@ -4,7 +4,8 @@ import { haversineDistanceMeters, type Coordinate } from '../lib/geo/distance';
 import { formatKm2, type CityStat } from '../lib/geo/cityStats';
 import { formatPercent, type CountryPlaces, type CountryStat } from '../lib/geo/countryStats';
 import { bearingLabel } from '../lib/poi/discovery';
-import { KIND_ICON } from '../lib/poi/greeting';
+import KindIcon from '../components/KindIcon';
+import type { PoiKind } from '../lib/poi/types';
 import type { DiscoveredPlace, Poi } from '../lib/poi/types';
 
 export interface CountryPlacesScreenProps {
@@ -29,8 +30,8 @@ function formatDistance(meters: number): string {
 
 type Row =
   | { kind: 'city'; city: CityStat }
-  | { kind: 'found'; place: DiscoveredPlace; icon: string; date: string }
-  | { kind: 'hidden'; poi: Poi; icon: string; where: string | null };
+  | { kind: 'found'; place: DiscoveredPlace; icon: PoiKind; date: string }
+  | { kind: 'hidden'; poi: Poi; icon: PoiKind; where: string | null };
 
 export default function CountryPlacesScreen({
   country,
@@ -47,7 +48,7 @@ export default function CountryPlacesScreen({
     const found: Row[] = (places?.discovered ?? []).map((p) => ({
       kind: 'found',
       place: p,
-      icon: KIND_ICON[p.kind],
+      icon: p.kind,
       date: formatDate(p.discoveredAt),
     }));
     const hidden: Row[] = (places?.hidden ?? [])
@@ -56,7 +57,7 @@ export default function CountryPlacesScreen({
       .map(({ poi, meters }) => ({
         kind: 'hidden',
         poi,
-        icon: KIND_ICON[poi.kind],
+        icon: poi.kind,
         where: origin ? `${formatDistance(meters)}, ${bearingLabel(origin, poi)}` : null,
       }));
     const cityRows: Row[] = cities.map((city) => ({ kind: 'city', city }));
@@ -118,7 +119,7 @@ export default function CountryPlacesScreen({
                 accessibilityRole="button"
               >
                 <View style={styles.badge}>
-                  <Text style={styles.icon}>{item.icon}</Text>
+                  <KindIcon kind={item.icon} size={20} color="#8a5a00" />
                 </View>
                 <Text style={styles.name} numberOfLines={1}>
                   {item.place.name}
@@ -133,7 +134,7 @@ export default function CountryPlacesScreen({
                 accessibilityLabel="Показать на карте"
               >
                 <View style={[styles.badge, styles.badgeHidden]}>
-                  <Text style={[styles.icon, styles.iconHidden]}>{item.icon}</Text>
+                  <KindIcon kind={item.icon} size={20} color="#a8a8a8" />
                 </View>
                 <View style={styles.hiddenText}>
                   <Text style={[styles.name, styles.muted]}>Тайное место</Text>

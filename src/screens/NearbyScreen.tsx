@@ -3,7 +3,7 @@ import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from 'react-native';
 import { haversineDistanceMeters } from '../lib/geo/distance';
 import { bearingLabel } from '../lib/poi/discovery';
-import { KIND_ICON } from '../lib/poi/greeting';
+import KindIcon from '../components/KindIcon';
 import type { Poi } from '../lib/poi/types';
 
 export interface NearbyScreenProps {
@@ -51,7 +51,7 @@ export default function NearbyScreen({ pois, discoveredIds, origin, onSelect }: 
               accessibilityLabel="Показать на карте"
             >
               <View style={styles.iconBadge}>
-                <Text style={styles.icon}>{KIND_ICON[item.poi.kind]}</Text>
+                <KindIcon kind={item.poi.kind} size={22} color="#8a5a00" />
               </View>
               <View style={styles.rowText}>
                 <Text style={styles.name}>Тайное место</Text>

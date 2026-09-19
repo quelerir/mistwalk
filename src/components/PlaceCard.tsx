@@ -2,7 +2,8 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { haversineDistanceMeters, type Coordinate } from '../lib/geo/distance';
 import { bearingLabel } from '../lib/poi/discovery';
-import { KIND_ICON } from '../lib/poi/greeting';
+import { KIND_LABEL } from '../lib/poi/greeting';
+import KindIcon from './KindIcon';
 import type { Poi } from '../lib/poi/types';
 
 export interface PlaceCardProps {
@@ -26,10 +27,10 @@ export default function PlaceCard({ poi, origin, onBuildRoute, onClose }: PlaceC
     <View style={styles.card}>
       <View style={styles.header}>
         <View style={styles.badge}>
-          <Text style={styles.icon}>{KIND_ICON[poi.kind]}</Text>
+          <KindIcon kind={poi.kind} size={22} color="#8a5a00" />
         </View>
         <View style={styles.text}>
-          <Text style={styles.title}>Тайное место</Text>
+          <Text style={styles.title}>{KIND_LABEL[poi.kind]}</Text>
           <Text style={styles.subtitle}>{where}</Text>
         </View>
         <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Закрыть">

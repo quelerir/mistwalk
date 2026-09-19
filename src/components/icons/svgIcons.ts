@@ -8,7 +8,13 @@ export type IconName =
   | 'cloud'
   | 'moon'
   | 'logout'
-  | 'navigate';
+  | 'navigate'
+  | 'poi-viewpoint'
+  | 'poi-monument'
+  | 'poi-castle'
+  | 'poi-ruins'
+  | 'poi-attraction'
+  | 'poi-artwork';
 
 export type LayerMode = 'stroke' | 'fill' | 'cutout';
 
@@ -30,6 +36,8 @@ const line = (d: string) => ({
   outline: [{ d, mode: 'stroke' as const }],
   active: [{ d, mode: 'stroke' as const }],
 });
+
+const shapes = (layers: IconLayer[]) => ({ outline: layers, active: layers });
 
 export const ICONS: Record<IconName, { outline: IconLayer[]; active: IconLayer[] }> = {
   map: {
@@ -88,6 +96,32 @@ export const ICONS: Record<IconName, { outline: IconLayer[]; active: IconLayer[]
   menu: line('M4 6h16M4 12h16M4 18h16'),
   cloud: line('M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9z'),
   moon: line('M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z'),
+  'poi-viewpoint': shapes([
+    { d: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z', mode: 'stroke' },
+    { d: circle(12, 12, 3), mode: 'stroke' },
+  ]),
+  'poi-monument': shapes([
+    { d: 'M12 2l3 5v10H9V7z', mode: 'stroke' },
+    { d: 'M6 22v-5h12v5z', mode: 'stroke' },
+  ]),
+  'poi-castle': shapes([
+    { d: 'M4 21V6h3v3h3V6h4v3h3V6h3v15z', mode: 'stroke' },
+    { d: 'M10 21v-4a2 2 0 0 1 4 0v4', mode: 'stroke' },
+  ]),
+  'poi-ruins': shapes([
+    { d: 'M3 21h18', mode: 'stroke' },
+    { d: 'M5 21V11l3-2v4l2-3v11', mode: 'stroke' },
+    { d: 'M15 21V8h4v13', mode: 'stroke' },
+  ]),
+  'poi-attraction': shapes([
+    { d: 'M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z', mode: 'stroke' },
+  ]),
+  'poi-artwork': shapes([
+    { d: 'M12 3a9 9 0 1 0 0 18c1.6 0 2.2-1.1 1.6-2.2s-.1-2.3 1.4-2.3h2a4 4 0 0 0 4-4c0-5-4.5-9.5-9-9.5z', mode: 'stroke' },
+    { d: circle(8, 11, 1), mode: 'fill' },
+    { d: circle(12, 7.5, 1), mode: 'fill' },
+    { d: circle(16, 10, 1), mode: 'fill' },
+  ]),
   navigate: line('M3 11l19-9-9 19-2-8-8-2z'),
   logout: line('M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9'),
 };

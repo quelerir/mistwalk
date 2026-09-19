@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { greetingFor, KIND_ICON } from '../lib/poi/greeting';
+import { greetingFor } from '../lib/poi/greeting';
+import KindIcon from './KindIcon';
 import type { Poi } from '../lib/poi/types';
 
 export interface DiscoveryCardProps {
@@ -20,9 +21,10 @@ export default function DiscoveryCard({ place, onDismiss, onOpen }: DiscoveryCar
       }}
     >
       <View style={styles.card}>
-        <Text style={styles.title}>
-          {KIND_ICON[place.kind]} Вы нашли: {place.name}
-        </Text>
+        <View style={styles.titleRow}>
+          <KindIcon kind={place.kind} size={22} color="#ffc83c" />
+          <Text style={styles.title}>Вы нашли: {place.name}</Text>
+        </View>
         <Text style={styles.text}>{greetingFor(place.kind)}</Text>
         <Text style={styles.more}>Подробнее ›</Text>
       </View>
@@ -39,7 +41,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 200, 60, 0.8)',
   },
-  title: { color: '#ffc83c', fontSize: 18, fontWeight: '800', marginBottom: 6 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  title: { flex: 1, color: '#ffc83c', fontSize: 18, fontWeight: '800' },
   text: { color: 'white', fontSize: 15 },
   more: { color: '#ffc83c', fontWeight: '700', marginTop: 8 },
 });
