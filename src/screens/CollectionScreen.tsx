@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { formatPercent, type CountryStat } from '../lib/geo/countryStats';
 import { evaluateAchievements, type Stats } from '../lib/stats/achievements';
 import { KIND_ICON } from '../lib/poi/greeting';
 import type { DiscoveredPlace } from '../lib/poi/types';
@@ -7,17 +8,22 @@ import type { DiscoveredPlace } from '../lib/poi/types';
 export interface CollectionScreenProps {
   stats: Stats;
   discovered: DiscoveredPlace[];
-}
-
-function formatArea(km2: number): string {
-  return km2 < 1 ? `${Math.round(km2 * 100)} га` : `${km2.toFixed(2)} км²`;
+  countries: CountryStat[];
+  countriesPending: boolean;
+  countriesFailed: boolean;
 }
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
 }
 
-export default function CollectionScreen({ stats, discovered }: CollectionScreenProps) {
+export default function CollectionScreen({
+  stats,
+  discovered,
+  countries,
+  countriesPending,
+  countriesFailed,
+}: CollectionScreenProps) {
   const achievements = useMemo(() => evaluateAchievements(stats), [stats]);
   const unlockedCount = achievements.filter((a) => a.unlocked).length;
   const places = useMemo(
@@ -26,9 +32,7 @@ export default function CollectionScreen({ stats, discovered }: CollectionScreen
   );
 
   const tiles = [
-    { label: 'Открыто', value: formatArea(stats.areaKm2) },
     { label: 'Пройдено', value: `${stats.distanceKm.toFixed(1)} км` },
-    { label: 'Дней подряд', value: String(stats.streakDays) },
     { label: 'Мест найдено', value: String(stats.discoveredCount) },
   ];
 
@@ -44,6 +48,25 @@ export default function CollectionScreen({ stats, discovered }: CollectionScreen
           </View>
         ))}
       </View>
+
+      <Text style={styles.sectionTitle}>Открыто по странам</Text>
+      {countries.map((country) => (
+        <View key={country.code} style={styles.countryRow}>
+          <Text style={styles.countryName} numberOfLines={1}>
+            {country.name}
+          </Text>
+          <Text style={styles.countryPercent}>{formatPercent(country.percent)}</Text>
+        </View>
+      ))}
+      {countries.length === 0 && (
+        <Text style={styles.empty}>
+          {countriesPending
+            ? 'Определяем страну…'
+            : countriesFailed
+              ? 'Не удалось определить страну. Проверьте интернет.'
+              : 'Пока нечего показать. Пройдитесь по карте.'}
+        </Text>
+      )}
 
       <Text style={styles.sectionTitle}>
         Значки {unlockedCount}/{achievements.length}
@@ -91,7 +114,7 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 32 },
   title: { fontSize: 24, fontWeight: '800', color: '#262626', marginBottom: 12 },
   tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  tile: { width: '48%', backgroundColor: '#f6f6f6', borderRadius: 14, padding: 14 },
+  tile: { flex: 1, backgroundColor: '#f6f6f6', borderRadius: 14, padding: 14 },
   tileValue: { fontSize: 22, fontWeight: '800', color: '#262626' },
   tileLabel: { marginTop: 2, color: '#8e8e8e' },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#262626', marginTop: 24, marginBottom: 12 },
@@ -106,6 +129,9 @@ const styles = StyleSheet.create({
   muted: { color: '#8e8e8e' },
   badgeDesc: { marginTop: 2, fontSize: 10, color: '#8e8e8e', textAlign: 'center' },
   empty: { color: '#8e8e8e' },
+  countryRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#dbdbdb' },
+  countryName: { flex: 1, fontSize: 16, fontWeight: '600', color: '#262626' },
+  countryPercent: { fontSize: 16, fontWeight: '700', color: '#262626', marginLeft: 12 },
   placeRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
   placeIcon: {
     width: 40,

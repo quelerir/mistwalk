@@ -21,6 +21,7 @@ import CollectionScreen from './CollectionScreen';
 import { useRoute } from '../hooks/useRoute';
 import type { Poi } from '../lib/poi/types';
 import { useStats } from '../hooks/useStats';
+import { useCountryStats } from '../hooks/useCountryStats';
 
 type TabKey = 'map' | 'nearby' | 'collection' | 'menu';
 
@@ -90,6 +91,8 @@ export default function MainScreen({
 
   const stats = useStats(points, discovered, tab === 'collection');
 
+  const countryStats = useCountryStats(points, tab === 'collection');
+
   useEffect(() => {
     void getFogStyle(AsyncStorage).then(setFogStyleState);
   }, []);
@@ -144,7 +147,15 @@ export default function MainScreen({
             onSelect={handleSelect}
           />
         )}
-        {tab === 'collection' && <CollectionScreen stats={stats} discovered={discovered} />}
+        {tab === 'collection' && (
+          <CollectionScreen
+            stats={stats}
+            discovered={discovered}
+            countries={countryStats.countries}
+            countriesPending={countryStats.pending}
+            countriesFailed={countryStats.failed}
+          />
+        )}
         <DiscoveryCard place={greeting} onDismiss={dismissGreeting} />
       </View>
       <TabBar
