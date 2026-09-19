@@ -18,6 +18,7 @@ import { stopForegroundTracking } from '../services/locationTracker';
 import MapScreen from './MapScreen';
 import NearbyScreen from './NearbyScreen';
 import CollectionScreen from './CollectionScreen';
+import CountriesScreen from './CountriesScreen';
 import { useRoute } from '../hooks/useRoute';
 import type { Poi } from '../lib/poi/types';
 import { useStats } from '../hooks/useStats';
@@ -57,6 +58,7 @@ export default function MainScreen({
 }: MainScreenProps) {
   const [tab, setTab] = useState<Exclude<TabKey, 'menu'>>('map');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showCountries, setShowCountries] = useState(false);
   const [selected, setSelected] = useState<Poi | null>(null);
   const [routing, setRouting] = useState(false);
   const [view, setView] = useState<MapView | null>(null);
@@ -147,21 +149,34 @@ export default function MainScreen({
             onSelect={handleSelect}
           />
         )}
-        {tab === 'collection' && (
-          <CollectionScreen
-            stats={stats}
-            discovered={discovered}
-            countries={countryStats.countries}
-            countriesPending={countryStats.pending}
-            countriesFailed={countryStats.failed}
-          />
-        )}
+        {tab === 'collection' &&
+          (showCountries ? (
+            <CountriesScreen
+              countries={countryStats.countries}
+              pending={countryStats.pending}
+              failed={countryStats.failed}
+              onBack={() => setShowCountries(false)}
+            />
+          ) : (
+            <CollectionScreen
+              stats={stats}
+              discovered={discovered}
+              countries={countryStats.countries}
+              onOpenCountries={() => setShowCountries(true)}
+            />
+          ))}
         <DiscoveryCard place={greeting} onDismiss={dismissGreeting} />
       </View>
       <TabBar
         tabs={TABS}
         active={tab}
-        onChange={(key) => (key === 'menu' ? setMenuOpen(true) : setTab(key))}
+        onChange={(key) => {
+          if (key === 'menu') setMenuOpen(true);
+          else {
+            setTab(key);
+            if (key !== 'collection') setShowCountries(false);
+          }
+        }}
       />
       <AppMenu
         visible={menuOpen}

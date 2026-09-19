@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { formatPercent, type CountryStat } from '../lib/geo/countryStats';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import type { CountryStat } from '../lib/geo/countryStats';
 import { evaluateAchievements, type Stats } from '../lib/stats/achievements';
 import { KIND_ICON } from '../lib/poi/greeting';
 import type { DiscoveredPlace } from '../lib/poi/types';
@@ -9,8 +9,7 @@ export interface CollectionScreenProps {
   stats: Stats;
   discovered: DiscoveredPlace[];
   countries: CountryStat[];
-  countriesPending: boolean;
-  countriesFailed: boolean;
+  onOpenCountries: () => void;
 }
 
 function formatDate(ts: number): string {
@@ -21,11 +20,11 @@ export default function CollectionScreen({
   stats,
   discovered,
   countries,
-  countriesPending,
-  countriesFailed,
+  onOpenCountries,
 }: CollectionScreenProps) {
   const achievements = useMemo(() => evaluateAchievements(stats), [stats]);
   const unlockedCount = achievements.filter((a) => a.unlocked).length;
+  const visitedCountries = useMemo(() => countries.filter((c) => c.percent > 0).length, [countries]);
   const places = useMemo(
     () => [...discovered].sort((a, b) => b.discoveredAt - a.discoveredAt),
     [discovered]
@@ -49,24 +48,19 @@ export default function CollectionScreen({
         ))}
       </View>
 
-      <Text style={styles.sectionTitle}>Открыто по странам</Text>
-      {countries.map((country) => (
-        <View key={country.code} style={styles.countryRow}>
-          <Text style={styles.countryName} numberOfLines={1}>
-            {country.name}
+      <Pressable
+        style={({ pressed }) => [styles.countriesButton, pressed && styles.pressed]}
+        onPress={onOpenCountries}
+        accessibilityRole="button"
+      >
+        <View style={styles.countriesText}>
+          <Text style={styles.countriesTitle}>Страны</Text>
+          <Text style={styles.countriesSub}>
+            Открыто {visitedCountries} из {countries.length}
           </Text>
-          <Text style={styles.countryPercent}>{formatPercent(country.percent)}</Text>
         </View>
-      ))}
-      {countries.length === 0 && (
-        <Text style={styles.empty}>
-          {countriesPending
-            ? 'Определяем страну…'
-            : countriesFailed
-              ? 'Не удалось определить страну. Проверьте интернет.'
-              : 'Пока нечего показать. Пройдитесь по карте.'}
-        </Text>
-      )}
+        <Text style={styles.chevron}>›</Text>
+      </Pressable>
 
       <Text style={styles.sectionTitle}>
         Значки {unlockedCount}/{achievements.length}
@@ -129,9 +123,19 @@ const styles = StyleSheet.create({
   muted: { color: '#8e8e8e' },
   badgeDesc: { marginTop: 2, fontSize: 10, color: '#8e8e8e', textAlign: 'center' },
   empty: { color: '#8e8e8e' },
-  countryRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#dbdbdb' },
-  countryName: { flex: 1, fontSize: 16, fontWeight: '600', color: '#262626' },
-  countryPercent: { fontSize: 16, fontWeight: '700', color: '#262626', marginLeft: 12 },
+  countriesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f6f6f6',
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 10,
+  },
+  pressed: { opacity: 0.6 },
+  countriesText: { flex: 1 },
+  countriesTitle: { fontSize: 16, fontWeight: '700', color: '#262626' },
+  countriesSub: { marginTop: 2, color: '#8e8e8e' },
+  chevron: { fontSize: 28, color: '#8e8e8e', marginLeft: 8 },
   placeRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
   placeIcon: {
     width: 40,

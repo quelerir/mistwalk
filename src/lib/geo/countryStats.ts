@@ -1,4 +1,5 @@
 import { computeAreaKm2, type TimedPoint } from '../stats/coverage';
+import { COUNTRIES, COUNTRY_BY_CODE } from './countries';
 
 export interface CountryRef {
   code: string;
@@ -13,7 +14,6 @@ export interface CountryStat extends CountryRef {
 
 // Nominatim asks for at most one request per second and an identifying User-Agent.
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/reverse';
-const WORLD_BANK_URL = 'https://api.worldbank.org/v2/country';
 const CELL_DEGREES = 0.25;
 
 export function cellKey(lat: number, lng: number): string {
@@ -39,19 +39,6 @@ export async function fetchCountryAt(
   return code && name ? { code, name } : null;
 }
 
-// Total surface area (land plus inland water) in km² from the World Bank, or null if unknown.
-export async function fetchCountryAreaKm2(
-  code: string,
-  fetchImpl: typeof fetch = fetch
-): Promise<number | null> {
-  const url = `${WORLD_BANK_URL}/${code}/indicator/AG.SRF.TOTL.K2?format=json&mrv=1`;
-  const response = await fetchImpl(url);
-  if (!response.ok) throw new Error(`area lookup responded with ${response.status}`);
-  const json = (await response.json()) as [unknown, Array<{ value: number | null }>?];
-  const value = json[1]?.[0]?.value;
-  return typeof value === 'number' && value > 0 ? value : null;
-}
-
 export function groupPointsByCountry(
   points: TimedPoint[],
   cellCountries: Readonly<Record<string, CountryRef | null>>
@@ -67,19 +54,30 @@ export function groupPointsByCountry(
   return groups;
 }
 
-export function buildCountryStats(
+// Every country in the table with its explored share; visited ones first, then alphabetical.
+export function buildCountryList(
   points: TimedPoint[],
-  cellCountries: Readonly<Record<string, CountryRef | null>>,
-  areasKm2: Readonly<Record<string, number>>
+  cellCountries: Readonly<Record<string, CountryRef | null>>
 ): CountryStat[] {
-  const stats: CountryStat[] = [];
-  for (const { country, points: countryPoints } of groupPointsByCountry(points, cellCountries).values()) {
-    const totalKm2 = areasKm2[country.code];
-    if (!totalKm2) continue;
-    const exploredKm2 = computeAreaKm2(countryPoints);
-    stats.push({ ...country, exploredKm2, totalKm2, percent: (exploredKm2 / totalKm2) * 100 });
-  }
-  return stats.sort((a, b) => b.percent - a.percent);
+  const groups = groupPointsByCountry(points, cellCountries);
+  const list = COUNTRIES.map((country) => {
+    const group = groups.get(country.code);
+    const exploredKm2 = group ? computeAreaKm2(group.points) : 0;
+    return {
+      code: country.code,
+      name: country.name,
+      exploredKm2,
+      totalKm2: country.areaKm2,
+      percent: (exploredKm2 / country.areaKm2) * 100,
+    };
+  });
+  return list.sort((a, b) => b.percent - a.percent || a.name.localeCompare(b.name, 'ru'));
+}
+
+// Names come from our table so they are Russian and consistent with the list.
+export function toCountryRef(code: string, fallbackName: string): CountryRef {
+  const known = COUNTRY_BY_CODE[code];
+  return { code, name: known?.name ?? fallbackName };
 }
 
 export function formatPercent(percent: number): string {

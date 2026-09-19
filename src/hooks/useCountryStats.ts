@@ -1,21 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  buildCountryStats,
+  buildCountryList,
   cellKey,
-  fetchCountryAreaKm2,
   fetchCountryAt,
+  toCountryRef,
   type CountryRef,
   type CountryStat,
 } from '../lib/geo/countryStats';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
 
 const CELLS_KEY = 'geo.countryCells.v1';
-const AREAS_KEY = 'geo.countryAreas.v1';
 const GEOCODE_GAP_MS = 1100;
 
 type CellCountries = Record<string, CountryRef | null>;
-type CountryAreas = Record<string, number>;
 
 async function readJson<T>(key: string, fallback: T): Promise<T> {
   try {
@@ -30,20 +28,16 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function useCountryStats(points: VisitedPoint[], enabled: boolean) {
   const [cells, setCells] = useState<CellCountries>({});
-  const [areas, setAreas] = useState<CountryAreas>({});
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const running = useRef(false);
 
   useEffect(() => {
     if (!enabled || ready) return;
-    void Promise.all([readJson<CellCountries>(CELLS_KEY, {}), readJson<CountryAreas>(AREAS_KEY, {})]).then(
-      ([storedCells, storedAreas]) => {
-        setCells(storedCells);
-        setAreas(storedAreas);
-        setReady(true);
-      }
-    );
+    void readJson<CellCountries>(CELLS_KEY, {}).then((stored) => {
+      setCells(stored);
+      setReady(true);
+    });
   }, [enabled, ready]);
 
   // One representative point per not-yet-resolved 25 km cell.
@@ -57,41 +51,24 @@ export function useCountryStats(points: VisitedPoint[], enabled: boolean) {
     return [...seen.entries()];
   }, [points, cells, ready]);
 
-  const missingAreas = useMemo(() => {
-    const codes = new Set<string>();
-    for (const country of Object.values(cells)) {
-      if (country && !(country.code in areas)) codes.add(country.code);
-    }
-    return [...codes];
-  }, [cells, areas]);
-
-  const work = unresolved.map(([key]) => key).join(',') + '|' + missingAreas.join(',');
+  const work = unresolved.map(([key]) => key).join(',');
 
   useEffect(() => {
     if (!enabled || !ready || running.current) return;
-    if (unresolved.length === 0 && missingAreas.length === 0) return;
+    if (unresolved.length === 0) return;
     running.current = true;
     let cancelled = false;
 
     (async () => {
       const nextCells = { ...cells };
-      const nextAreas = { ...areas };
       try {
         for (const [key, at] of unresolved) {
           if (cancelled) return;
-          nextCells[key] = await fetchCountryAt(at.lat, at.lng);
+          const found = await fetchCountryAt(at.lat, at.lng);
+          nextCells[key] = found ? toCountryRef(found.code, found.name) : null;
           setCells({ ...nextCells });
           await AsyncStorage.setItem(CELLS_KEY, JSON.stringify(nextCells));
           await sleep(GEOCODE_GAP_MS);
-        }
-        for (const country of Object.values(nextCells)) {
-          if (cancelled) return;
-          if (!country || country.code in nextAreas) continue;
-          const area = await fetchCountryAreaKm2(country.code);
-          // Cache "unknown" as 0 so we don't ask again; buildCountryStats skips it.
-          nextAreas[country.code] = area ?? 0;
-          setAreas({ ...nextAreas });
-          await AsyncStorage.setItem(AREAS_KEY, JSON.stringify(nextAreas));
         }
         setFailed(false);
       } catch (err) {
@@ -111,10 +88,10 @@ export function useCountryStats(points: VisitedPoint[], enabled: boolean) {
   }, [enabled, ready, work]);
 
   const countries: CountryStat[] = useMemo(
-    () => (ready ? buildCountryStats(points, cells, areas) : []),
-    [points, cells, areas, ready]
+    () => (ready ? buildCountryList(points, cells) : []),
+    [points, cells, ready]
   );
 
-  const pending = enabled && (!ready || unresolved.length > 0 || missingAreas.length > 0) && !failed;
+  const pending = enabled && (!ready || unresolved.length > 0) && !failed;
   return { countries, pending, failed };
 }

@@ -1,7 +1,6 @@
 import {
-  buildCountryStats,
+  buildCountryList,
   cellKey,
-  fetchCountryAreaKm2,
   fetchCountryAt,
   formatPercent,
   groupPointsByCountry,
@@ -37,23 +36,7 @@ describe('fetchCountryAt', () => {
   });
 });
 
-describe('fetchCountryAreaKm2', () => {
-  it('reads the latest surface area value', async () => {
-    const fetchImpl = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => [{}, [{ value: 83879 }]],
-    });
-    expect(await fetchCountryAreaKm2('AT', fetchImpl as unknown as typeof fetch)).toBe(83879);
-    expect(fetchImpl.mock.calls[0][0]).toContain('/AT/indicator/AG.SRF.TOTL.K2');
-  });
-
-  it('returns null when the indicator has no value', async () => {
-    const fetchImpl = jest.fn().mockResolvedValue({ ok: true, json: async () => [{}, [{ value: null }]] });
-    expect(await fetchCountryAreaKm2('XX', fetchImpl as unknown as typeof fetch)).toBeNull();
-  });
-});
-
-describe('groupPointsByCountry / buildCountryStats', () => {
+describe('groupPointsByCountry / buildCountryList', () => {
   const vienna = point(48.2082, 16.3738);
   const ocean = point(0, 0);
   const cells = { [cellKey(vienna.lat, vienna.lng)]: AT, [cellKey(0, 0)]: null };
@@ -64,15 +47,14 @@ describe('groupPointsByCountry / buildCountryStats', () => {
     expect(groups.get('AT')?.points).toHaveLength(1);
   });
 
-  it('computes the explored share of the country area', () => {
-    const [stat] = buildCountryStats([vienna], cells, { AT: 83879 });
-    expect(stat.code).toBe('AT');
-    expect(stat.exploredKm2).toBeGreaterThan(0);
-    expect(stat.percent).toBeCloseTo((stat.exploredKm2 / 83879) * 100, 10);
-  });
-
-  it('skips countries whose area is unknown', () => {
-    expect(buildCountryStats([vienna], cells, {})).toEqual([]);
+  it('lists every country, visited ones first with their explored share', () => {
+    const list = buildCountryList([vienna], cells);
+    expect(list.length).toBeGreaterThan(200);
+    expect(list[0].code).toBe('AT');
+    expect(list[0].percent).toBeCloseTo((list[0].exploredKm2 / 83879) * 100, 10);
+    expect(list[0].percent).toBeGreaterThan(0);
+    expect(list[1].percent).toBe(0);
+    expect(list.filter((c) => c.percent > 0)).toHaveLength(1);
   });
 });
 
