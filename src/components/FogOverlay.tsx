@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
-import { BlurMask, Canvas, ColorMatrix, FractalNoise, Group, Paint, Path, Rect, Skia, useClock } from '@shopify/react-native-skia';
+import { BlurMask, Canvas, Circle, ColorMatrix, FractalNoise, Group, Paint, Path, Rect, Skia, useClock } from '@shopify/react-native-skia';
 import { useDerivedValue } from 'react-native-reanimated';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
 import type { FogPalette } from '../lib/settings/fogStyle';
@@ -20,6 +20,8 @@ export interface FogOverlayProps {
   animated?: boolean;
   // 0 = dry; above 0 falling drops are drawn over the map, more of them the stronger it is (max 1).
   rain?: number;
+  // Draw the "you are here" dot ourselves (Android; the native MapLibre one is left out there).
+  userDot?: boolean;
 }
 
 const REVEAL_RADIUS_METERS = 60;
@@ -235,8 +237,13 @@ function Rain({ size, rain, animated }: RainProps) {
   );
 }
 
-export default function FogOverlay({ points, livePosition, view, fog, animated = true, rain = 0 }: FogOverlayProps) {
+export default function FogOverlay({ points, livePosition, view, fog, animated = true, rain = 0, userDot = false }: FogOverlayProps) {
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
+
+  const dot = useMemo(
+    () => (view && livePosition && size.width > 0 ? projectToScreen(livePosition.lng, livePosition.lat, view, size) : null),
+    [view, livePosition, size]
+  );
 
   const trail = useMemo(() => buildTrail(points, livePosition), [points, livePosition]);
 
@@ -308,6 +315,13 @@ export default function FogOverlay({ points, livePosition, view, fog, animated =
           )}
         </Group>
         {rain > 0 && size.width > 0 && <Rain size={size} rain={rain} animated={animated} />}
+        {userDot && dot && (
+          <>
+            <Circle cx={dot.x} cy={dot.y} r={22} color="rgba(47, 143, 255, 0.18)" />
+            <Circle cx={dot.x} cy={dot.y} r={10} color="#FFFFFF" />
+            <Circle cx={dot.x} cy={dot.y} r={7} color="#2F8FFF" />
+          </>
+        )}
       </Canvas>
     </View>
   );

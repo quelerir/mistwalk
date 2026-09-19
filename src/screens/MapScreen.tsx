@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View, type NativeSyntheticEvent } from 'react-native';
+import { Pressable, StyleSheet, View, type NativeSyntheticEvent, Platform } from 'react-native';
 import {
   Camera,
   Map,
@@ -157,9 +157,9 @@ export default function MapScreen({
         onRegionDidChange={handleRegion}
       >
         <Camera ref={cameraRef} initialViewState={{ zoom: FOLLOW_ZOOM }} />
-        <UserLocation />
+        {Platform.OS !== 'android' && <UserLocation />}
       </Map>
-      <FogOverlay points={points} livePosition={livePosition} view={view} fog={fog} animated={fogAnimated} rain={rain} />
+      <FogOverlay points={points} livePosition={livePosition} view={view} fog={fog} animated={fogAnimated} rain={rain} userDot={Platform.OS === 'android'} />
       <RouteOverlay coordinates={progress?.coordinates ?? route?.coordinates ?? null} view={view} />
       <PoiMarkers
         pois={pois}
