@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
-import { BlurMask, Canvas, ColorMatrix, FractalNoise, Group, Paint, Path, Rect, Skia } from '@shopify/react-native-skia';
+import { BlurMask, Canvas, ColorMatrix, FractalNoise, Group, Paint, Path, Rect, Skia, useClock } from '@shopify/react-native-skia';
+import { useDerivedValue } from 'react-native-reanimated';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
 import type { FogPalette } from '../lib/settings/fogStyle';
 import { haversineDistanceMeters } from '../lib/geo/distance';
@@ -16,6 +17,7 @@ export interface FogOverlayProps {
   livePosition: LivePosition | null;
   view: MapView | null;
   fog: FogPalette;
+  animated?: boolean;
 }
 
 const REVEAL_RADIUS_METERS = 60;
@@ -78,53 +80,79 @@ interface FogCloudsProps {
   view: MapView | null;
   size: Size;
   fog: FogPalette;
+  animated: boolean;
 }
 
-// Clouds are laid out in map space around a fixed origin, so they pan, zoom and rotate with the map.
-function FogClouds({ view, size, fog }: FogCloudsProps) {
-  const origin = useRef<[number, number] | null>(null);
-  if (!view) return null;
-  if (!origin.current) origin.current = [view.center[0], view.center[1]];
+// Each cloud layer sways on its own slow loop (different axes and periods), so the billows slide past
+// each other and the fog seems to churn. Bounded, so no wrap-around jump and no growing offsets.
+const DRIFT_AMPLITUDE = 45;
+const TAU = Math.PI * 2;
 
-  let at = projectToScreen(origin.current[0], origin.current[1], view, size);
-  if (Math.abs(at.x) > CLOUD_MAX_OFFSET_PX || Math.abs(at.y) > CLOUD_MAX_OFFSET_PX) {
-    // Far from the origin (first real fix or a long trip): re-anchor to keep float precision.
-    origin.current = [view.center[0], view.center[1]];
+// Clouds are laid out in map space around a fixed origin, so they pan, zoom and rotate with the map.
+function FogClouds({ view, size, fog, animated }: FogCloudsProps) {
+  const origin = useRef<[number, number] | null>(null);
+  const clock = useClock();
+
+  let at = { x: 0, y: 0 };
+  let scale = 1;
+  let rotation = 0;
+  let extent = 0;
+  if (view) {
+    if (!origin.current) origin.current = [view.center[0], view.center[1]];
     at = projectToScreen(origin.current[0], origin.current[1], view, size);
+    if (Math.abs(at.x) > CLOUD_MAX_OFFSET_PX || Math.abs(at.y) > CLOUD_MAX_OFFSET_PX) {
+      // Far from the origin (first real fix or a long trip): re-anchor to keep float precision.
+      origin.current = [view.center[0], view.center[1]];
+      at = projectToScreen(origin.current[0], origin.current[1], view, size);
+    }
+    scale = Math.min(CLOUD_MAX_SCALE, Math.max(CLOUD_MIN_SCALE, 2 ** (view.zoom - CLOUD_REFERENCE_ZOOM)));
+    rotation = (-view.bearing * Math.PI) / 180;
+    // The cloud rect is centred on the anchor, so it must reach the farthest screen corner (plus the sway).
+    const reach = Math.hypot(
+      Math.max(Math.abs(at.x), Math.abs(at.x - size.width)),
+      Math.max(Math.abs(at.y), Math.abs(at.y - size.height))
+    );
+    extent = reach / scale + DRIFT_AMPLITUDE * 1.5;
   }
-  const scale = Math.min(
-    CLOUD_MAX_SCALE,
-    Math.max(CLOUD_MIN_SCALE, 2 ** (view.zoom - CLOUD_REFERENCE_ZOOM))
-  );
-  // The cloud rect is centred on the anchor, so it must reach the farthest screen corner.
-  const reach = Math.hypot(
-    Math.max(Math.abs(at.x), Math.abs(at.x - size.width)),
-    Math.max(Math.abs(at.y), Math.abs(at.y - size.height))
-  );
-  const extent = reach / scale;
-  const mapTransform = [
-    { translateX: at.x },
-    { translateY: at.y },
-    { rotate: (-view.bearing * Math.PI) / 180 },
-    { scale },
-  ];
+  const { x: atX, y: atY } = at;
+
+  const mapTransform = (layer: 'a' | 'b') => {
+    'worklet';
+    const t = animated ? clock.value / 1000 : 0;
+    const dx = layer === 'a' ? Math.sin((t / 23) * TAU) : -Math.cos((t / 17) * TAU);
+    const dy = layer === 'a' ? Math.cos((t / 31) * TAU) * 0.7 : Math.sin((t / 29) * TAU);
+    return [
+      { translateX: atX },
+      { translateY: atY },
+      { rotate: rotation },
+      { scale },
+      { translateX: dx * DRIFT_AMPLITUDE },
+      { translateY: dy * DRIFT_AMPLITUDE },
+    ];
+  };
+  const layerA = useDerivedValue(() => mapTransform('a'), [atX, atY, rotation, scale, animated]);
+  const layerB = useDerivedValue(() => mapTransform('b'), [atX, atY, rotation, scale, animated]);
+
+  if (!view) return null;
 
   return (
     <>
       <Group transform={[{ translateX: CLOUD_SHADOW_OFFSET.x }, { translateY: CLOUD_SHADOW_OFFSET.y }]}>
-        <Group transform={mapTransform}>
+        <Group transform={layerA}>
           <CloudLayer extent={extent} color={fog.shadow} freq={0.006} seed={3} gain={3.2} />
         </Group>
       </Group>
-      <Group transform={mapTransform}>
+      <Group transform={layerA}>
         <CloudLayer extent={extent} color={fog.light} freq={0.006} seed={3} gain={3.2} />
+      </Group>
+      <Group transform={layerB}>
         <CloudLayer extent={extent} color={fog.light} freq={0.02} seed={11} gain={1.6} />
       </Group>
     </>
   );
 }
 
-export default function FogOverlay({ points, livePosition, view, fog }: FogOverlayProps) {
+export default function FogOverlay({ points, livePosition, view, fog, animated = true }: FogOverlayProps) {
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
 
   const trail = useMemo(() => buildTrail(points, livePosition), [points, livePosition]);
@@ -181,7 +209,7 @@ export default function FogOverlay({ points, livePosition, view, fog }: FogOverl
       <Canvas style={StyleSheet.absoluteFill}>
         <Group layer={<Paint />}>
           <Rect x={0} y={0} width={size.width} height={size.height} color={fog.base} />
-          <FogClouds view={view} size={size} fog={fog} />
+          <FogClouds view={view} size={size} fog={fog} animated={animated} />
           {revealPath && (
             <Path
               path={revealPath}

@@ -46,3 +46,16 @@ export async function setFogStyle(
 ): Promise<void> {
   await storage.setItem(STORAGE_KEY, style);
 }
+
+const ANIMATED_KEY = 'settings.fogAnimated.v1';
+
+export async function getFogAnimated(storage: Pick<KeyValueStorage, 'getItem'>): Promise<boolean> {
+  return (await storage.getItem(ANIMATED_KEY)) !== 'off';
+}
+
+export async function setFogAnimated(
+  storage: Pick<KeyValueStorage, 'setItem'>,
+  animated: boolean
+): Promise<void> {
+  await storage.setItem(ANIMATED_KEY, animated ? 'on' : 'off');
+}

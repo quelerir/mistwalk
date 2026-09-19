@@ -13,7 +13,7 @@ import type { LivePosition } from '../components/FogOverlay';
 import { usePlaces } from '../hooks/usePlaces';
 import type { MapView } from '../lib/geo/projection';
 import { performSignOut } from '../lib/session/signOutFlow';
-import { FOG_PALETTES, getFogStyle, setFogStyle, type FogStyle } from '../lib/settings/fogStyle';
+import { FOG_PALETTES, getFogAnimated, getFogStyle, setFogAnimated, setFogStyle, type FogStyle } from '../lib/settings/fogStyle';
 import { signOut, signOutLocal } from '../lib/supabase/auth';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
 import { stopBackgroundTracking } from '../services/backgroundLocationTask';
@@ -82,6 +82,7 @@ export default function MainScreen({
   const [routing, setRouting] = useState(false);
   const [view, setView] = useState<MapView | null>(null);
   const [fogStyle, setFogStyleState] = useState<FogStyle>('ink');
+  const [fogAnimated, setFogAnimatedState] = useState(true);
   const { pois, discovered, discoveredIds, greeting, dismissGreeting } = usePlaces({
     client,
     userId,
@@ -184,11 +185,17 @@ export default function MainScreen({
 
   useEffect(() => {
     void getFogStyle(AsyncStorage).then(setFogStyleState);
+    void getFogAnimated(AsyncStorage).then(setFogAnimatedState);
   }, []);
 
   function handleFogStyleChange(style: FogStyle) {
     setFogStyleState(style);
     void setFogStyle(AsyncStorage, style);
+  }
+
+  function handleFogAnimatedChange(next: boolean) {
+    setFogAnimatedState(next);
+    void setFogAnimated(AsyncStorage, next);
   }
 
   function handleSignOut() {
@@ -215,6 +222,7 @@ export default function MainScreen({
             pois={pois}
             discoveredIds={discoveredIds}
             fog={FOG_PALETTES[fogStyle]}
+            fogAnimated={fogAnimated}
             view={view}
             onViewChange={setView}
             route={route}
@@ -310,6 +318,8 @@ export default function MainScreen({
         onClose={() => setMenuOpen(false)}
         fogStyle={fogStyle}
         onFogStyleChange={handleFogStyleChange}
+        fogAnimated={fogAnimated}
+        onFogAnimatedChange={handleFogAnimatedChange}
         backgroundEnabled={backgroundEnabled}
         onEnableBackground={onEnableBackground}
         onSignOut={handleSignOut}

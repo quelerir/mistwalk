@@ -17,6 +17,8 @@ export interface AppMenuProps {
   onClose: () => void;
   fogStyle: FogStyle;
   onFogStyleChange: (style: FogStyle) => void;
+  fogAnimated: boolean;
+  onFogAnimatedChange: (next: boolean) => void;
   backgroundEnabled: boolean;
   onEnableBackground: () => Promise<boolean>;
   onSignOut: () => Promise<void>;
@@ -34,6 +36,8 @@ export default function AppMenu({
   onClose,
   fogStyle,
   onFogStyleChange,
+  fogAnimated,
+  onFogAnimatedChange,
   backgroundEnabled,
   onEnableBackground,
   onSignOut,
@@ -130,6 +134,13 @@ export default function AppMenu({
       label: 'Стиль тумана',
       value: FOG_STYLE_LABELS[fogStyle],
       onPress: () => onFogStyleChange(nextFogStyle(fogStyle)),
+    },
+    {
+      key: 'fogAnimation',
+      icon: 'cloud',
+      label: 'Анимация тумана',
+      value: fogAnimated ? 'Включена' : 'Выключена',
+      onPress: () => onFogAnimatedChange(!fogAnimated),
     },
     {
       key: 'accuracy',
