@@ -1,7 +1,6 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ANDROID_SAFE_MODE } from '../lib/androidSafeMode';
 import { routeBackgroundLocations } from '../lib/location/routeBackgroundLocations';
 import { notifyIfNearby } from './placeNotifier';
 
@@ -86,7 +85,6 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
 });
 
 export async function startBackgroundTracking(distanceIntervalMeters: number): Promise<void> {
-  if (ANDROID_SAFE_MODE) return;
   const alreadyStarted = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
   if (alreadyStarted) return;
 

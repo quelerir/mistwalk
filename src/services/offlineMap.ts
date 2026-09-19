@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { OfflineManager, type OfflinePack } from '@maplibre/maplibre-react-native';
-import { ANDROID_SAFE_MODE } from '../lib/androidSafeMode';
 import type { Coordinate } from '../lib/geo/distance';
 import { areaBounds, shouldRefreshArea, MAX_ZOOM, MIN_ZOOM, type AreaPack } from '../lib/map/offlineArea';
 import { getOfflineMap } from '../lib/settings/offlineMap';
@@ -23,7 +22,7 @@ function areaOf(pack: OfflinePack): AreaPack | null {
 // Keeps the map of the area around you on the phone. Called with your position while the app is open; it
 // decides by itself whether a download is due (see shouldRefreshArea) and replaces the old area when done.
 export async function ensureOfflineArea(position: Coordinate, styleUrl: string, now: number = Date.now()): Promise<void> {
-  if (ANDROID_SAFE_MODE || downloading || now - lastCheck < CHECK_THROTTLE_MS) return;
+  if (downloading || now - lastCheck < CHECK_THROTTLE_MS) return;
   lastCheck = now;
   try {
     if (!(await getOfflineMap(AsyncStorage))) return;
