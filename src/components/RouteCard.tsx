@@ -64,7 +64,7 @@ const makeStyles = (c: Colors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: c.card,
-    borderRadius: 14,
+    borderRadius: 24,
     padding: 12,
     shadowColor: '#000',
     shadowOpacity: 0.2,

@@ -11,6 +11,8 @@ export interface MenuItem {
   icon: IconName;
   label: string;
   value?: string;
+  // A switch instead of a value: on/off settings.
+  on?: boolean;
   destructive?: boolean;
   onPress: () => void;
 }
@@ -40,17 +42,24 @@ export default function MenuSheet({ visible, items, header, onClose }: MenuSheet
               key={item.key}
               style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
               onPress={item.onPress}
-              accessibilityRole="button"
+              accessibilityRole={item.on !== undefined ? 'switch' : 'button'}
+              accessibilityState={item.on !== undefined ? { checked: item.on } : undefined}
               accessibilityLabel={item.label}
             >
               <View style={styles.icon}>
-                <SvgIcon name={item.icon} size={26} color={color} background={c.sheetBg} />
+                <SvgIcon name={item.icon} size={20} color={item.destructive ? c.danger : c.accent} background={c.surfaceAlt} />
               </View>
               <View style={[styles.labelWrap, index < items.length - 1 && styles.separator]}>
                 <Text style={[styles.label, { color }]} numberOfLines={1}>
                   {item.label}
                 </Text>
-                {item.value ? <Text style={styles.value}>{item.value}</Text> : null}
+                {item.on !== undefined ? (
+                  <View style={[styles.track, item.on && styles.trackOn]}>
+                    <View style={[styles.knob, item.on && styles.knobOn]} />
+                  </View>
+                ) : item.value ? (
+                  <Text style={styles.value}>{item.value}</Text>
+                ) : null}
               </View>
             </Pressable>
           );
@@ -65,6 +74,8 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   sheet: {
     backgroundColor: c.sheetBg,
     paddingTop: 10,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
   },
   handle: {
     alignSelf: 'center',
@@ -76,7 +87,7 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   },
   row: { flexDirection: 'row', alignItems: 'center', paddingLeft: 18, minHeight: 60 },
   rowPressed: { backgroundColor: c.surfaceAlt },
-  icon: { width: 30, alignItems: 'center', marginRight: 16 },
+  icon: { width: 40, height: 40, borderRadius: 20, backgroundColor: c.surfaceAlt, alignItems: 'center', justifyContent: 'center', marginRight: 14 },
   labelWrap: {
     flex: 1,
     minHeight: 60,
@@ -86,6 +97,10 @@ const makeStyles = (c: Colors) => StyleSheet.create({
     paddingRight: 18,
   },
   separator: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
-  label: { fontSize: 17, flexShrink: 1 },
+  label: { fontSize: 17, fontWeight: '600', flexShrink: 1 },
   value: { fontSize: 15, color: c.textMuted, marginLeft: 12 },
+  track: { width: 48, height: 28, borderRadius: 14, backgroundColor: c.surfaceAlt, borderWidth: StyleSheet.hairlineWidth, borderColor: c.borderStrong, justifyContent: 'center', paddingHorizontal: 2 },
+  trackOn: { backgroundColor: c.accent, borderColor: c.accent },
+  knob: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#FFFFFF', alignSelf: 'flex-start', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 2, shadowOffset: { width: 0, height: 1 } },
+  knobOn: { alignSelf: 'flex-end' },
 });

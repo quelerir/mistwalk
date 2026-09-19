@@ -147,7 +147,7 @@ export default function AppMenu({
       key: 'fogAnimation',
       icon: 'cloud',
       label: 'Анимация тумана',
-      value: fogAnimated ? 'Включена' : 'Выключена',
+      on: fogAnimated,
       onPress: () => onFogAnimatedChange(!fogAnimated),
     },
     {
@@ -170,14 +170,14 @@ export default function AppMenu({
       key: 'placeNotifications',
       icon: 'bell',
       label: 'Уведомления о местах',
-      value: placeNotifications ? 'Включены' : 'Выключены',
+      on: placeNotifications,
       onPress: () => void onPlaceNotificationsChange(!placeNotifications),
     },
     {
       key: 'weeklySummary',
       icon: 'award',
       label: 'Итоги недели',
-      value: weeklySummary ? 'Включены' : 'Выключены',
+      on: weeklySummary,
       onPress: () => void onWeeklySummaryChange(!weeklySummary),
     },
   ];
