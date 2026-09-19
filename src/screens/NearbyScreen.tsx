@@ -3,6 +3,7 @@ import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import { KIND_LABEL } from '../lib/poi/greeting';
 import { buildNearbyList, kindCounts, type NearbySort } from '../lib/poi/nearbyList';
 import KindIcon from '../components/KindIcon';
+import SvgIcon from '../components/icons/SvgIcon';
 import type { Poi, PoiKind } from '../lib/poi/types';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
@@ -17,16 +18,7 @@ export interface NearbyScreenProps {
 const MAX_LISTED = 30;
 const NEARBY_RADIUS_METERS = 1000;
 
-const KIND_CHIP: Record<PoiKind, string> = {
-  monument: 'Памятники',
-  castle: 'Замки',
-  ruins: 'Руины',
-  viewpoint: 'Смотровые',
-  attraction: 'Места',
-  artwork: 'Арт-объекты',
-};
-
-const SORT_LABEL: Record<NearbySort, string> = { distance: 'Ближние', name: 'По названию' };
+const SORT_HINT: Record<NearbySort, string> = { distance: 'Сортировка: ближние', name: 'Сортировка: по названию' };
 
 function formatDistance(meters: number): string {
   return meters < 1000 ? `${Math.round(meters / 10) * 10} м` : `${(meters / 1000).toFixed(1)} км`;
@@ -34,15 +26,30 @@ function formatDistance(meters: number): string {
 
 type ScreenStyles = ReturnType<typeof makeStyles>;
 
-function Chip({ label, active, onPress, styles }: { label: string; active: boolean; onPress: () => void; styles: ScreenStyles }) {
+interface FilterButtonProps {
+  label: string;
+  count: number;
+  active: boolean;
+  onPress: () => void;
+  styles: ScreenStyles;
+  children: (color: string) => React.ReactNode;
+}
+
+// A round icon with the number of places in the corner; the chosen one is filled.
+function FilterButton({ label, count, active, onPress, styles, children }: FilterButtonProps) {
+  const { colors: c } = useTheme();
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.chip, active && styles.chipActive]}
+      style={[styles.filter, active && styles.filterActive]}
       accessibilityRole="button"
+      accessibilityLabel={`${label}, ${count}`}
       accessibilityState={{ selected: active }}
     >
-      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+      {children(active ? c.bg : c.text)}
+      <View style={styles.count}>
+        <Text style={styles.countText}>{count}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -79,10 +86,10 @@ export default function NearbyScreen({ pois, discoveredIds, origin, onSelect }: 
           <Pressable
             onPress={() => setSort(sort === 'distance' ? 'name' : 'distance')}
             accessibilityRole="button"
-            accessibilityLabel="Сменить сортировку"
-            hitSlop={8}
+            accessibilityLabel={SORT_HINT[sort]}
+            hitSlop={10}
           >
-            <Text style={styles.sort}>{SORT_LABEL[sort]}</Text>
+            <SvgIcon name={sort === 'distance' ? 'sort-distance' : 'sort-name'} size={24} color={c.text} />
           </Pressable>
         )}
       </View>
@@ -90,18 +97,23 @@ export default function NearbyScreen({ pois, discoveredIds, origin, onSelect }: 
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={styles.chipsScroll}
-          contentContainerStyle={styles.chips}
+          style={styles.filtersScroll}
+          contentContainerStyle={styles.filters}
         >
-          <Chip label={`Все ${total}`} active={activeKind === 'all'} onPress={() => setKind('all')} styles={styles} />
+          <FilterButton label="Все" count={total} active={activeKind === 'all'} onPress={() => setKind('all')} styles={styles}>
+            {(color) => <SvgIcon name="grid" size={22} color={color} />}
+          </FilterButton>
           {counts.map((k) => (
-            <Chip
+            <FilterButton
               key={k.kind}
-              label={`${KIND_CHIP[k.kind]} ${k.count}`}
+              label={KIND_LABEL[k.kind]}
+              count={k.count}
               active={activeKind === k.kind}
               onPress={() => setKind(k.kind)}
               styles={styles}
-            />
+            >
+              {(color) => <KindIcon kind={k.kind} size={22} color={color} />}
+            </FilterButton>
           ))}
         </ScrollView>
       )}
@@ -144,13 +156,25 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   title: { fontSize: 24, fontWeight: '800', color: c.text },
   subtitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2, marginBottom: 10 },
   subtitle: { color: c.textMuted, flexShrink: 1 },
-  sort: { color: c.link, fontWeight: '600', marginLeft: 12 },
-  chipsScroll: { flexGrow: 0, marginBottom: 6 },
-  chips: { gap: 8, paddingRight: 8 },
-  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, backgroundColor: c.surfaceAlt },
-  chipActive: { backgroundColor: c.text },
-  chipText: { color: c.text, fontWeight: '600' },
-  chipTextActive: { color: c.bg },
+  filtersScroll: { flexGrow: 0, marginBottom: 8, overflow: 'visible' },
+  filters: { gap: 12, paddingTop: 8, paddingRight: 12, paddingBottom: 4 },
+  filter: { width: 44, height: 44, borderRadius: 22, backgroundColor: c.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
+  filterActive: { backgroundColor: c.text },
+  count: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    backgroundColor: c.bg,
+    borderWidth: 1,
+    borderColor: c.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countText: { fontSize: 11, fontWeight: '700', color: c.text },
   empty: { marginTop: 32, textAlign: 'center', color: c.textMuted },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
   iconBadge: {

@@ -8,6 +8,9 @@ export type IconName =
   | 'cloud'
   | 'moon'
   | 'bell'
+  | 'sort-distance'
+  | 'sort-name'
+  | 'grid'
   | 'logout'
   | 'navigate'
   | 'settings'
@@ -99,6 +102,20 @@ export const ICONS: Record<IconName, { outline: IconLayer[]; active: IconLayer[]
   menu: line('M4 6h16M4 12h16M4 18h16'),
   cloud: line('M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9z'),
   moon: line('M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z'),
+  // Bars that grow with distance, and А–Я letters, both with a "down" arrow.
+  'sort-distance': shapes([
+    { d: 'M3 6h5M3 12h9M3 18h13', mode: 'stroke' },
+    { d: 'M20 5v14M16.5 15.5L20 19l3.5-3.5', mode: 'stroke' },
+  ]),
+  'sort-name': shapes([
+    { d: 'M3 10l3.5-8L10 10M4.6 7h3.8', mode: 'stroke' },
+    { d: 'M3 14h7l-7 8h7', mode: 'stroke' },
+    { d: 'M20 5v14M16.5 15.5L20 19l3.5-3.5', mode: 'stroke' },
+  ]),
+  // Four squares: "all kinds".
+  grid: shapes([
+    { d: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z', mode: 'stroke' },
+  ]),
   bell: line('M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0'),
   'poi-viewpoint': shapes([
     { d: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z', mode: 'stroke' },
