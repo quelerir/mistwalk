@@ -62,8 +62,6 @@ const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
   sheet: {
     backgroundColor: SHEET_BG,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
     paddingTop: 10,
   },
   handle: {
