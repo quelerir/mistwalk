@@ -82,7 +82,7 @@ export default function PoiMarkers({
               accessibilityRole="button"
               accessibilityLabel="Тайное место"
             >
-              <KindIcon kind={poi.kind} size={18} color="#f3f4f6" />
+              <KindIcon kind={poi.kind} size={18} color="#4b5563" />
             </Pressable>
           </View>
         )
@@ -97,11 +97,9 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: 'rgba(120, 128, 142, 0.6)',
+    backgroundColor: 'rgba(205, 210, 220, 0.55)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.35)',
     shadowColor: '#000000',
     shadowOpacity: 0.25,
     shadowRadius: 5,
