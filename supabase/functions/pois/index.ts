@@ -58,16 +58,17 @@ async function fetchOverpass(query: string) {
     try {
       const response = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "FogOfWarMap/0.1 (edge function)" },
+        headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "FogOfWarMap/0.1 (+https://github.com/quelerir/fog-of-war-map)" },
         body: "data=" + encodeURIComponent(query),
         signal: AbortSignal.timeout(MIRROR_TIMEOUT_MS),
       });
-      if (response.ok) return await response.json();
+      if (response.ok) { console.log("overpass ok: " + url); return await response.json(); }
       errors += url + " responded " + response.status + "; ";
     } catch (err) {
       errors += url + " failed " + String(err) + "; ";
     }
   }
+  console.log("overpass failed: " + errors);
   throw new Error(errors);
 }
 
