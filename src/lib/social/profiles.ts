@@ -12,11 +12,13 @@ export interface ProfileSnapshot {
 export interface MyProfile {
   displayName: string;
   isPublic: boolean;
+  avatarPath: string | null;
 }
 
 export interface LeaderboardEntry {
   userId: string;
   displayName: string;
+  avatarPath: string | null;
   foundCount: number;
   rank: number;
 }
@@ -24,6 +26,7 @@ export interface LeaderboardEntry {
 export interface PlayerProfile extends ProfileSnapshot {
   userId: string;
   displayName: string;
+  avatarPath: string | null;
   foundCount: number;
   places: Array<{ name: string; kind: PoiKind; discoveredAt: number }>;
 }
@@ -57,11 +60,13 @@ export function buildSnapshot(
 export async function fetchMyProfile(client: SupabaseClient, userId: string): Promise<MyProfile | null> {
   const { data, error } = await client
     .from('player_profiles')
-    .select('display_name, is_public')
+    .select('display_name, is_public, avatar_path')
     .eq('user_id', userId)
     .maybeSingle();
   if (error) throw error;
-  return data ? { displayName: data.display_name, isPublic: data.is_public } : null;
+  return data
+    ? { displayName: data.display_name, isPublic: data.is_public, avatarPath: data.avatar_path ?? null }
+    : null;
 }
 
 export async function saveMyProfile(
@@ -103,6 +108,7 @@ export async function setProfileVisibility(
 interface LeaderboardRow {
   user_id: string;
   display_name: string;
+  avatar_path: string | null;
   found_count: number | string;
   rank: number | string;
 }
@@ -113,6 +119,7 @@ export async function fetchLeaderboard(client: SupabaseClient): Promise<Leaderbo
   return ((data ?? []) as LeaderboardRow[]).map((row) => ({
     userId: row.user_id,
     displayName: row.display_name,
+    avatarPath: row.avatar_path ?? null,
     foundCount: Number(row.found_count),
     rank: Number(row.rank),
   }));
@@ -121,6 +128,7 @@ export async function fetchLeaderboard(client: SupabaseClient): Promise<Leaderbo
 interface PlayerRow {
   user_id: string;
   display_name: string;
+  avatar_path?: string | null;
   distance_km: number;
   found_count: number | string;
   countries: Array<{ code: string; name: string; percent: number }>;
@@ -139,6 +147,7 @@ export async function fetchPlayerProfile(
   return {
     userId: row.user_id,
     displayName: row.display_name,
+    avatarPath: row.avatar_path ?? null,
     distanceKm: row.distance_km,
     foundCount: Number(row.found_count),
     countries: row.countries ?? [],
@@ -163,7 +172,11 @@ export async function createDefaultProfile(
 ): Promise<MyProfile> {
   const compact = userId.replace(/-/g, '');
   for (const length of [6, 10, 16]) {
-    const profile: MyProfile = { displayName: `Игрок ${compact.slice(0, length)}`, isPublic: true };
+    const profile: MyProfile = {
+      displayName: `Игрок ${compact.slice(0, length)}`,
+      isPublic: true,
+      avatarPath: null,
+    };
     try {
       await saveMyProfile(client, userId, profile, snapshot);
       return profile;
@@ -172,4 +185,38 @@ export async function createDefaultProfile(
     }
   }
   throw new Error('could not pick a display name');
+}
+
+const AVATAR_BUCKET = 'avatars';
+
+export function avatarUrl(client: SupabaseClient, path: string | null): string | null {
+  return path ? client.storage.from(AVATAR_BUCKET).getPublicUrl(path).data.publicUrl : null;
+}
+
+// Uploads a new avatar under the user's own folder, points the profile at it and removes the old file.
+export async function uploadAvatar(
+  client: SupabaseClient,
+  userId: string,
+  body: ArrayBuffer,
+  previousPath: string | null
+): Promise<string> {
+  const path = `${userId}/avatar-${Date.now()}.jpg`;
+  const { error } = await client.storage.from(AVATAR_BUCKET).upload(path, body, {
+    contentType: 'image/jpeg',
+    upsert: false,
+  });
+  if (error) throw error;
+  await setAvatarPath(client, userId, path);
+  if (previousPath) await client.storage.from(AVATAR_BUCKET).remove([previousPath]).catch(() => undefined);
+  return path;
+}
+
+export async function setAvatarPath(client: SupabaseClient, userId: string, path: string | null): Promise<void> {
+  const { error } = await client.from('player_profiles').update({ avatar_path: path }).eq('user_id', userId);
+  if (error) throw error;
+}
+
+export async function removeAvatar(client: SupabaseClient, userId: string, path: string): Promise<void> {
+  await setAvatarPath(client, userId, null);
+  await client.storage.from(AVATAR_BUCKET).remove([path]).catch(() => undefined);
 }

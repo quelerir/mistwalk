@@ -18,10 +18,11 @@ export interface MenuItem {
 export interface MenuSheetProps {
   visible: boolean;
   items: MenuItem[];
+  header?: React.ReactNode;
   onClose: () => void;
 }
 
-export default function MenuSheet({ visible, items, onClose }: MenuSheetProps) {
+export default function MenuSheet({ visible, items, header, onClose }: MenuSheetProps) {
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   const insets = useSafeAreaInsets();
@@ -31,6 +32,7 @@ export default function MenuSheet({ visible, items, onClose }: MenuSheetProps) {
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Закрыть меню" />
       <View style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}>
         <View style={styles.handle} />
+        {header}
         {items.map((item, index) => {
           const color = item.destructive ? c.danger : c.text;
           return (

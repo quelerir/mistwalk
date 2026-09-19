@@ -4,7 +4,9 @@ import {
   createDefaultProfile,
   fetchMyProfile,
   saveMyProfile,
+  removeAvatar,
   setProfileVisibility,
+  uploadAvatar,
   type MyProfile,
   type ProfileSnapshot,
 } from '../lib/social/profiles';
@@ -56,5 +58,19 @@ export function useProfileSync(client: SupabaseClient, userId: string, snapshot:
     [client, userId]
   );
 
-  return { profile, setVisible };
+  const setAvatar = useCallback(
+    async (body: ArrayBuffer) => {
+      const path = await uploadAvatar(client, userId, body, profile?.avatarPath ?? null);
+      setProfile((current) => (current ? { ...current, avatarPath: path } : current));
+    },
+    [client, userId, profile?.avatarPath]
+  );
+
+  const clearAvatar = useCallback(async () => {
+    if (!profile?.avatarPath) return;
+    await removeAvatar(client, userId, profile.avatarPath);
+    setProfile((current) => (current ? { ...current, avatarPath: null } : current));
+  }, [client, userId, profile?.avatarPath]);
+
+  return { profile, setVisible, setAvatar, clearAvatar };
 }

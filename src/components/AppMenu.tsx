@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Text, View } from 'react-native';
+import Avatar from './Avatar';
 import MenuSheet, { type MenuItem } from './MenuSheet';
 import { useTheme } from '../theme/ThemeProvider';
 import { nextThemePreference, THEME_LABELS } from '../theme/palettes';
@@ -21,6 +23,10 @@ export interface AppMenuProps {
   email: string;
   leaderboardVisible: boolean | null;
   onLeaderboardVisibleChange: (next: boolean) => Promise<void>;
+  avatarUri: string | null;
+  displayName: string;
+  onChangeAvatar: () => Promise<string | null>;
+  onRemoveAvatar: () => Promise<void>;
 }
 
 export default function AppMenu({
@@ -34,14 +40,15 @@ export default function AppMenu({
   email,
   leaderboardVisible,
   onLeaderboardVisibleChange,
+  avatarUri,
+  displayName,
+  onChangeAvatar,
+  onRemoveAvatar,
 }: AppMenuProps) {
   const [accuracy, setAccuracy] = useState<AccuracyProfile>('battery-saver');
-  const { preference, setPreference } = useTheme();
+  const { preference, setPreference, colors: c } = useTheme();
+  const [note, setNote] = useState<string | null>(null);
   const [page, setPage] = useState<'main' | 'settings' | 'account'>('main');
-
-  useEffect(() => {
-    if (!visible) setPage('main');
-  }, [visible]);
 
   useEffect(() => {
     void getAccuracyProfile(AsyncStorage).then(setAccuracy);
@@ -54,6 +61,7 @@ export default function AppMenu({
 
   function closeThen(action: () => void) {
     return () => {
+      setPage('main');
       onClose();
       action();
     };
@@ -67,6 +75,28 @@ export default function AppMenu({
   const accountItems: MenuItem[] = [
     { key: 'back', icon: 'back', label: 'Назад', onPress: () => setPage('main') },
     { key: 'email', icon: 'user', label: email || 'Без почты', onPress: () => {} },
+    {
+      key: 'photo',
+      icon: 'user',
+      label: avatarUri ? 'Изменить фото' : 'Добавить фото',
+      onPress: () => {
+        setNote(null);
+        void onChangeAvatar().then((message) => setNote(message));
+      },
+    },
+    ...(avatarUri
+      ? [
+          {
+            key: 'photo-remove',
+            icon: 'logout' as const,
+            label: 'Удалить фото',
+            onPress: () => {
+              setNote(null);
+              void onRemoveAvatar().catch(() => setNote('Не удалось удалить фото'));
+            },
+          },
+        ]
+      : []),
     {
       key: 'visibility',
       icon: 'award',
@@ -121,5 +151,20 @@ export default function AppMenu({
 
   const items = page === 'main' ? mainItems : page === 'settings' ? settingsItems : accountItems;
 
-  return <MenuSheet visible={visible} items={items} onClose={onClose} />;
+  const header =
+    page === 'account' ? (
+      <View style={{ alignItems: 'center', paddingVertical: 14 }}>
+        <Avatar uri={avatarUri} name={displayName} size={88} />
+        <Text style={{ color: c.text, fontWeight: '700', fontSize: 17, marginTop: 10 }}>{displayName}</Text>
+        {note && <Text style={{ color: c.textMuted, marginTop: 4 }}>{note}</Text>}
+      </View>
+    ) : null;
+
+  // A user-driven close starts from the main page next time; the avatar flow reopens where it left off.
+  function handleClose() {
+    setPage('main');
+    onClose();
+  }
+
+  return <MenuSheet visible={visible} items={items} header={header} onClose={handleClose} />;
 }

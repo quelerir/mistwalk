@@ -5,7 +5,9 @@ import {
   fetchMyProfile,
   fetchPlayerProfile,
   NameTakenError,
+  avatarUrl,
   saveMyProfile,
+  uploadAvatar,
 } from './profiles';
 
 const snapshot = { distanceKm: 3.4, countries: [], cities: [] };
@@ -34,7 +36,7 @@ describe('fetchLeaderboard', () => {
     });
     const list = await fetchLeaderboard({ rpc } as unknown as SupabaseClient);
     expect(rpc).toHaveBeenCalledWith('leaderboard', { max_rows: 50 });
-    expect(list).toEqual([{ userId: 'u1', displayName: 'Аня', foundCount: 12, rank: 1 }]);
+    expect(list).toEqual([{ userId: 'u1', displayName: 'Аня', avatarPath: null, foundCount: 12, rank: 1 }]);
   });
 });
 
@@ -72,14 +74,14 @@ describe('profile saving', () => {
 
   it('upserts the profile with the snapshot', async () => {
     const { client, upsert } = clientWith({ error: null });
-    await saveMyProfile(client, 'u1', { displayName: 'Аня', isPublic: true }, snapshot);
+    await saveMyProfile(client, 'u1', { displayName: 'Аня', isPublic: true, avatarPath: null }, snapshot);
     expect(upsert.mock.calls[0][0]).toMatchObject({ user_id: 'u1', display_name: 'Аня', is_public: true, distance_km: 3.4 });
     expect(upsert.mock.calls[0][1]).toEqual({ onConflict: 'user_id' });
   });
 
   it('reports a taken name', async () => {
     const { client } = clientWith({ error: { code: '23505' } });
-    await expect(saveMyProfile(client, 'u1', { displayName: 'Аня', isPublic: true }, snapshot)).rejects.toBeInstanceOf(NameTakenError);
+    await expect(saveMyProfile(client, 'u1', { displayName: 'Аня', isPublic: true, avatarPath: null }, snapshot)).rejects.toBeInstanceOf(NameTakenError);
   });
 });
 
@@ -88,5 +90,43 @@ describe('fetchMyProfile', () => {
     const maybeSingle = jest.fn().mockResolvedValue({ data: null, error: null });
     const client = { from: () => ({ select: () => ({ eq: () => ({ maybeSingle }) }) }) } as unknown as SupabaseClient;
     expect(await fetchMyProfile(client, 'u1')).toBeNull();
+  });
+});
+
+describe('avatars', () => {
+  const storageClient = (upload: jest.Mock, remove: jest.Mock, update: jest.Mock) =>
+    ({
+      storage: {
+        from: () => ({
+          upload,
+          remove,
+          getPublicUrl: (path: string) => ({ data: { publicUrl: `https://cdn/${path}` } }),
+        }),
+      },
+      from: () => ({ update: () => ({ eq: update }) }),
+    }) as unknown as SupabaseClient;
+
+  it('builds a public url only when there is a path', () => {
+    const client = storageClient(jest.fn(), jest.fn(), jest.fn());
+    expect(avatarUrl(client, null)).toBeNull();
+    expect(avatarUrl(client, 'u1/a.jpg')).toBe('https://cdn/u1/a.jpg');
+  });
+
+  it('uploads into the user folder, updates the profile and removes the old file', async () => {
+    const upload = jest.fn().mockResolvedValue({ error: null });
+    const remove = jest.fn().mockResolvedValue({});
+    const update = jest.fn().mockResolvedValue({ error: null });
+    const path = await uploadAvatar(storageClient(upload, remove, update), 'u1', new ArrayBuffer(4), 'u1/old.jpg');
+    expect(path).toMatch(/^u1\/avatar-\d+\.jpg$/);
+    expect(upload.mock.calls[0][0]).toBe(path);
+    expect(update).toHaveBeenCalledWith('user_id', 'u1');
+    expect(remove).toHaveBeenCalledWith(['u1/old.jpg']);
+  });
+
+  it('does not touch the profile when the upload fails', async () => {
+    const upload = jest.fn().mockResolvedValue({ error: new Error('boom') });
+    const update = jest.fn();
+    await expect(uploadAvatar(storageClient(upload, jest.fn(), update), 'u1', new ArrayBuffer(4), null)).rejects.toThrow('boom');
+    expect(update).not.toHaveBeenCalled();
   });
 });

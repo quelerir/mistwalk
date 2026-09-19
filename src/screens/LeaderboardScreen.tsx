@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { fetchLeaderboard, type LeaderboardEntry } from '../lib/social/profiles';
+import Avatar from '../components/Avatar';
+import { avatarUrl, fetchLeaderboard, type LeaderboardEntry } from '../lib/social/profiles';
 import { useStyles } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 
@@ -61,6 +62,9 @@ export default function LeaderboardScreen({ client, userId, onBack, onOpenPlayer
               accessibilityRole="button"
             >
               <Text style={styles.rank}>{item.rank}</Text>
+              <View style={styles.avatar}>
+                <Avatar uri={avatarUrl(client, item.avatarPath)} name={item.displayName} size={36} />
+              </View>
               <Text style={[styles.name, item.userId === userId && styles.mine]} numberOfLines={1}>
                 {item.displayName}
                 {item.userId === userId ? ' (вы)' : ''}
@@ -113,6 +117,7 @@ const makeStyles = (c: Colors) =>
       borderBottomColor: c.border,
     },
     pressed: { opacity: 0.5 },
+    avatar: { marginRight: 12 },
     rank: { width: 32, fontSize: 16, fontWeight: '800', color: c.textMuted },
     name: { flex: 1, fontSize: 16, fontWeight: '600', color: c.text },
     mine: { color: c.link },

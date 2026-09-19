@@ -32,7 +32,8 @@ import { useCityStats } from '../hooks/useCityStats';
 import LeaderboardScreen from './LeaderboardScreen';
 import PlayerScreen from './PlayerScreen';
 import { useProfileSync } from '../hooks/useProfileSync';
-import { buildSnapshot, type LeaderboardEntry } from '../lib/social/profiles';
+import { pickAvatar } from '../lib/social/pickAvatar';
+import { avatarUrl, buildSnapshot, type LeaderboardEntry } from '../lib/social/profiles';
 
 const NO_PLACES: DiscoveredPlace[] = [];
 
@@ -138,6 +139,25 @@ export default function MainScreen({
     [stats.distanceKm, countryStats.countries, allCityStats.cities]
   );
   const profileSync = useProfileSync(client, userId, snapshot);
+  const avatarUri = avatarUrl(client, profileSync.profile?.avatarPath ?? null);
+
+  async function handleChangeAvatar(): Promise<string | null> {
+    // iOS cannot present the photo picker over the menu sheet, so hide the sheet while picking.
+    setMenuOpen(false);
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    try {
+      const picked = await pickAvatar();
+      if (picked.kind === 'denied') return 'Нет доступа к фото. Разрешите его в настройках iPhone.';
+      if (picked.kind === 'cancelled') return null;
+      await profileSync.setAvatar(picked.body);
+      return 'Фото обновлено';
+    } catch (err) {
+      console.warn('[avatar] upload failed', err);
+      return 'Не удалось загрузить фото. Проверьте интернет.';
+    } finally {
+      setMenuOpen(true);
+    }
+  }
 
   const cityStats = useCityStats(
     openCountryPoints,
@@ -278,6 +298,10 @@ export default function MainScreen({
         email={email}
         leaderboardVisible={profileSync.profile?.isPublic ?? null}
         onLeaderboardVisibleChange={profileSync.setVisible}
+        avatarUri={avatarUri}
+        displayName={profileSync.profile?.displayName ?? email}
+        onChangeAvatar={handleChangeAvatar}
+        onRemoveAvatar={profileSync.clearAvatar}
       />
     </View>
   );

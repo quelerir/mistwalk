@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import Avatar from '../components/Avatar';
 import KindIcon from '../components/KindIcon';
 import { flagUrl } from '../lib/geo/countries';
 import { formatPercent } from '../lib/geo/countryStats';
 import { formatKm2 } from '../lib/geo/cityStats';
-import { fetchPlayerProfile, type PlayerProfile } from '../lib/social/profiles';
+import { avatarUrl, fetchPlayerProfile, type PlayerProfile } from '../lib/social/profiles';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 
@@ -50,6 +51,9 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack }:
         <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel="Назад">
           <Text style={styles.back}>‹</Text>
         </Pressable>
+        <View style={styles.avatar}>
+          <Avatar uri={avatarUrl(client, player?.avatarPath ?? null)} name={player?.displayName ?? fallbackName} size={44} />
+        </View>
         <View style={styles.headerText}>
           <Text style={styles.title} numberOfLines={1}>
             {player?.displayName ?? fallbackName}
@@ -124,6 +128,7 @@ const makeStyles = (c: Colors) =>
     container: { flex: 1, backgroundColor: c.bg },
     header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
     back: { fontSize: 36, lineHeight: 36, color: c.text, marginRight: 12, marginTop: -4 },
+    avatar: { marginRight: 12 },
     headerText: { flex: 1 },
     title: { fontSize: 24, fontWeight: '800', color: c.text },
     loader: { marginTop: 32 },
