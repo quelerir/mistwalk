@@ -55,7 +55,7 @@ function mergePoints(local: VisitedPoint[], remote: VisitedPoint[]): VisitedPoin
 
 export function createProgressStore(options: CreateProgressStoreOptions) {
   const storage: KeyValueStorage = options.storage ?? AsyncStorage;
-  const throttleMeters = options.throttleMeters ?? DEFAULT_THROTTLE_METERS;
+  let throttleMeters = options.throttleMeters ?? DEFAULT_THROTTLE_METERS;
 
   const queue = new SyncQueue<VisitedPoint>({
     maxBatchSize: options.batchSize ?? DEFAULT_BATCH_SIZE,
@@ -98,5 +98,11 @@ export function createProgressStore(options: CreateProgressStoreOptions) {
     },
   }));
 
-  return { useProgressStore, queue };
+  return {
+    useProgressStore,
+    queue,
+    setThrottleMeters: (meters: number) => {
+      throttleMeters = meters;
+    },
+  };
 }

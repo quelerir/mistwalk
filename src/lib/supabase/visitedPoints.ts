@@ -65,6 +65,8 @@ export async function insertVisitedPoints(
     lat: p.lat,
     lng: p.lng,
     radius: p.radius,
+    // Capture time: a batch is uploaded later, and the server checks walking speed from these times.
+    created_at: new Date(p.ts).toISOString(),
   }));
 
   const { error } = await client.from('visited_points').insert(rows);

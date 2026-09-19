@@ -8,12 +8,14 @@ import NetInfo from '@react-native-community/netinfo';
 import { ThemeProvider, useTheme } from './src/theme/ThemeProvider';
 import { getEnvSupabaseClient } from './src/lib/supabase/client';
 import { getSession } from './src/lib/supabase/auth';
-import { getAccuracyProfile, DISTANCE_INTERVAL_METERS } from './src/lib/settings/accuracyProfile';
+import { getAccuracyProfile, onAccuracyProfileChange, DISTANCE_INTERVAL_METERS } from './src/lib/settings/accuracyProfile';
 import { createProgressStore } from './src/store/progressStore';
 import { startForegroundTracking, stopForegroundTracking } from './src/services/locationTracker';
 import {
   setBackgroundLocationHandler,
   startBackgroundTracking,
+  stopBackgroundTracking,
+  BACKGROUND_LOCATION_TASK,
   drainPendingBackgroundPoints,
 } from './src/services/backgroundLocationTask';
 import { useLocationPermissions } from './src/hooks/useLocationPermissions';
@@ -113,13 +115,14 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
     let cancelled = false;
     let unsubscribeStore: (() => void) | null = null;
     let unsubscribeNet: (() => void) | null = null;
+    let unsubscribeProfile: (() => void) | null = null;
 
     void (async () => {
       // Read the accuracy profile before the store is constructed so its
       // 25m/75m radius also becomes the point-recording throttle, not just
       // the GPS distanceInterval.
       const profile = await getAccuracyProfile(AsyncStorage);
-      const distanceInterval = DISTANCE_INTERVAL_METERS[profile];
+      let distanceInterval = DISTANCE_INTERVAL_METERS[profile];
 
       const store = createProgressStore({
         client,
@@ -166,17 +169,20 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
 
       const foregroundOk = await requestForeground();
       if (!cancelled && foregroundOk) {
-        subscriptionRef.current = await startForegroundTracking(
-          {
-            onPoint: (coord, accuracy) => {
-              setLivePosition({ lat: coord.lat, lng: coord.lng });
-              void store.useProgressStore
-                .getState()
-                .addPoint(coord, Math.max(accuracy || 0, distanceInterval));
+        const startForeground = async () => {
+          subscriptionRef.current = await startForegroundTracking(
+            {
+              onPoint: (coord, accuracy) => {
+                setLivePosition({ lat: coord.lat, lng: coord.lng });
+                void store.useProgressStore
+                  .getState()
+                  .addPoint(coord, Math.max(accuracy || 0, distanceInterval));
+              },
             },
-          },
-          Math.min(distanceInterval, LIVE_POSITION_INTERVAL_METERS)
-        );
+            Math.min(distanceInterval, LIVE_POSITION_INTERVAL_METERS)
+          );
+        };
+        await startForeground();
 
         startBackgroundRef.current = async () => {
           setBackgroundLocationHandler((coord, accuracy) =>
@@ -186,6 +192,20 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
           );
           await startBackgroundTracking(distanceInterval);
         };
+
+        // A new accuracy setting applies at once: restart both trackers with the new interval.
+        unsubscribeProfile = onAccuracyProfileChange((next) => {
+          distanceInterval = DISTANCE_INTERVAL_METERS[next];
+          store.setThrottleMeters(distanceInterval);
+          void (async () => {
+            stopForegroundTracking(subscriptionRef.current);
+            await startForeground();
+            if (await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK)) {
+              await stopBackgroundTracking();
+              await startBackgroundRef.current?.();
+            }
+          })().catch((err) => console.warn('[App] failed to apply accuracy change', err));
+        });
 
         const existing = await Location.getBackgroundPermissionsAsync();
         if (existing.status === 'granted') {
@@ -202,6 +222,7 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
       cancelled = true;
       unsubscribeStore?.();
       unsubscribeNet?.();
+      unsubscribeProfile?.();
       stopForegroundTracking(subscriptionRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

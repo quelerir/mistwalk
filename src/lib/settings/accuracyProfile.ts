@@ -17,9 +17,18 @@ export async function getAccuracyProfile(storage: KeyValueStorage): Promise<Accu
   return raw === 'precise' ? 'precise' : 'battery-saver';
 }
 
+const listeners = new Set<(profile: AccuracyProfile) => void>();
+
+// Lets the tracking code react to a change from the menu without an app restart.
+export function onAccuracyProfileChange(listener: (profile: AccuracyProfile) => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
 export async function setAccuracyProfile(
   storage: KeyValueStorage,
   profile: AccuracyProfile
 ): Promise<void> {
   await storage.setItem(STORAGE_KEY, profile);
+  listeners.forEach((listener) => listener(profile));
 }

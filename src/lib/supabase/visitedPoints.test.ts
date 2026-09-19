@@ -74,13 +74,15 @@ describe('insertVisitedPoints', () => {
     expect(from).not.toHaveBeenCalled();
   });
 
-  it('inserts rows with user_id attached', async () => {
+  it('inserts rows with user_id attached and the capture time, not the upload time', async () => {
     const { client, insert } = makeFakeClient({ data: [], error: null }, { error: null });
     const points: VisitedPoint[] = [{ lat: 1, lng: 2, radius: 30, ts: 1735689600000 }];
 
     await insertVisitedPoints(client, 'user-1', points);
 
-    expect(insert).toHaveBeenCalledWith([{ user_id: 'user-1', lat: 1, lng: 2, radius: 30 }]);
+    expect(insert).toHaveBeenCalledWith([
+      { user_id: 'user-1', lat: 1, lng: 2, radius: 30, created_at: '2025-01-01T00:00:00.000Z' },
+    ]);
   });
 
   it('throws on error', async () => {
