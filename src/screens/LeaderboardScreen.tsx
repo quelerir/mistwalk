@@ -23,6 +23,21 @@ export interface LeaderboardScreenProps {
 }
 
 const SYNC_DELAY_MS = 4000;
+
+// Everyone takes part by default under a neutral name; the email is never used.
+async function autoJoin(client: SupabaseClient, userId: string, snapshot: ProfileSnapshot): Promise<MyProfile> {
+  const compact = userId.replace(/-/g, '');
+  for (const length of [6, 10, 16]) {
+    const profile: MyProfile = { displayName: `Игрок ${compact.slice(0, length)}`, isPublic: true };
+    try {
+      await saveMyProfile(client, userId, profile, snapshot);
+      return profile;
+    } catch (err) {
+      if (!(err instanceof NameTakenError)) throw err;
+    }
+  }
+  throw new Error('could not pick a display name');
+}
 const MIN_NAME = 2;
 const MAX_NAME = 24;
 
@@ -36,13 +51,17 @@ export default function LeaderboardScreen({ client, userId, snapshot, onBack, on
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const lastSynced = useRef('');
+  const snapshotRef = useRef(snapshot);
+  snapshotRef.current = snapshot;
 
   const load = useCallback(async () => {
     try {
-      const [profile, list] = await Promise.all([fetchMyProfile(client, userId), fetchLeaderboard(client)]);
+      let profile = await fetchMyProfile(client, userId);
+      if (!profile) profile = await autoJoin(client, userId, snapshotRef.current);
+      const list = await fetchLeaderboard(client);
       setMe(profile);
       setEntries(list);
-      if (profile) setName((current) => current || profile.displayName);
+      setName((current) => current || profile.displayName);
       setStatus('ready');
     } catch (err) {
       console.warn('[leaderboard] load failed', err);
@@ -69,8 +88,9 @@ export default function LeaderboardScreen({ client, userId, snapshot, onBack, on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me, snapshotKey]);
 
-  async function join() {
+  async function rename() {
     const trimmed = name.trim();
+    if (!me) return;
     if (trimmed.length < MIN_NAME || trimmed.length > MAX_NAME) {
       setMessage(`Имя от ${MIN_NAME} до ${MAX_NAME} символов`);
       return;
@@ -78,9 +98,10 @@ export default function LeaderboardScreen({ client, userId, snapshot, onBack, on
     setBusy(true);
     setMessage(null);
     try {
-      await saveMyProfile(client, userId, { displayName: trimmed, isPublic: true }, snapshot);
+      await saveMyProfile(client, userId, { displayName: trimmed, isPublic: me.isPublic }, snapshot);
       lastSynced.current = snapshotKey;
       await load();
+      setMessage('Имя сохранено');
     } catch (err) {
       setMessage(err instanceof NameTakenError ? 'Это имя уже занято' : 'Не удалось сохранить. Проверьте интернет.');
     } finally {
@@ -88,13 +109,14 @@ export default function LeaderboardScreen({ client, userId, snapshot, onBack, on
     }
   }
 
-  async function leave() {
+  async function toggleVisibility(next: boolean) {
     setBusy(true);
+    setMessage(null);
     try {
-      await setProfileVisibility(client, userId, false);
+      await setProfileVisibility(client, userId, next);
       await load();
     } catch {
-      setMessage('Не удалось скрыть профиль');
+      setMessage('Не удалось изменить видимость');
     } finally {
       setBusy(false);
     }
@@ -102,20 +124,11 @@ export default function LeaderboardScreen({ client, userId, snapshot, onBack, on
 
   const header = (
     <View>
-      {me?.isPublic ? (
+      {me && (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Вы в рейтинге как {me.displayName}</Text>
-          <Text style={styles.cardText}>Другие игроки видят найденные места, страны и города, но не ваши маршруты.</Text>
-          <Pressable onPress={() => void leave()} disabled={busy} accessibilityRole="button">
-            <Text style={styles.link}>Скрыть меня из рейтинга</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Участвовать в рейтинге</Text>
+          <Text style={styles.cardTitle}>{me.isPublic ? 'Вы в рейтинге' : 'Вы скрыты из рейтинга'}</Text>
           <Text style={styles.cardText}>
-            Игроки увидят ваше имя, число найденных мест, страны и города. Точные маршруты и координаты остаются
-            приватными.
+            Другие игроки видят имя, найденные места, страны и города, но не ваши маршруты и координаты.
           </Text>
           <TextInput
             style={styles.input}
@@ -128,11 +141,14 @@ export default function LeaderboardScreen({ client, userId, snapshot, onBack, on
           />
           <Pressable
             style={[styles.button, busy && styles.disabled]}
-            onPress={() => void join()}
+            onPress={() => void rename()}
             disabled={busy}
             accessibilityRole="button"
           >
-            <Text style={styles.buttonText}>Участвовать</Text>
+            <Text style={styles.buttonText}>Сохранить имя</Text>
+          </Pressable>
+          <Pressable onPress={() => void toggleVisibility(!me.isPublic)} disabled={busy} accessibilityRole="button">
+            <Text style={styles.link}>{me.isPublic ? 'Скрыть меня из рейтинга' : 'Показывать меня в рейтинге'}</Text>
           </Pressable>
         </View>
       )}
