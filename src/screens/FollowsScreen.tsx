@@ -19,13 +19,14 @@ type Tab = 'followers' | 'following';
 
 export interface FollowsScreenProps {
   client: SupabaseClient;
+  initialTab?: Tab;
   onBack: () => void;
   onOpenPlayer: (player: { userId: string; displayName: string }) => void;
 }
 
-export default function FollowsScreen({ client, onBack, onOpenPlayer }: FollowsScreenProps) {
+export default function FollowsScreen({ client, initialTab = 'followers', onBack, onOpenPlayer }: FollowsScreenProps) {
   const styles = useStyles(makeStyles);
-  const [tab, setTab] = useState<Tab>('followers');
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [entries, setEntries] = useState<FollowEntry[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [busyId, setBusyId] = useState<string | null>(null);

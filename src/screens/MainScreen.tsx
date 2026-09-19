@@ -85,6 +85,7 @@ export default function MainScreen({
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [openPlayer, setOpenPlayer] = useState<{ userId: string; displayName: string } | null>(null);
   const [showFollows, setShowFollows] = useState(false);
+  const [followsTab, setFollowsTab] = useState<'followers' | 'following'>('followers');
   const [followCounts, setFollowCounts] = useState<{ followers: number; following: number } | null>(null);
   const [selected, setSelected] = useState<Poi | null>(null);
   const [detailPlace, setDetailPlace] = useState<Poi | null>(null);
@@ -309,7 +310,7 @@ export default function MainScreen({
               isMe={openPlayer.userId === userId}
             />
           ) : showFollows ? (
-            <FollowsScreen client={client} onBack={() => setShowFollows(false)} onOpenPlayer={setOpenPlayer} />
+            <FollowsScreen client={client} initialTab={followsTab} onBack={() => setShowFollows(false)} onOpenPlayer={setOpenPlayer} />
           ) : showLeaderboard ? (
             <LeaderboardScreen
               client={client}
@@ -350,7 +351,10 @@ export default function MainScreen({
               countries={countryStats.countries}
               onOpenCountries={() => setShowCountries(true)}
               onOpenLeaderboard={() => setShowLeaderboard(true)}
-              onOpenFollows={() => setShowFollows(true)}
+              onOpenFollows={(tab) => {
+                setFollowsTab(tab);
+                setShowFollows(true);
+              }}
               followCounts={followCounts}
             />
           ))}

@@ -15,7 +15,7 @@ export interface CollectionScreenProps {
   countries: CountryStat[];
   onOpenCountries: () => void;
   onOpenLeaderboard: () => void;
-  onOpenFollows: () => void;
+  onOpenFollows: (tab: 'followers' | 'following') => void;
   followCounts: { followers: number; following: number } | null;
 }
 
@@ -54,6 +54,17 @@ export default function CollectionScreen({
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Достижения</Text>
+
+      <View style={styles.followRow}>
+        <Pressable onPress={() => onOpenFollows('followers')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Подписчики">
+          <Text style={styles.followValue}>{followCounts ? followCounts.followers : '–'}</Text>
+          <Text style={styles.followLabel}>подписчиков</Text>
+        </Pressable>
+        <Pressable onPress={() => onOpenFollows('following')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Подписки">
+          <Text style={styles.followValue}>{followCounts ? followCounts.following : '–'}</Text>
+          <Text style={styles.followLabel}>подписок</Text>
+        </Pressable>
+      </View>
 
       <View style={styles.tiles}>
         {tiles.map((tile) => (
@@ -122,21 +133,6 @@ export default function CollectionScreen({
         </View>
         <Text style={styles.chevron}>›</Text>
       </Pressable>
-      <Pressable
-        style={({ pressed }) => [styles.countriesButton, pressed && styles.pressed]}
-        onPress={onOpenFollows}
-        accessibilityRole="button"
-      >
-        <View style={styles.countriesText}>
-          <Text style={styles.countriesTitle}>Подписки</Text>
-          <Text style={styles.countriesSub}>
-            {followCounts
-              ? `Подписчики: ${followCounts.followers} · Вы подписаны: ${followCounts.following}`
-              : 'Кто на вас подписан'}
-          </Text>
-        </View>
-        <Text style={styles.chevron}>›</Text>
-      </Pressable>
     </ScrollView>
   );
 }
@@ -144,7 +140,10 @@ export default function CollectionScreen({
 const makeStyles = (c: Colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: c.bg },
   content: { padding: 16, paddingBottom: 32 },
-  title: { fontSize: 34, fontFamily: FONT.display, letterSpacing: -0.8, color: c.text, marginBottom: 12 },
+  title: { fontSize: 34, fontFamily: FONT.display, letterSpacing: -0.8, color: c.text, marginBottom: 8 },
+  followRow: { flexDirection: 'row', gap: 28, marginBottom: 14 },
+  followValue: { fontSize: 22, fontFamily: FONT.display, letterSpacing: -0.4, color: c.text },
+  followLabel: { fontSize: 13, color: c.textMuted, marginTop: 1 },
   tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   tile: { flex: 1, backgroundColor: c.surface, borderRadius: 24, padding: 16, shadowColor: c.shadow, ...CARD_SHADOW },
   tileValue: { fontSize: 32, fontFamily: FONT.display, letterSpacing: -0.6, color: c.text },
