@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { LocationSubscription } from 'expo-location';
-import { useStyles } from '../theme/ThemeProvider';
+import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import AppMenu from '../components/AppMenu';
 import PlaceSheet from '../components/PlaceSheet';
@@ -17,6 +17,9 @@ import { performSignOut } from '../lib/session/signOutFlow';
 import { FOG_PALETTES, getFogAnimated, getFogStyle, resolveFogStyle, setFogAnimated, setFogStyle, type FogSetting } from '../lib/settings/fogStyle';
 import { getPlaceNotifications, setPlaceNotifications } from '../lib/settings/placeNotifications';
 import { getWeeklySummary, setWeeklySummary } from '../lib/settings/weeklySummary';
+import { getOfflineMap, setOfflineMap } from '../lib/settings/offlineMap';
+import { MAP_STYLES } from '../lib/map/styles';
+import { clearOfflineAreas, ensureOfflineArea, offlineMapBytes } from '../services/offlineMap';
 import { dailyKm, weekSummary } from '../lib/stats/weekly';
 import { ensureNotificationPermission } from '../services/notificationPermission';
 import { cancelWeeklySummary, scheduleWeeklySummary } from '../services/weeklySummaryNotification';
@@ -98,6 +101,9 @@ export default function MainScreen({
   const [hour, setHour] = useState(() => new Date().getHours());
   const [placeNotifications, setPlaceNotificationsState] = useState(false);
   const [weeklySummaryOn, setWeeklySummaryOn] = useState(false);
+  const [offlineMapOn, setOfflineMapOn] = useState(true);
+  const [offlineMb, setOfflineMb] = useState<number | null>(null);
+  const { scheme } = useTheme();
   const { pois, discovered, discoveredIds, greeting, dismissGreeting } = usePlaces({
     client,
     userId,
@@ -135,6 +141,15 @@ export default function MainScreen({
       .catch(() => {});
   }, [client, userId, showFollows]);
   const insets = useSafeAreaInsets();
+  // Keep the area around you on the phone (Wi-Fi only; the service decides when a download is due).
+  useEffect(() => {
+    if (offlineMapOn && livePosition) void ensureOfflineArea(livePosition, MAP_STYLES[scheme]);
+  }, [offlineMapOn, livePosition, scheme]);
+  // The size shown in the menu is read when the menu opens.
+  useEffect(() => {
+    if (!menuOpen || !offlineMapOn) return;
+    void offlineMapBytes().then((bytes) => setOfflineMb(bytes > 0 ? Math.max(1, Math.round(bytes / (1024 * 1024))) : null));
+  }, [menuOpen, offlineMapOn]);
   const week = useMemo(() => weekSummary(points, discovered, Date.now()), [points, discovered]);
   const daily = useMemo(() => dailyKm(points, Date.now()), [points]);
 
@@ -218,6 +233,7 @@ export default function MainScreen({
     void getFogAnimated(AsyncStorage).then(setFogAnimatedState);
     void getPlaceNotifications(AsyncStorage).then((s) => setPlaceNotificationsState(s.enabled && s.userId === userId));
     void getWeeklySummary(AsyncStorage).then(setWeeklySummaryOn);
+    void getOfflineMap(AsyncStorage).then(setOfflineMapOn);
     return () => clearInterval(tick);
   }, []);
 
@@ -250,6 +266,17 @@ export default function MainScreen({
     await setWeeklySummary(AsyncStorage, next);
     if (next) await scheduleWeeklySummary();
     else await cancelWeeklySummary();
+  }
+
+  async function handleOfflineMapChange(next: boolean) {
+    setOfflineMapOn(next);
+    await setOfflineMap(AsyncStorage, next);
+    if (!next) {
+      await clearOfflineAreas();
+      setOfflineMb(null);
+    } else if (livePosition) {
+      void ensureOfflineArea(livePosition, MAP_STYLES[scheme]);
+    }
   }
 
   function handleSignOut() {
@@ -390,6 +417,9 @@ export default function MainScreen({
         placeNotifications={placeNotifications}
         onPlaceNotificationsChange={handlePlaceNotificationsChange}
         weeklySummary={weeklySummaryOn}
+        offlineMap={offlineMapOn}
+        offlineMapMb={offlineMb}
+        onOfflineMapChange={handleOfflineMapChange}
         onWeeklySummaryChange={handleWeeklySummaryChange}
         backgroundEnabled={backgroundEnabled}
         onEnableBackground={onEnableBackground}

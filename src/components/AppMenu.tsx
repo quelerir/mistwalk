@@ -22,6 +22,9 @@ export interface AppMenuProps {
   placeNotifications: boolean;
   onPlaceNotificationsChange: (next: boolean) => Promise<void>;
   weeklySummary: boolean;
+  offlineMap: boolean;
+  offlineMapMb: number | null;
+  onOfflineMapChange: (next: boolean) => Promise<void>;
   onWeeklySummaryChange: (next: boolean) => Promise<void>;
   backgroundEnabled: boolean;
   onEnableBackground: () => Promise<boolean>;
@@ -45,6 +48,9 @@ export default function AppMenu({
   placeNotifications,
   onPlaceNotificationsChange,
   weeklySummary,
+  offlineMap,
+  offlineMapMb,
+  onOfflineMapChange,
   onWeeklySummaryChange,
   backgroundEnabled,
   onEnableBackground,
@@ -172,6 +178,13 @@ export default function AppMenu({
       label: 'Уведомления о местах',
       on: placeNotifications,
       onPress: () => void onPlaceNotificationsChange(!placeNotifications),
+    },
+    {
+      key: 'offlineMap',
+      icon: 'download',
+      label: offlineMap && offlineMapMb ? `Карта без сети · ${offlineMapMb} МБ` : 'Карта без сети',
+      on: offlineMap,
+      onPress: () => void onOfflineMapChange(!offlineMap),
     },
     {
       key: 'weeklySummary',

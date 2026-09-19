@@ -19,6 +19,7 @@ import type { WalkingRoute } from '../lib/routing/walkingRoute';
 import PoiMarkers from '../components/PoiMarkers';
 import SvgIcon from '../components/icons/SvgIcon';
 import type { MapView } from '../lib/geo/projection';
+import { MAP_STYLES } from '../lib/map/styles';
 import type { Poi } from '../lib/poi/types';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
@@ -26,10 +27,6 @@ import type { Colors } from '../theme/palettes';
 
 const FOLLOW_ZOOM = 16;
 const FOLLOW_EASE_MS = 900;
-const MAP_STYLES = {
-  light: 'https://tiles.openfreemap.org/styles/liberty',
-  dark: 'https://tiles.openfreemap.org/styles/dark',
-};
 
 export interface MapScreenProps {
   points: VisitedPoint[];
