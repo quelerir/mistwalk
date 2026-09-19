@@ -19,6 +19,8 @@ export interface AppMenuProps {
   onFogStyleChange: (style: FogStyle) => void;
   fogAnimated: boolean;
   onFogAnimatedChange: (next: boolean) => void;
+  placeNotifications: boolean;
+  onPlaceNotificationsChange: (next: boolean) => Promise<void>;
   backgroundEnabled: boolean;
   onEnableBackground: () => Promise<boolean>;
   onSignOut: () => Promise<void>;
@@ -38,6 +40,8 @@ export default function AppMenu({
   onFogStyleChange,
   fogAnimated,
   onFogAnimatedChange,
+  placeNotifications,
+  onPlaceNotificationsChange,
   backgroundEnabled,
   onEnableBackground,
   onSignOut,
@@ -157,6 +161,13 @@ export default function AppMenu({
       onPress: () => {
         if (!backgroundEnabled) void onEnableBackground();
       },
+    },
+    {
+      key: 'placeNotifications',
+      icon: 'bell',
+      label: 'Уведомления о местах',
+      value: placeNotifications ? 'Включены' : 'Выключены',
+      onPress: () => void onPlaceNotificationsChange(!placeNotifications),
     },
   ];
 

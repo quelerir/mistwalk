@@ -2,6 +2,7 @@ import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { routeBackgroundLocations } from '../lib/location/routeBackgroundLocations';
+import { notifyIfNearby } from './placeNotifier';
 
 export const BACKGROUND_LOCATION_TASK = 'background-location-task';
 
@@ -78,6 +79,9 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
     handler,
     appendPendingPoints
   );
+
+  const latest = locations[locations.length - 1].coords;
+  await notifyIfNearby({ lat: latest.latitude, lng: latest.longitude });
 });
 
 export async function startBackgroundTracking(distanceIntervalMeters: number): Promise<void> {

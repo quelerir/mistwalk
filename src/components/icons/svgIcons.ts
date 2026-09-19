@@ -7,6 +7,7 @@ export type IconName =
   | 'menu'
   | 'cloud'
   | 'moon'
+  | 'bell'
   | 'logout'
   | 'navigate'
   | 'settings'
@@ -98,6 +99,7 @@ export const ICONS: Record<IconName, { outline: IconLayer[]; active: IconLayer[]
   menu: line('M4 6h16M4 12h16M4 18h16'),
   cloud: line('M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9z'),
   moon: line('M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z'),
+  bell: line('M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0'),
   'poi-viewpoint': shapes([
     { d: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z', mode: 'stroke' },
     { d: circle(12, 12, 3), mode: 'stroke' },

@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { LocationSubscription } from 'expo-location';
+import * as Notifications from 'expo-notifications';
 import { useStyles } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import AppMenu from '../components/AppMenu';
@@ -14,6 +15,7 @@ import { usePlaces } from '../hooks/usePlaces';
 import type { MapView } from '../lib/geo/projection';
 import { performSignOut } from '../lib/session/signOutFlow';
 import { FOG_PALETTES, getFogAnimated, getFogStyle, setFogAnimated, setFogStyle, type FogStyle } from '../lib/settings/fogStyle';
+import { getPlaceNotifications, setPlaceNotifications } from '../lib/settings/placeNotifications';
 import { signOut, signOutLocal } from '../lib/supabase/auth';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
 import { stopBackgroundTracking } from '../services/backgroundLocationTask';
@@ -83,6 +85,7 @@ export default function MainScreen({
   const [view, setView] = useState<MapView | null>(null);
   const [fogStyle, setFogStyleState] = useState<FogStyle>('ink');
   const [fogAnimated, setFogAnimatedState] = useState(true);
+  const [placeNotifications, setPlaceNotificationsState] = useState(false);
   const { pois, discovered, discoveredIds, greeting, dismissGreeting } = usePlaces({
     client,
     userId,
@@ -190,6 +193,7 @@ export default function MainScreen({
   useEffect(() => {
     void getFogStyle(AsyncStorage).then(setFogStyleState);
     void getFogAnimated(AsyncStorage).then(setFogAnimatedState);
+    void getPlaceNotifications(AsyncStorage).then((s) => setPlaceNotificationsState(s.enabled && s.userId === userId));
   }, []);
 
   function handleFogStyleChange(style: FogStyle) {
@@ -202,7 +206,23 @@ export default function MainScreen({
     void setFogAnimated(AsyncStorage, next);
   }
 
+  async function handlePlaceNotificationsChange(next: boolean) {
+    if (next) {
+      const current = await Notifications.getPermissionsAsync();
+      const granted =
+        current.status === 'granted' || (current.canAskAgain && (await Notifications.requestPermissionsAsync()).status === 'granted');
+      // iOS asks only once; after a refusal the switch has to be flipped in the system settings.
+      if (!granted) {
+        await Linking.openSettings();
+        return;
+      }
+    }
+    setPlaceNotificationsState(next);
+    await setPlaceNotifications(AsyncStorage, { enabled: next, userId: next ? userId : null });
+  }
+
   function handleSignOut() {
+    void setPlaceNotifications(AsyncStorage, { enabled: false, userId: null });
     return performSignOut({
       stopForeground: () => stopForegroundTracking(subscription),
       stopBackground: stopBackgroundTracking,
@@ -324,6 +344,8 @@ export default function MainScreen({
         onFogStyleChange={handleFogStyleChange}
         fogAnimated={fogAnimated}
         onFogAnimatedChange={handleFogAnimatedChange}
+        placeNotifications={placeNotifications}
+        onPlaceNotificationsChange={handlePlaceNotificationsChange}
         backgroundEnabled={backgroundEnabled}
         onEnableBackground={onEnableBackground}
         onSignOut={handleSignOut}

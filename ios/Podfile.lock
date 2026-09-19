@@ -1,4 +1,6 @@
 PODS:
+  - EXApplication (55.0.19):
+    - ExpoModulesCore
   - EXConstants (55.0.17):
     - ExpoModulesCore
   - Expo (55.0.31):
@@ -75,6 +77,8 @@ PODS:
     - React-Core
     - React-runtimescheduler
     - ReactCommon
+  - ExpoNotifications (55.0.27):
+    - ExpoModulesCore
   - ExpoTaskManager (55.0.20):
     - ExpoModulesCore
     - UMAppLoader
@@ -2270,7 +2274,8 @@ PODS:
   - Yoga (0.0.0)
 
 DEPENDENCIES:
-  - EXConstants (from `../node_modules/expo/node_modules/expo-constants/ios`)
+  - EXApplication (from `../node_modules/expo-application/ios`)
+  - EXConstants (from `../node_modules/expo-constants/ios`)
   - Expo (from `../node_modules/expo`)
   - ExpoAsset (from `../node_modules/expo/node_modules/expo-asset/ios`)
   - "ExpoDomWebView (from `../node_modules/expo/node_modules/@expo/log-box/node_modules/@expo/dom-webview/ios`)"
@@ -2283,6 +2288,7 @@ DEPENDENCIES:
   - "ExpoLogBox (from `../node_modules/expo/node_modules/@expo/log-box`)"
   - ExpoModulesCore (from `../node_modules/expo-modules-core`)
   - ExpoModulesJSI (from `../node_modules/expo-modules-core`)
+  - ExpoNotifications (from `../node_modules/expo-notifications/ios`)
   - ExpoTaskManager (from `../node_modules/expo-task-manager/ios`)
   - FBLazyVector (from `../node_modules/react-native/Libraries/FBLazyVector`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
@@ -2376,8 +2382,10 @@ SPEC REPOS:
     - SDWebImageWebPCoder
 
 EXTERNAL SOURCES:
+  EXApplication:
+    :path: "../node_modules/expo-application/ios"
   EXConstants:
-    :path: "../node_modules/expo/node_modules/expo-constants/ios"
+    :path: "../node_modules/expo-constants/ios"
   Expo:
     :path: "../node_modules/expo"
   ExpoAsset:
@@ -2402,6 +2410,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-modules-core"
   ExpoModulesJSI:
     :path: "../node_modules/expo-modules-core"
+  ExpoNotifications:
+    :path: "../node_modules/expo-notifications/ios"
   ExpoTaskManager:
     :path: "../node_modules/expo-task-manager/ios"
   FBLazyVector:
@@ -2573,6 +2583,7 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
 SPEC CHECKSUMS:
+  EXApplication: 91436e68f46d5c6c830777300acaf833c7c7a496
   EXConstants: 49a092f564eb895b79ab416f53ba54f7e6935197
   Expo: f2da47e96f1185569920ff464ba6b2e1571c9831
   ExpoAsset: f3c42967e877b950418c217508ac1c6f32be4f99
@@ -2586,6 +2597,7 @@ SPEC CHECKSUMS:
   ExpoLogBox: 4bb2f041d3281b8c27ed494fae3b6f217ba79857
   ExpoModulesCore: 0790d0f7d6dbf7d0980750fb3b0267cc8da426cf
   ExpoModulesJSI: 1bf2fab061d2c9635ff63b6fcc26747a68af9f12
+  ExpoNotifications: 6d4f3cf4eda7a7bab49f11aacc1687ed5a0f17a2
   ExpoTaskManager: 30a8729c6f6fc1872d96589bffc4ad8d5384b8d9
   FBLazyVector: b88945378388c6651d3725b0e8c2624fbb37ec64
   hermes-engine: f37e1d6f1eb198649a60b3f17b6f685a6ac12470
