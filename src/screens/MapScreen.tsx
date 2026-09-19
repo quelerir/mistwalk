@@ -190,7 +190,7 @@ export default function MapScreen({
 }
 
 const makeStyles = (c: Colors) => StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, overflow: 'hidden' },
   map: { flex: 1 },
   recenter: {
     position: 'absolute',
