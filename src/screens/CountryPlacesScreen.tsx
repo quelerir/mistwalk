@@ -5,7 +5,7 @@ import { formatKm2, type CityStat } from '../lib/geo/cityStats';
 import { formatPercent, type CountryPlaces, type CountryStat } from '../lib/geo/countryStats';
 import { bearingLabel } from '../lib/poi/discovery';
 import { KIND_ICON } from '../lib/poi/greeting';
-import type { Poi } from '../lib/poi/types';
+import type { DiscoveredPlace, Poi } from '../lib/poi/types';
 
 export interface CountryPlacesScreenProps {
   country: CountryStat;
@@ -16,6 +16,7 @@ export interface CountryPlacesScreenProps {
   origin: Coordinate | null;
   onBack: () => void;
   onSelectHidden: (poi: Poi) => void;
+  onOpenFound: (place: DiscoveredPlace) => void;
 }
 
 function formatDate(ts: number): string {
@@ -28,7 +29,7 @@ function formatDistance(meters: number): string {
 
 type Row =
   | { kind: 'city'; city: CityStat }
-  | { kind: 'found'; id: string; name: string; icon: string; date: string }
+  | { kind: 'found'; place: DiscoveredPlace; icon: string; date: string }
   | { kind: 'hidden'; poi: Poi; icon: string; where: string | null };
 
 export default function CountryPlacesScreen({
@@ -40,12 +41,12 @@ export default function CountryPlacesScreen({
   origin,
   onBack,
   onSelectHidden,
+  onOpenFound,
 }: CountryPlacesScreenProps) {
   const sections = useMemo(() => {
     const found: Row[] = (places?.discovered ?? []).map((p) => ({
       kind: 'found',
-      id: p.id,
-      name: p.name,
+      place: p,
       icon: KIND_ICON[p.kind],
       date: formatDate(p.discoveredAt),
     }));
@@ -87,7 +88,7 @@ export default function CountryPlacesScreen({
         <SectionList
           sections={sections}
           keyExtractor={(row) =>
-            row.kind === 'city' ? `city:${row.city.name}` : row.kind === 'found' ? row.id : row.poi.id
+            row.kind === 'city' ? `city:${row.city.name}` : row.kind === 'found' ? row.place.id : row.poi.id
           }
           stickySectionHeadersEnabled={false}
           renderSectionHeader={({ section }) => <Text style={styles.sectionTitle}>{section.title}</Text>}
@@ -111,15 +112,19 @@ export default function CountryPlacesScreen({
                 {item.city.percent !== null && <Text style={styles.cityPercent}>{formatPercent(item.city.percent)}</Text>}
               </View>
             ) : item.kind === 'found' ? (
-              <View style={styles.row}>
+              <Pressable
+                style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+                onPress={() => onOpenFound(item.place)}
+                accessibilityRole="button"
+              >
                 <View style={styles.badge}>
                   <Text style={styles.icon}>{item.icon}</Text>
                 </View>
                 <Text style={styles.name} numberOfLines={1}>
-                  {item.name}
+                  {item.place.name}
                 </Text>
                 <Text style={styles.date}>{item.date}</Text>
-              </View>
+              </Pressable>
             ) : (
               <Pressable
                 style={({ pressed }) => [styles.row, pressed && styles.pressed]}

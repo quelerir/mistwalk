@@ -9,6 +9,15 @@ export const KIND_ICON: Record<PoiKind, string> = {
   artwork: '✎',
 };
 
+export const KIND_LABEL: Record<PoiKind, string> = {
+  viewpoint: 'Смотровая площадка',
+  monument: 'Памятник',
+  castle: 'Замок',
+  ruins: 'Руины',
+  attraction: 'Достопримечательность',
+  artwork: 'Арт-объект',
+};
+
 const GREETINGS: Record<PoiKind, string> = {
   viewpoint: 'Отсюда открывается вид. Остановитесь на минуту и оглядитесь.',
   monument: 'Вы дошли до памятного места. Здесь есть что вспомнить.',

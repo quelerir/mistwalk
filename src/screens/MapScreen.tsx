@@ -39,6 +39,7 @@ export interface MapScreenProps {
   selected: Poi | null;
   routing: boolean;
   onSelect: (poi: Poi) => void;
+  onOpenFound: (poi: Poi) => void;
   onCloseSelected: () => void;
   onBuildRoute: () => void;
   onCancelRoute: () => void;
@@ -58,6 +59,7 @@ export default function MapScreen({
   selected,
   routing,
   onSelect,
+  onOpenFound,
   onCloseSelected,
   onBuildRoute,
   onCancelRoute,
@@ -152,6 +154,7 @@ export default function MapScreen({
         view={view}
         selectedId={selectedId}
         onSelect={onSelect}
+        onOpenFound={onOpenFound}
       />
       {routing ? (
         <RouteCard status={routeStatus} route={route} onCancel={onCancelRoute} />

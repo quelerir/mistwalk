@@ -10,6 +10,7 @@ export interface PoiMarkersProps {
   view: MapView | null;
   selectedId?: string | null;
   onSelect?: (poi: Poi) => void;
+  onOpenFound?: (poi: Poi) => void;
 }
 
 const MAX_MARKERS = 60;
@@ -21,6 +22,7 @@ export default function PoiMarkers({
   view,
   selectedId = null,
   onSelect,
+  onOpenFound,
 }: PoiMarkersProps) {
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
 
@@ -55,12 +57,18 @@ export default function PoiMarkers({
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none" onLayout={onLayout}>
       {visible.map(({ poi, x, y, showLabel }) =>
         discoveredIds.has(poi.id) ? (
-          <View key={poi.id} pointerEvents="none" style={[styles.anchor, { left: x - 60, top: y - 16 }]}>
-            <View style={styles.found}>
+          <View key={poi.id} pointerEvents="box-none" style={[styles.anchor, { left: x - 60, top: y - 16 }]}>
+            <Pressable
+              onPress={() => onOpenFound?.(poi)}
+              hitSlop={8}
+              style={styles.found}
+              accessibilityRole="button"
+              accessibilityLabel={poi.name}
+            >
               <Text style={styles.foundIcon}>{KIND_ICON[poi.kind]}</Text>
-            </View>
+            </Pressable>
             {showLabel && (
-              <Text style={styles.label} numberOfLines={1}>
+              <Text style={styles.label} numberOfLines={1} pointerEvents="none">
                 {poi.name}
               </Text>
             )}

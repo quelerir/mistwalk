@@ -6,17 +6,25 @@ import type { Poi } from '../lib/poi/types';
 export interface DiscoveryCardProps {
   place: Poi | null;
   onDismiss: () => void;
+  onOpen: (place: Poi) => void;
 }
 
-export default function DiscoveryCard({ place, onDismiss }: DiscoveryCardProps) {
+export default function DiscoveryCard({ place, onDismiss, onOpen }: DiscoveryCardProps) {
   if (!place) return null;
   return (
-    <Pressable style={styles.wrapper} onPress={onDismiss}>
+    <Pressable
+      style={styles.wrapper}
+      onPress={() => {
+        onDismiss();
+        onOpen(place);
+      }}
+    >
       <View style={styles.card}>
         <Text style={styles.title}>
           {KIND_ICON[place.kind]} Вы нашли: {place.name}
         </Text>
         <Text style={styles.text}>{greetingFor(place.kind)}</Text>
+        <Text style={styles.more}>Подробнее ›</Text>
       </View>
     </Pressable>
   );
@@ -33,4 +41,5 @@ const styles = StyleSheet.create({
   },
   title: { color: '#ffc83c', fontSize: 18, fontWeight: '800', marginBottom: 6 },
   text: { color: 'white', fontSize: 15 },
+  more: { color: '#ffc83c', fontWeight: '700', marginTop: 8 },
 });

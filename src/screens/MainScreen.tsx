@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { LocationSubscription } from 'expo-location';
 import AppMenu from '../components/AppMenu';
+import PlaceSheet from '../components/PlaceSheet';
 import DiscoveryCard from '../components/DiscoveryCard';
 import TabBar, { type TabItem } from '../components/TabBar';
 import type { LivePosition } from '../components/FogOverlay';
@@ -66,6 +67,7 @@ export default function MainScreen({
   const [showCountries, setShowCountries] = useState(false);
   const [openCountry, setOpenCountry] = useState<CountryStat | null>(null);
   const [selected, setSelected] = useState<Poi | null>(null);
+  const [detailPlace, setDetailPlace] = useState<Poi | null>(null);
   const [routing, setRouting] = useState(false);
   const [view, setView] = useState<MapView | null>(null);
   const [fogStyle, setFogStyleState] = useState<FogStyle>('ink');
@@ -160,6 +162,7 @@ export default function MainScreen({
             selected={selected}
             routing={routing}
             onSelect={handleSelect}
+            onOpenFound={setDetailPlace}
             onCloseSelected={handleCloseSelected}
             onBuildRoute={() => setRouting(true)}
             onCancelRoute={() => setRouting(false)}
@@ -183,6 +186,7 @@ export default function MainScreen({
               citiesFailed={cityStats.failed}
               origin={livePosition}
               onBack={() => setOpenCountry(null)}
+              onOpenFound={setDetailPlace}
               onSelectHidden={(poi) => {
                 setShowCountries(false);
                 setOpenCountry(null);
@@ -205,7 +209,7 @@ export default function MainScreen({
               onOpenCountries={() => setShowCountries(true)}
             />
           ))}
-        <DiscoveryCard place={greeting} onDismiss={dismissGreeting} />
+        <DiscoveryCard place={greeting} onDismiss={dismissGreeting} onOpen={setDetailPlace} />
       </View>
       <TabBar
         tabs={TABS}
@@ -221,6 +225,7 @@ export default function MainScreen({
           }
         }}
       />
+      <PlaceSheet place={detailPlace} onClose={() => setDetailPlace(null)} />
       <AppMenu
         visible={menuOpen}
         onClose={() => setMenuOpen(false)}
