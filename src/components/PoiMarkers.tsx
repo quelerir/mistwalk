@@ -6,6 +6,7 @@ import KindIcon from './KindIcon';
 import type { Poi } from '../lib/poi/types';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
+import { KIND_COLOR } from '../lib/poi/kindColors';
 
 export interface PoiMarkersProps {
   pois: Poi[];
@@ -87,7 +88,7 @@ export default function PoiMarkers({
               accessibilityRole="button"
               accessibilityLabel={KIND_LABEL[poi.kind]}
             >
-              <KindIcon kind={poi.kind} size={18} color="#374151" />
+              <KindIcon kind={poi.kind} size={18} color={KIND_COLOR[poi.kind]} />
             </Pressable>
           </View>
         )
@@ -102,7 +103,7 @@ const makeStyles = (c: Colors) => StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: 'rgba(222, 226, 234, 0.45)',
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000000',

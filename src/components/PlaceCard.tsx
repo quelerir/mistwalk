@@ -6,6 +6,7 @@ import KindIcon from './KindIcon';
 import type { Poi } from '../lib/poi/types';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
+import { KIND_COLOR, kindTint } from '../lib/poi/kindColors';
 
 export interface PlaceCardProps {
   poi: Poi;
@@ -28,8 +29,8 @@ export default function PlaceCard({ poi, origin, onBuildRoute, onClose }: PlaceC
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <View style={styles.badge}>
-          <KindIcon kind={poi.kind} size={22} color={c.badgeFg} />
+        <View style={[styles.badge, { backgroundColor: kindTint(poi.kind) }]}>
+          <KindIcon kind={poi.kind} size={22} color={KIND_COLOR[poi.kind]} />
         </View>
         <View style={styles.text}>
           <Text style={styles.title} numberOfLines={1}>

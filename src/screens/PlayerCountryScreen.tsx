@@ -10,6 +10,7 @@ import type { PlayerProfile } from '../lib/social/profiles';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import { FONT } from '../theme/fonts';
+import { KIND_COLOR, kindTint } from '../lib/poi/kindColors';
 
 export interface PlayerCountryScreenProps {
   player: PlayerProfile;
@@ -86,8 +87,8 @@ export default function PlayerCountryScreen({ player, countryCode, onBack }: Pla
               </View>
             ) : (
               <View style={styles.row}>
-                <View style={styles.badge}>
-                  <KindIcon kind={item.place.kind} size={18} color={c.badgeFg} />
+                <View style={[styles.badge, { backgroundColor: kindTint(item.place.kind) }]}>
+                  <KindIcon kind={item.place.kind} size={18} color={KIND_COLOR[item.place.kind]} />
                 </View>
                 <View style={styles.placeText}>
                   <Text style={styles.name} numberOfLines={1}>

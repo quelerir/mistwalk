@@ -12,6 +12,7 @@ import type { DiscoveredPlace, Poi } from '../lib/poi/types';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import { FONT } from '../theme/fonts';
+import { KIND_COLOR, kindTint } from '../lib/poi/kindColors';
 
 export interface CountryPlacesScreenProps {
   country: CountryStat;
@@ -127,8 +128,8 @@ export default function CountryPlacesScreen({
                 onPress={() => onOpenFound(item.place)}
                 accessibilityRole="button"
               >
-                <View style={styles.badge}>
-                  <KindIcon kind={item.icon} size={20} color={c.badgeFg} />
+                <View style={[styles.badge, { backgroundColor: kindTint(item.icon) }]}>
+                  <KindIcon kind={item.icon} size={20} color={KIND_COLOR[item.icon]} />
                 </View>
                 <Text style={styles.name} numberOfLines={1}>
                   {item.place.name}

@@ -7,6 +7,7 @@ import KindIcon from './KindIcon';
 import type { Poi } from '../lib/poi/types';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
+import { KIND_COLOR } from '../lib/poi/kindColors';
 
 export interface PlaceSheetProps {
   place: Poi | null;
@@ -31,7 +32,7 @@ export default function PlaceSheet({ place, onClose }: PlaceSheetProps) {
             ) : null}
             <View style={styles.body}>
               <View style={styles.kindRow}>
-                <KindIcon kind={place.kind} size={18} color={c.badgeFg} />
+                <KindIcon kind={place.kind} size={18} color={KIND_COLOR[place.kind]} />
                 <Text style={styles.kind}>{KIND_LABEL[place.kind]}</Text>
               </View>
               <Text style={styles.title}>{place.name}</Text>
@@ -67,7 +68,7 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   photo: { width: '100%', height: 220, backgroundColor: c.surfaceAlt },
   body: { padding: 16 },
   kindRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  kind: { color: c.badgeFg, fontWeight: '700' },
+  kind: { color: c.text, fontWeight: '700' },
   title: { fontSize: 22, fontWeight: '800', color: c.text, marginBottom: 12 },
   text: { fontSize: 15, lineHeight: 22, color: c.text },
   muted: { fontSize: 15, color: c.textMuted },

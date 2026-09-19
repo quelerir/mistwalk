@@ -8,6 +8,7 @@ import type { Poi, PoiKind } from '../lib/poi/types';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import { FONT } from '../theme/fonts';
+import { KIND_COLOR, kindTint } from '../lib/poi/kindColors';
 
 export interface NearbyScreenProps {
   pois: Poi[];
@@ -133,8 +134,8 @@ export default function NearbyScreen({ pois, discoveredIds, origin, onSelect }: 
               accessibilityRole="button"
               accessibilityLabel="Показать на карте"
             >
-              <View style={styles.iconBadge}>
-                <KindIcon kind={item.poi.kind} size={22} color={c.badgeFg} />
+              <View style={[styles.iconBadge, { backgroundColor: kindTint(item.poi.kind) }]}>
+                <KindIcon kind={item.poi.kind} size={22} color={KIND_COLOR[item.poi.kind]} />
               </View>
               <View style={styles.rowText}>
                 <Text style={styles.name} numberOfLines={1}>

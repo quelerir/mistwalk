@@ -46,7 +46,7 @@ export default function TabBar<K extends string>({ tabs, active, onChange }: Tab
                   style={[styles.photo, { borderColor: on ? c.accent : 'transparent' }]}
                 />
               ) : (
-                <SvgIcon name={tab.icon} active={on} size={24} color={on ? c.accent : c.textMuted} />
+                <SvgIcon name={tab.icon} size={24} color={on ? c.accent : c.textMuted} />
               )}
             </View>
             <Text style={[styles.label, on && styles.labelActive]} numberOfLines={1}>
