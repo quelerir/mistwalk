@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { BlurMask, Canvas, ColorMatrix, FractalNoise, Group, Paint, Path, Rect, Skia } from '@shopify/react-native-skia';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
@@ -41,28 +41,81 @@ function parseHex(hex: string): [number, number, number] {
 }
 
 interface CloudLayerProps {
-  size: Size;
+  extent: number;
   color: string;
   freq: number;
   seed: number;
-  alpha: number;
+  gain: number;
 }
 
-// Fractal noise recoloured to one tint: alpha follows the noise so the billows fade in and out.
-function CloudLayer({ size, color, freq, seed, alpha }: CloudLayerProps) {
+// Fractal noise recoloured to one tint: alpha rises steeply above the noise midpoint, so the
+// billows get defined edges instead of a uniform haze.
+function CloudLayer({ extent, color, freq, seed, gain }: CloudLayerProps) {
   const [r, g, b] = parseHex(color);
   // prettier-ignore
   const matrix = [
     0, 0, 0, 0, r,
     0, 0, 0, 0, g,
     0, 0, 0, 0, b,
-    alpha * 2.4, 0, 0, 0, -alpha * 0.9,
+    gain, 0, 0, 0, -gain * 0.4,
   ];
   return (
-    <Rect x={0} y={0} width={size.width} height={size.height}>
-      <FractalNoise freqX={freq} freqY={freq} octaves={4} seed={seed} />
+    <Rect x={-extent} y={-extent} width={extent * 2} height={extent * 2}>
+      <FractalNoise freqX={freq} freqY={freq} octaves={5} seed={seed} />
       <ColorMatrix matrix={matrix} />
     </Rect>
+  );
+}
+
+const CLOUD_REFERENCE_ZOOM = 16;
+const CLOUD_MIN_SCALE = 0.35;
+const CLOUD_MAX_SCALE = 4;
+const CLOUD_MAX_OFFSET_PX = 50000;
+// Screen-space offset of the shadow copy: light comes from the top-left.
+const CLOUD_SHADOW_OFFSET = { x: 9, y: 12 };
+
+interface FogCloudsProps {
+  view: MapView | null;
+  size: Size;
+  fog: FogPalette;
+}
+
+// Clouds are laid out in map space around a fixed origin, so they pan, zoom and rotate with the map.
+function FogClouds({ view, size, fog }: FogCloudsProps) {
+  const origin = useRef<[number, number] | null>(null);
+  if (!view) return null;
+  if (!origin.current) origin.current = [view.center[0], view.center[1]];
+
+  let at = projectToScreen(origin.current[0], origin.current[1], view, size);
+  if (Math.abs(at.x) > CLOUD_MAX_OFFSET_PX || Math.abs(at.y) > CLOUD_MAX_OFFSET_PX) {
+    // Far from the origin (first real fix or a long trip): re-anchor to keep float precision.
+    origin.current = [view.center[0], view.center[1]];
+    at = projectToScreen(origin.current[0], origin.current[1], view, size);
+  }
+  const scale = Math.min(
+    CLOUD_MAX_SCALE,
+    Math.max(CLOUD_MIN_SCALE, 2 ** (view.zoom - CLOUD_REFERENCE_ZOOM))
+  );
+  const extent = Math.hypot(size.width, size.height) / scale;
+  const mapTransform = [
+    { translateX: at.x },
+    { translateY: at.y },
+    { rotate: (-view.bearing * Math.PI) / 180 },
+    { scale },
+  ];
+
+  return (
+    <>
+      <Group transform={[{ translateX: CLOUD_SHADOW_OFFSET.x }, { translateY: CLOUD_SHADOW_OFFSET.y }]}>
+        <Group transform={mapTransform}>
+          <CloudLayer extent={extent} color={fog.shadow} freq={0.006} seed={3} gain={3.2} />
+        </Group>
+      </Group>
+      <Group transform={mapTransform}>
+        <CloudLayer extent={extent} color={fog.light} freq={0.006} seed={3} gain={3.2} />
+        <CloudLayer extent={extent} color={fog.light} freq={0.02} seed={11} gain={1.6} />
+      </Group>
+    </>
   );
 }
 
@@ -123,8 +176,7 @@ export default function FogOverlay({ points, livePosition, view, fog }: FogOverl
       <Canvas style={StyleSheet.absoluteFill}>
         <Group layer={<Paint />}>
           <Rect x={0} y={0} width={size.width} height={size.height} color={fog.base} />
-          <CloudLayer size={size} color={fog.shadow} freq={0.011} seed={7} alpha={0.55} />
-          <CloudLayer size={size} color={fog.light} freq={0.006} seed={3} alpha={0.9} />
+          <FogClouds view={view} size={size} fog={fog} />
           {revealPath && (
             <Path
               path={revealPath}
