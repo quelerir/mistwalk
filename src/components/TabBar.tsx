@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SvgIcon from './icons/SvgIcon';
 import type { IconName } from './icons/svgIcons';
@@ -10,6 +10,8 @@ export interface TabItem<K extends string> {
   key: K;
   label: string;
   icon: IconName;
+  // A profile photo replaces the icon as a small circle.
+  photoUri?: string | null;
 }
 
 export interface TabBarProps<K extends string> {
@@ -35,11 +37,21 @@ export default function TabBar<K extends string>({ tabs, active, onChange }: Tab
           accessibilityState={{ selected: tab.key === active }}
           hitSlop={8}
         >
-          <SvgIcon
-            name={tab.icon}
-            active={tab.key === active}
-            color={tab.key === active ? c.text : c.textMuted}
-          />
+          {tab.photoUri ? (
+            <Image
+              source={{ uri: tab.photoUri }}
+              style={[
+                styles.photo,
+                { borderColor: tab.key === active ? c.text : 'transparent' },
+              ]}
+            />
+          ) : (
+            <SvgIcon
+              name={tab.icon}
+              active={tab.key === active}
+              color={tab.key === active ? c.text : c.textMuted}
+            />
+          )}
         </Pressable>
       ))}
     </View>
@@ -55,4 +67,5 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   },
   tab: { flex: 1, height: 52, alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: 0.5 },
+  photo: { width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, backgroundColor: c.surfaceAlt },
 });

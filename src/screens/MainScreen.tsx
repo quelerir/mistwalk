@@ -44,7 +44,7 @@ const TABS: Array<TabItem<TabKey>> = [
   { key: 'map', label: 'Карта', icon: 'map' },
   { key: 'nearby', label: 'Рядом', icon: 'compass' },
   { key: 'collection', label: 'Достижения', icon: 'award' },
-  { key: 'menu', label: 'Меню', icon: 'menu' },
+  { key: 'menu', label: 'Меню', icon: 'user' },
 ];
 
 export interface MainScreenProps {
@@ -158,6 +158,10 @@ export default function MainScreen({
   );
   const profileSync = useProfileSync(client, userId, snapshot);
   const avatarUri = avatarUrl(client, profileSync.profile?.avatarPath ?? null);
+  const tabs = useMemo(
+    () => TABS.map((t) => (t.key === 'menu' ? { ...t, photoUri: avatarUri } : t)),
+    [avatarUri]
+  );
 
   async function handleChangeAvatar(): Promise<string | null> {
     // iOS cannot present the photo picker over the menu sheet, so hide the sheet while picking.
@@ -297,7 +301,7 @@ export default function MainScreen({
         <DiscoveryCard place={greeting} onDismiss={dismissGreeting} onOpen={setDetailPlace} />
       </View>
       <TabBar
-        tabs={TABS}
+        tabs={tabs}
         active={tab}
         onChange={(key) => {
           if (key === 'menu') setMenuOpen(true);
