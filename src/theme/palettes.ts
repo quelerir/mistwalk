@@ -50,9 +50,9 @@ export const LIGHT: Colors = {
   cityBadgeBg: '#e8f0ff',
   sheetBg: '#ffffff',
   sheetHandle: '#d0d0d0',
-  foundFill: '#ffffff',
-  foundBorder: '#3b82f6',
-  foundIcon: '#1d4ed8',
+  foundFill: '#262626',
+  foundBorder: '#262626',
+  foundIcon: '#ffffff',
 };
 
 export const DARK: Colors = {
@@ -77,9 +77,9 @@ export const DARK: Colors = {
   cityBadgeBg: '#1d2a44',
   sheetBg: '#1a1d23',
   sheetHandle: '#3a3f49',
-  foundFill: '#1a1d23',
-  foundBorder: '#4d94ff',
-  foundIcon: '#8fb8ff',
+  foundFill: '#f2f3f5',
+  foundBorder: '#f2f3f5',
+  foundIcon: '#111318',
 };
 
 export const PALETTES: Record<ColorScheme, Colors> = { light: LIGHT, dark: DARK };
