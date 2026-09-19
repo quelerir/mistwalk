@@ -1,161 +1,38 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import {
-  fetchLeaderboard,
-  fetchMyProfile,
-  NameTakenError,
-  saveMyProfile,
-  setProfileVisibility,
-  type LeaderboardEntry,
-  type MyProfile,
-  type ProfileSnapshot,
-} from '../lib/social/profiles';
-import { useStyles, useTheme } from '../theme/ThemeProvider';
+import { fetchLeaderboard, type LeaderboardEntry } from '../lib/social/profiles';
+import { useStyles } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 
 export interface LeaderboardScreenProps {
   client: SupabaseClient;
   userId: string;
-  snapshot: ProfileSnapshot;
   onBack: () => void;
   onOpenPlayer: (entry: LeaderboardEntry) => void;
 }
 
-const SYNC_DELAY_MS = 4000;
-
-// Everyone takes part by default under a neutral name; the email is never used.
-async function autoJoin(client: SupabaseClient, userId: string, snapshot: ProfileSnapshot): Promise<MyProfile> {
-  const compact = userId.replace(/-/g, '');
-  for (const length of [6, 10, 16]) {
-    const profile: MyProfile = { displayName: `Игрок ${compact.slice(0, length)}`, isPublic: true };
-    try {
-      await saveMyProfile(client, userId, profile, snapshot);
-      return profile;
-    } catch (err) {
-      if (!(err instanceof NameTakenError)) throw err;
-    }
-  }
-  throw new Error('could not pick a display name');
-}
-const MIN_NAME = 2;
-const MAX_NAME = 24;
-
-export default function LeaderboardScreen({ client, userId, snapshot, onBack, onOpenPlayer }: LeaderboardScreenProps) {
+export default function LeaderboardScreen({ client, userId, onBack, onOpenPlayer }: LeaderboardScreenProps) {
   const styles = useStyles(makeStyles);
-  const { colors: c } = useTheme();
-  const [me, setMe] = useState<MyProfile | null>(null);
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [name, setName] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const lastSynced = useRef('');
-  const snapshotRef = useRef(snapshot);
-  snapshotRef.current = snapshot;
-
-  const load = useCallback(async () => {
-    try {
-      let profile = await fetchMyProfile(client, userId);
-      if (!profile) profile = await autoJoin(client, userId, snapshotRef.current);
-      const list = await fetchLeaderboard(client);
-      setMe(profile);
-      setEntries(list);
-      setName((current) => current || profile.displayName);
-      setStatus('ready');
-    } catch (err) {
-      console.warn('[leaderboard] load failed', err);
-      setStatus('error');
-    }
-  }, [client, userId]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
-
-  // Keep the public numbers fresh while the screen is open and the player takes part.
-  const snapshotKey = JSON.stringify(snapshot);
-  useEffect(() => {
-    if (!me?.isPublic || snapshotKey === lastSynced.current) return;
-    const timer = setTimeout(() => {
-      lastSynced.current = snapshotKey;
-      saveMyProfile(client, userId, me, snapshot).catch((err) => {
-        lastSynced.current = '';
-        console.warn('[leaderboard] sync failed', err);
+    let cancelled = false;
+    fetchLeaderboard(client)
+      .then((list) => {
+        if (cancelled) return;
+        setEntries(list);
+        setStatus('ready');
+      })
+      .catch((err) => {
+        console.warn('[leaderboard] load failed', err);
+        if (!cancelled) setStatus('error');
       });
-    }, SYNC_DELAY_MS);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [me, snapshotKey]);
-
-  async function rename() {
-    const trimmed = name.trim();
-    if (!me) return;
-    if (trimmed.length < MIN_NAME || trimmed.length > MAX_NAME) {
-      setMessage(`Имя от ${MIN_NAME} до ${MAX_NAME} символов`);
-      return;
-    }
-    setBusy(true);
-    setMessage(null);
-    try {
-      await saveMyProfile(client, userId, { displayName: trimmed, isPublic: me.isPublic }, snapshot);
-      lastSynced.current = snapshotKey;
-      await load();
-      setMessage('Имя сохранено');
-    } catch (err) {
-      setMessage(err instanceof NameTakenError ? 'Это имя уже занято' : 'Не удалось сохранить. Проверьте интернет.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function toggleVisibility(next: boolean) {
-    setBusy(true);
-    setMessage(null);
-    try {
-      await setProfileVisibility(client, userId, next);
-      await load();
-    } catch {
-      setMessage('Не удалось изменить видимость');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const header = (
-    <View>
-      {me && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{me.isPublic ? 'Вы в рейтинге' : 'Вы скрыты из рейтинга'}</Text>
-          <Text style={styles.cardText}>
-            Другие игроки видят имя, найденные места, страны и города, но не ваши маршруты и координаты.
-          </Text>
-          <TextInput
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-            placeholder="Как вас показывать"
-            placeholderTextColor={c.textFaint}
-            maxLength={MAX_NAME}
-            autoCapitalize="words"
-          />
-          <Pressable
-            style={[styles.button, busy && styles.disabled]}
-            onPress={() => void rename()}
-            disabled={busy}
-            accessibilityRole="button"
-          >
-            <Text style={styles.buttonText}>Сохранить имя</Text>
-          </Pressable>
-          <Pressable onPress={() => void toggleVisibility(!me.isPublic)} disabled={busy} accessibilityRole="button">
-            <Text style={styles.link}>{me.isPublic ? 'Скрыть меня из рейтинга' : 'Показывать меня в рейтинге'}</Text>
-          </Pressable>
-        </View>
-      )}
-      {message && <Text style={styles.error}>{message}</Text>}
-      <Text style={styles.sectionTitle}>Игроки</Text>
-    </View>
-  );
+    return () => {
+      cancelled = true;
+    };
+  }, [client]);
 
   return (
     <View style={styles.container}>
@@ -176,7 +53,6 @@ export default function LeaderboardScreen({ client, userId, snapshot, onBack, on
         <FlatList
           data={entries}
           keyExtractor={(item) => item.userId}
-          ListHeaderComponent={header}
           ListEmptyComponent={<Text style={styles.empty}>Пока никого. Станьте первым!</Text>}
           renderItem={({ item }) => (
             <Pressable

@@ -154,3 +154,22 @@ export async function fetchPlayerProfile(
     })),
   };
 }
+
+// Everyone takes part by default under a neutral name; the email is never used.
+export async function createDefaultProfile(
+  client: SupabaseClient,
+  userId: string,
+  snapshot: ProfileSnapshot
+): Promise<MyProfile> {
+  const compact = userId.replace(/-/g, '');
+  for (const length of [6, 10, 16]) {
+    const profile: MyProfile = { displayName: `Игрок ${compact.slice(0, length)}`, isPublic: true };
+    try {
+      await saveMyProfile(client, userId, profile, snapshot);
+      return profile;
+    } catch (err) {
+      if (!(err instanceof NameTakenError)) throw err;
+    }
+  }
+  throw new Error('could not pick a display name');
+}

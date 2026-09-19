@@ -19,6 +19,8 @@ export interface AppMenuProps {
   onEnableBackground: () => Promise<boolean>;
   onSignOut: () => Promise<void>;
   email: string;
+  leaderboardVisible: boolean | null;
+  onLeaderboardVisibleChange: (next: boolean) => Promise<void>;
 }
 
 export default function AppMenu({
@@ -30,6 +32,8 @@ export default function AppMenu({
   onEnableBackground,
   onSignOut,
   email,
+  leaderboardVisible,
+  onLeaderboardVisibleChange,
 }: AppMenuProps) {
   const [accuracy, setAccuracy] = useState<AccuracyProfile>('battery-saver');
   const { preference, setPreference } = useTheme();
@@ -63,6 +67,15 @@ export default function AppMenu({
   const accountItems: MenuItem[] = [
     { key: 'back', icon: 'back', label: 'Назад', onPress: () => setPage('main') },
     { key: 'email', icon: 'user', label: email || 'Без почты', onPress: () => {} },
+    {
+      key: 'visibility',
+      icon: 'award',
+      label: 'Виден в рейтинге',
+      value: leaderboardVisible === null ? '…' : leaderboardVisible ? 'Да' : 'Нет',
+      onPress: () => {
+        if (leaderboardVisible !== null) void onLeaderboardVisibleChange(!leaderboardVisible);
+      },
+    },
     {
       key: 'signout',
       icon: 'logout',

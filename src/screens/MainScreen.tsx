@@ -31,6 +31,7 @@ import { useCountryStats } from '../hooks/useCountryStats';
 import { useCityStats } from '../hooks/useCityStats';
 import LeaderboardScreen from './LeaderboardScreen';
 import PlayerScreen from './PlayerScreen';
+import { useProfileSync } from '../hooks/useProfileSync';
 import { buildSnapshot, type LeaderboardEntry } from '../lib/social/profiles';
 
 const NO_PLACES: DiscoveredPlace[] = [];
@@ -107,9 +108,9 @@ export default function MainScreen({
     setRouting(false);
   }
 
-  const stats = useStats(points, discovered.length, tab === 'collection');
+  const stats = useStats(points, discovered.length, true);
 
-  const countryStats = useCountryStats(points, tab === 'collection');
+  const countryStats = useCountryStats(points, true);
   // Found places are stored without OpenStreetMap's wiki links; take them from the loaded POI.
   const detailWithTags = useMemo(() => {
     if (!detailPlace) return null;
@@ -130,12 +131,13 @@ export default function MainScreen({
     [discovered, pois, discoveredIds, countryStats.cells]
   );
 
-  // The public snapshot needs every city, so resolve them all while the leaderboard is open.
-  const allCityStats = useCityStats(points, discovered, showLeaderboard);
+  // The public profile needs every city, so resolve them all in the background.
+  const allCityStats = useCityStats(points, discovered, true);
   const snapshot = useMemo(
     () => buildSnapshot(stats.distanceKm, countryStats.countries, allCityStats.cities),
     [stats.distanceKm, countryStats.countries, allCityStats.cities]
   );
+  const profileSync = useProfileSync(client, userId, snapshot);
 
   const cityStats = useCityStats(
     openCountryPoints,
@@ -210,7 +212,6 @@ export default function MainScreen({
             <LeaderboardScreen
               client={client}
               userId={userId}
-              snapshot={snapshot}
               onBack={() => setShowLeaderboard(false)}
               onOpenPlayer={setOpenPlayer}
             />
@@ -275,6 +276,8 @@ export default function MainScreen({
         onEnableBackground={onEnableBackground}
         onSignOut={handleSignOut}
         email={email}
+        leaderboardVisible={profileSync.profile?.isPublic ?? null}
+        onLeaderboardVisibleChange={profileSync.setVisible}
       />
     </View>
   );
