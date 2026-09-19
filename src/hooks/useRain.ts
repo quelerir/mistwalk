@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { ANDROID_SAFE_MODE } from '../lib/androidSafeMode';
 import type { Coordinate } from '../lib/geo/distance';
 import { fetchWeather, rainIntensity } from '../lib/weather/weather';
 
@@ -34,5 +35,5 @@ export function useRain(position: Coordinate | null, enabled: boolean): number {
     };
   }, [enabled, hasPosition, area]);
 
-  return enabled ? rain : 0;
+  return enabled && !ANDROID_SAFE_MODE ? rain : 0;
 }
