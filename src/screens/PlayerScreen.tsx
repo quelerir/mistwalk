@@ -10,6 +10,7 @@ import { avatarUrl, fetchPlayerProfile, reportPlayer, type PlayerProfile, type R
 import PlayerCountryScreen from './PlayerCountryScreen';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
+import { FONT } from '../theme/fonts';
 
 export interface PlayerScreenProps {
   client: SupabaseClient;
@@ -164,7 +165,7 @@ const makeStyles = (c: Colors) =>
     chevron: { fontSize: 24, color: c.chevron, marginLeft: 8 },
     report: { color: c.danger, fontWeight: '600', marginLeft: 8 },
     headerText: { flex: 1 },
-    title: { fontSize: 24, fontWeight: '800', color: c.text },
+    title: { fontSize: 26, fontFamily: FONT.display, letterSpacing: -0.8, color: c.text },
     loader: { marginTop: 32 },
     empty: { marginTop: 24, paddingHorizontal: 16, textAlign: 'center', color: c.textMuted },
     content: { paddingBottom: 32 },

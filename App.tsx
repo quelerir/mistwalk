@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useFonts } from 'expo-font';
 import { Linking, StatusBar, StyleSheet, Text, View } from 'react-native';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import NetInfo from '@react-native-community/netinfo';
+import { FONT_ASSETS } from './src/theme/fonts';
 import { ThemeProvider, useTheme } from './src/theme/ThemeProvider';
 import { getEnvSupabaseClient } from './src/lib/supabase/client';
 import { getSession } from './src/lib/supabase/auth';
@@ -39,6 +41,7 @@ const BACKGROUND_PERMISSION_POLLS = 12;
 const BACKGROUND_PROMPT_DISMISSED_KEY = 'permissions.backgroundPrompt.dismissed.v1';
 
 export default function App() {
+  const [fontsLoaded, fontError] = useFonts(FONT_ASSETS);
   if (!client) {
     return (
       <SafeAreaProvider>
@@ -50,6 +53,9 @@ export default function App() {
       </SafeAreaProvider>
     );
   }
+
+  // Titles use a bundled font; a failed load falls back to the system font instead of blocking.
+  if (!fontsLoaded && !fontError) return null;
 
   return (
     <ThemeProvider>

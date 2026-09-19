@@ -9,6 +9,7 @@ import { formatPercent } from '../lib/geo/countryStats';
 import type { PlayerProfile } from '../lib/social/profiles';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
+import { FONT } from '../theme/fonts';
 
 export interface PlayerCountryScreenProps {
   player: PlayerProfile;
@@ -111,7 +112,7 @@ const makeStyles = (c: Colors) =>
     back: { fontSize: 36, lineHeight: 36, color: c.text, marginRight: 12, marginTop: -4 },
     flag: { width: 40, height: 28, borderRadius: 4, backgroundColor: c.surfaceAlt, marginRight: 12 },
     headerText: { flex: 1 },
-    title: { fontSize: 24, fontWeight: '800', color: c.text },
+    title: { fontSize: 26, fontFamily: FONT.display, letterSpacing: -0.8, color: c.text },
     subtitle: { marginTop: 2, color: c.textMuted },
     empty: { marginTop: 32, paddingHorizontal: 16, textAlign: 'center', color: c.textMuted },
     sectionTitle: { fontSize: 16, fontWeight: '700', color: c.text, paddingHorizontal: 16, paddingTop: 20, paddingBottom: 6 },

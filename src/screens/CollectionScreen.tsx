@@ -5,6 +5,7 @@ import type { Stats } from '../hooks/useStats';
 import type { WeekSummary } from '../lib/stats/weekly';
 import { useStyles } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
+import { CARD_SHADOW, FONT } from '../theme/fonts';
 
 export interface CollectionScreenProps {
   stats: Stats;
@@ -97,25 +98,27 @@ export default function CollectionScreen({
 const makeStyles = (c: Colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: c.bg },
   content: { padding: 16, paddingBottom: 32 },
-  title: { fontSize: 24, fontWeight: '800', color: c.text, marginBottom: 12 },
+  title: { fontSize: 34, fontFamily: FONT.display, letterSpacing: -0.8, color: c.text, marginBottom: 12 },
   tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  tile: { flex: 1, backgroundColor: c.surface, borderRadius: 14, padding: 14 },
-  tileValue: { fontSize: 22, fontWeight: '800', color: c.text },
+  tile: { flex: 1, backgroundColor: c.surface, borderRadius: 24, padding: 16, shadowColor: c.shadow, ...CARD_SHADOW },
+  tileValue: { fontSize: 32, fontFamily: FONT.display, letterSpacing: -0.6, color: c.text },
   tileLabel: { marginTop: 2, color: c.textMuted },
-  week: { backgroundColor: c.surface, borderRadius: 14, padding: 14, marginTop: 10 },
+  week: { backgroundColor: c.surface, borderRadius: 24, padding: 16, marginTop: 12, shadowColor: c.shadow, ...CARD_SHADOW },
   weekTitle: { fontSize: 16, fontWeight: '700', color: c.text },
   weekRow: { flexDirection: 'row', marginTop: 10 },
   weekCell: { flex: 1 },
-  weekValue: { fontSize: 22, fontWeight: '800', color: c.text },
+  weekValue: { fontSize: 26, fontFamily: FONT.display, letterSpacing: -0.5, color: c.text },
   weekLabel: { color: c.text },
   weekNote: { marginTop: 2, fontSize: 12, color: c.textMuted },
   countriesButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: c.surface,
-    borderRadius: 14,
-    padding: 14,
-    marginTop: 10,
+    borderRadius: 24,
+    padding: 16,
+    marginTop: 12,
+    shadowColor: c.shadow,
+    ...CARD_SHADOW,
   },
   pressed: { opacity: 0.6 },
   countriesText: { flex: 1 },

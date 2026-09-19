@@ -3,6 +3,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import SvgIcon from './icons/SvgIcon';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
+import { FONT } from '../theme/fonts';
 
 export interface BackgroundPermissionPromptProps {
   visible: boolean;
@@ -63,7 +64,7 @@ const makeStyles = (c: Colors) => StyleSheet.create({
     alignSelf: 'center',
     marginBottom: 24,
   },
-  title: { fontSize: 24, fontWeight: '800', color: c.text, textAlign: 'center', marginBottom: 20 },
+  title: { fontSize: 26, fontFamily: FONT.display, letterSpacing: -0.8, color: c.text, textAlign: 'center', marginBottom: 20 },
   pointRow: { flexDirection: 'row', marginBottom: 12, paddingRight: 8 },
   bullet: { fontSize: 18, lineHeight: 22, marginRight: 10, color: c.text },
   pointText: { flex: 1, fontSize: 16, lineHeight: 22, color: c.text },

@@ -4,6 +4,7 @@ import { flagUrl } from '../lib/geo/countries';
 import { formatPercent, type CountryPlaces, type CountryStat } from '../lib/geo/countryStats';
 import { useStyles } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
+import { FONT } from '../theme/fonts';
 
 export interface CountriesScreenProps {
   countries: CountryStat[];
@@ -79,7 +80,7 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
   back: { fontSize: 36, lineHeight: 36, color: c.text, marginRight: 12, marginTop: -4 },
   headerText: { flex: 1 },
-  title: { fontSize: 24, fontWeight: '800', color: c.text },
+  title: { fontSize: 26, fontFamily: FONT.display, letterSpacing: -0.8, color: c.text },
   subtitle: { marginTop: 2, color: c.textMuted },
   row: {
     flexDirection: 'row',

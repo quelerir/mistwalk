@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
+    "@expo-google-fonts/bricolage-grotesque": "^0.4.1",
     "@maplibre/maplibre-react-native": "^11.3.10",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/netinfo": "11.5.2",
@@ -11,6 +12,7 @@
     "@shopify/react-native-skia": "2.4.18",
     "@supabase/supabase-js": "^2.116.0",
     "expo": "~55.0.31",
+    "expo-font": "~55.0.8",
     "expo-image-manipulator": "~55.0.21",
     "expo-image-picker": "~55.0.24",
     "expo-location": "~55.1.14",

@@ -7,6 +7,7 @@ import SvgIcon from '../components/icons/SvgIcon';
 import type { Poi, PoiKind } from '../lib/poi/types';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
+import { FONT } from '../theme/fonts';
 
 export interface NearbyScreenProps {
   pois: Poi[];
@@ -153,7 +154,7 @@ export default function NearbyScreen({ pois, discoveredIds, origin, onSelect }: 
 
 const makeStyles = (c: Colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: c.bg, paddingHorizontal: 16, paddingTop: 12 },
-  title: { fontSize: 24, fontWeight: '800', color: c.text },
+  title: { fontSize: 34, fontFamily: FONT.display, letterSpacing: -0.8, color: c.text },
   subtitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2, marginBottom: 10 },
   subtitle: { color: c.textMuted, flexShrink: 1 },
   filtersScroll: { flexGrow: 0, marginBottom: 8, overflow: 'visible' },

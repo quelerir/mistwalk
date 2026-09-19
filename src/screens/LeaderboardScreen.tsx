@@ -5,6 +5,7 @@ import Avatar from '../components/Avatar';
 import { avatarUrl, fetchLeaderboard, type LeaderboardEntry } from '../lib/social/profiles';
 import { useStyles } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
+import { FONT } from '../theme/fonts';
 
 export interface LeaderboardScreenProps {
   client: SupabaseClient;
@@ -85,7 +86,7 @@ const makeStyles = (c: Colors) =>
     header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
     back: { fontSize: 36, lineHeight: 36, color: c.text, marginRight: 12, marginTop: -4 },
     headerText: { flex: 1 },
-    title: { fontSize: 24, fontWeight: '800', color: c.text },
+    title: { fontSize: 26, fontFamily: FONT.display, letterSpacing: -0.8, color: c.text },
     subtitle: { marginTop: 2, color: c.textMuted },
     loader: { marginTop: 32 },
     empty: { marginTop: 24, paddingHorizontal: 16, textAlign: 'center', color: c.textMuted },
