@@ -102,6 +102,13 @@ export default function MainScreen({
   const stats = useStats(points, discovered.length, tab === 'collection');
 
   const countryStats = useCountryStats(points, tab === 'collection');
+  // Found places are stored without OpenStreetMap's wiki links; take them from the loaded POI.
+  const detailWithTags = useMemo(() => {
+    if (!detailPlace) return null;
+    const loaded = pois.find((p) => p.id === detailPlace.id);
+    return loaded ? { ...detailPlace, wikipedia: loaded.wikipedia, wikidata: loaded.wikidata } : detailPlace;
+  }, [detailPlace, pois]);
+
   const openCountryCode = openCountry?.code ?? null;
   const openCountryPoints = useMemo(
     () =>
@@ -225,7 +232,7 @@ export default function MainScreen({
           }
         }}
       />
-      <PlaceSheet place={detailPlace} onClose={() => setDetailPlace(null)} />
+      <PlaceSheet place={detailWithTags} onClose={() => setDetailPlace(null)} />
       <AppMenu
         visible={menuOpen}
         onClose={() => setMenuOpen(false)}

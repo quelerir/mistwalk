@@ -37,3 +37,17 @@ describe('parseOverpassResponse', () => {
     expect(parseOverpassResponse({})).toEqual([]);
   });
 });
+
+describe('parseOverpassResponse wiki tags', () => {
+  it('keeps the OpenStreetMap wikipedia and wikidata links when present', () => {
+    const [withTags, without] = parseOverpassResponse({
+      elements: [
+        { type: 'node', id: 1, lat: 1, lon: 2, tags: { tourism: 'attraction', name: 'A', wikipedia: 'de:Palais Seilern', wikidata: 'Q42' } },
+        { type: 'node', id: 2, lat: 1, lon: 2, tags: { tourism: 'attraction', name: 'B' } },
+      ],
+    });
+    expect(withTags).toMatchObject({ wikipedia: 'de:Palais Seilern', wikidata: 'Q42' });
+    expect(without).not.toHaveProperty('wikipedia');
+    expect(without).not.toHaveProperty('wikidata');
+  });
+});

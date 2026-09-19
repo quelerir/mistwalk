@@ -6,6 +6,9 @@ export interface Poi {
   kind: PoiKind;
   lat: number;
   lng: number;
+  // OpenStreetMap links to the encyclopedia entry, e.g. "de:Palais Seilern" and "Q123".
+  wikipedia?: string;
+  wikidata?: string;
 }
 
 export interface DiscoveredPlace extends Poi {

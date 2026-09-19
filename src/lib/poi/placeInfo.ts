@@ -79,9 +79,13 @@ const ARTICLE_PROPS =
 // Wikipedia article about the place (in the first language that has one), else a nearby
 // Wikimedia Commons photo, else null.
 export async function fetchPlaceInfo(
-  poi: Pick<Poi, 'name' | 'lat' | 'lng'>,
+  poi: Pick<Poi, 'name' | 'lat' | 'lng'> & Partial<Pick<Poi, 'wikipedia' | 'wikidata'>>,
   fetchImpl: typeof fetch = fetch
 ): Promise<PlaceInfo | null> {
+  // OpenStreetMap's own link to the encyclopedia entry is exact; use it before guessing by location.
+  const tagged = await fetchFromOsmTags(poi, fetchImpl);
+  if (tagged) return tagged;
+
   for (const lang of LANGUAGES) {
     const pages = await geosearch(`${lang}.wikipedia.org`, poi, ARTICLE_RADIUS_METERS, ARTICLE_PROPS, fetchImpl);
     const page = pickPage(pages, poi.name);
@@ -124,6 +128,7 @@ export async function fetchPlaceInfo(
 interface WikidataEntity {
   id: string;
   labels?: Record<string, { value: string }>;
+  sitelinks?: Record<string, { title: string }>;
   descriptions?: Record<string, { value: string }>;
   claims?: {
     P625?: Array<{ mainsnak?: { datavalue?: { value?: { latitude: number; longitude: number } } } }>;
@@ -163,7 +168,10 @@ export async function fetchWikidataInfo(
   }
   if (!best) return null;
 
-  const { entity } = best;
+  return infoFromEntity(best.entity, poi.name);
+}
+
+function infoFromEntity(entity: WikidataEntity, fallbackName: string): PlaceInfo | null {
   const pick = (field: 'descriptions' | 'labels') =>
     LANGUAGES.map((l) => entity[field]?.[l]?.value).find(Boolean) ?? null;
   const file = entity.claims?.P18?.[0]?.mainsnak?.datavalue?.value;
@@ -173,10 +181,90 @@ export async function fetchWikidataInfo(
     : null;
   if (!description && !imageUrl) return null;
   return {
-    title: pick('labels') ?? poi.name,
+    title: pick('labels') ?? fallbackName,
     description: description ? description.charAt(0).toUpperCase() + description.slice(1) : null,
     imageUrl,
     pageUrl: `https://www.wikidata.org/wiki/${entity.id}`,
     source: 'Wikidata',
   };
+}
+
+interface Summary {
+  title?: string;
+  extract?: string;
+  thumbnail?: { source: string };
+  content_urls?: { desktop?: { page?: string } };
+}
+
+async function summaryFor(lang: string, title: string, fetchImpl: typeof fetch): Promise<PlaceInfo | null> {
+  const url = `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g, '_'))}?redirect=true`;
+  const response = await fetchImpl(url);
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`${lang}.wikipedia.org responded with ${response.status}`);
+  const json = (await response.json()) as Summary;
+  if (!json.extract) return null;
+  return {
+    title: json.title ?? title,
+    description: json.extract.trim(),
+    imageUrl: json.thumbnail?.source ?? null,
+    pageUrl: json.content_urls?.desktop?.page ?? null,
+    source: `Википедия (${lang})`,
+  };
+}
+
+// The same article in Russian, when it exists.
+async function russianTitle(lang: string, title: string, fetchImpl: typeof fetch): Promise<string | null> {
+  const url =
+    `https://${lang}.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}` +
+    '&prop=langlinks&lllang=ru&redirects=1&format=json&formatversion=2&origin=*';
+  const response = await fetchImpl(url);
+  if (!response.ok) return null;
+  const json = (await response.json()) as { query?: { pages?: Array<{ langlinks?: Array<{ title: string }> }> } };
+  return json.query?.pages?.[0]?.langlinks?.[0]?.title ?? null;
+}
+
+export function parseWikipediaTag(tag: string): { lang: string; title: string } | null {
+  const match = /^([a-z]{2,3}(?:-[a-z]+)?):(.+)$/i.exec(tag.trim());
+  return match ? { lang: match[1].toLowerCase(), title: match[2].trim() } : null;
+}
+
+async function fromArticle(lang: string, title: string, fetchImpl: typeof fetch): Promise<PlaceInfo | null> {
+  if (lang !== 'ru') {
+    const ru = await russianTitle(lang, title, fetchImpl).catch(() => null);
+    if (ru) {
+      const russian = await summaryFor('ru', ru, fetchImpl);
+      if (russian) return russian;
+    }
+  }
+  return summaryFor(lang, title, fetchImpl);
+}
+
+async function fetchFromOsmTags(
+  poi: Pick<Poi, 'name'> & Partial<Pick<Poi, 'wikipedia' | 'wikidata'>>,
+  fetchImpl: typeof fetch
+): Promise<PlaceInfo | null> {
+  const article = poi.wikipedia ? parseWikipediaTag(poi.wikipedia) : null;
+  if (article) {
+    const info = await fromArticle(article.lang, article.title, fetchImpl);
+    if (info) return info;
+  }
+
+  if (poi.wikidata && /^Q\d+$/.test(poi.wikidata)) {
+    const data = (await wikidata(
+      `action=wbgetentities&ids=${poi.wikidata}&props=sitelinks%7Cdescriptions%7Clabels%7Cclaims` +
+        '&sitefilter=ruwiki%7Cenwiki%7Cdewiki&languages=ru%7Cen%7Cde',
+      fetchImpl
+    )) as { entities?: Record<string, WikidataEntity> };
+    const entity = data.entities?.[poi.wikidata];
+    if (!entity) return null;
+    for (const lang of LANGUAGES) {
+      const title = entity.sitelinks?.[`${lang}wiki`]?.title;
+      if (title) {
+        const info = await summaryFor(lang, title, fetchImpl);
+        if (info) return info;
+      }
+    }
+    return infoFromEntity(entity, poi.name);
+  }
+  return null;
 }

@@ -20,7 +20,7 @@ export function createPoiLoader({ storage, fetchTile, now = Date.now }: PoiCache
   const inFlight = new Map<string, Promise<Poi[]>>();
 
   async function load(tile: Tile): Promise<Poi[]> {
-    const key = `poi.tile.v1.${tileKey(tile)}`;
+    const key = `poi.tile.v2.${tileKey(tile)}`;
     const raw = await storage.getItem(key);
     if (raw) {
       try {

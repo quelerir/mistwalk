@@ -47,7 +47,10 @@ function parse(json: any) {
     if (!tags || !name || lat === undefined || lng === undefined) continue;
     const kind = kindOf(tags);
     if (!kind) continue;
-    result.push({ id: el.type + "/" + el.id, name, kind, lat, lng });
+    const poi: any = { id: el.type + "/" + el.id, name, kind, lat, lng };
+    if (tags.wikipedia) poi.wikipedia = tags.wikipedia;
+    if (tags.wikidata) poi.wikidata = tags.wikidata;
+    result.push(poi);
   }
   return result;
 }
@@ -87,7 +90,7 @@ Deno.serve(async (req: Request) => {
     return reply({ error: "invalid tile" }, 400);
   }
 
-  const key = z + "/" + x + "/" + y;
+  const key = "v2/" + z + "/" + x + "/" + y;
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
   const token = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");

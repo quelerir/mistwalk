@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchPlaceInfo, type PlaceInfo } from '../lib/poi/placeInfo';
 import type { Poi } from '../lib/poi/types';
 
-const KEY_PREFIX = 'placeInfo.v2:';
+const KEY_PREFIX = 'placeInfo.v3:';
 const FOUND_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const MISSING_TTL_MS = 24 * 60 * 60 * 1000;
 

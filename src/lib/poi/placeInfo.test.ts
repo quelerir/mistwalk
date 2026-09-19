@@ -1,4 +1,4 @@
-import { fetchPlaceInfo, pageMatchesName, pickPage } from './placeInfo';
+import { fetchPlaceInfo, pageMatchesName, parseWikipediaTag, pickPage } from './placeInfo';
 
 const page = (title: string, extra = {}, index = 0) => ({ title, index, ...extra });
 
@@ -101,5 +101,59 @@ describe('fetchPlaceInfo', () => {
   it('returns null when neither an article nor a photo exists', async () => {
     const fetchImpl = jest.fn().mockResolvedValue(reply([]));
     expect(await fetchPlaceInfo(poi, fetchImpl as unknown as typeof fetch)).toBeNull();
+  });
+});
+
+describe('parseWikipediaTag', () => {
+  it('splits the language prefix from the title', () => {
+    expect(parseWikipediaTag('de:Palais Seilern')).toEqual({ lang: 'de', title: 'Palais Seilern' });
+    expect(parseWikipediaTag('pt-br:Rio: cidade')).toEqual({ lang: 'pt-br', title: 'Rio: cidade' });
+    expect(parseWikipediaTag('just a title')).toBeNull();
+  });
+});
+
+describe('fetchPlaceInfo with OpenStreetMap tags', () => {
+  const summary = (title: string, extract: string) => ({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      title,
+      extract,
+      thumbnail: { source: 'https://img/t.jpg' },
+      content_urls: { desktop: { page: `https://wiki/${title}` } },
+    }),
+  });
+  const poi = { name: 'Palais Seilern', lat: 48.2, lng: 16.3, wikipedia: 'de:Palais Seilern' };
+
+  it('prefers the Russian version of the tagged article', async () => {
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ query: { pages: [{ langlinks: [{ title: 'Дворец Зайлерн' }] }] } }) })
+      .mockResolvedValueOnce(summary('Дворец Зайлерн', 'Дворец в Вене.'));
+    const info = await fetchPlaceInfo(poi, fetchImpl as unknown as typeof fetch);
+    expect(info).toMatchObject({ title: 'Дворец Зайлерн', description: 'Дворец в Вене.', source: 'Википедия (ru)' });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(fetchImpl.mock.calls[1][0]).toContain('ru.wikipedia.org/api/rest_v1/page/summary/');
+  });
+
+  it('uses the tagged language when there is no Russian article', async () => {
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ query: { pages: [{}] } }) })
+      .mockResolvedValueOnce(summary('Palais Seilern', 'Ein Palais.'));
+    const info = await fetchPlaceInfo(poi, fetchImpl as unknown as typeof fetch);
+    expect(info).toMatchObject({ description: 'Ein Palais.', source: 'Википедия (de)' });
+  });
+
+  it('resolves a wikidata tag through its wikipedia sitelinks', async () => {
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ entities: { Q9: { id: 'Q9', sitelinks: { enwiki: { title: 'Some Palace' } } } } }),
+      })
+      .mockResolvedValueOnce(summary('Some Palace', 'A palace.'));
+    const info = await fetchPlaceInfo({ name: 'X', lat: 1, lng: 1, wikidata: 'Q9' }, fetchImpl as unknown as typeof fetch);
+    expect(info).toMatchObject({ description: 'A palace.', source: 'Википедия (en)' });
   });
 });

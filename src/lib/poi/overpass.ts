@@ -42,7 +42,10 @@ export function parseOverpassResponse(json: { elements?: OverpassElement[] }): P
     if (!tags || !name || lat === undefined || lng === undefined) continue;
     const kind = kindFromTags(tags);
     if (!kind) continue;
-    result.push({ id: `${el.type}/${el.id}`, name, kind, lat, lng });
+    const poi: Poi = { id: `${el.type}/${el.id}`, name, kind, lat, lng };
+    if (tags.wikipedia) poi.wikipedia = tags.wikipedia;
+    if (tags.wikidata) poi.wikidata = tags.wikidata;
+    result.push(poi);
   }
   return result;
 }
