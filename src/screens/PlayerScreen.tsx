@@ -6,11 +6,13 @@ import KindIcon from '../components/KindIcon';
 import { flagUrl } from '../lib/geo/countries';
 import { formatPercent } from '../lib/geo/countryStats';
 import { formatKm2 } from '../lib/geo/cityStats';
+import SvgIcon from '../components/icons/SvgIcon';
+import { KIND_COLOR, kindTint } from '../lib/poi/kindColors';
 import { avatarUrl, fetchPlayerProfile, reportPlayer, type PlayerProfile, type ReportReason } from '../lib/social/profiles';
 import PlayerCountryScreen from './PlayerCountryScreen';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
-import { FONT } from '../theme/fonts';
+import { CARD_SHADOW, FONT } from '../theme/fonts';
 
 export interface PlayerScreenProps {
   client: SupabaseClient;
@@ -69,22 +71,22 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel="Назад">
-          <Text style={styles.back}>‹</Text>
+        <Pressable onPress={onBack} hitSlop={8} style={styles.roundButton} accessibilityRole="button" accessibilityLabel="Назад">
+          <SvgIcon name="back" size={22} color={c.text} />
         </Pressable>
-        <View style={styles.avatar}>
-          <Avatar uri={avatarUrl(client, player?.avatarPath ?? null)} name={player?.displayName ?? fallbackName} size={44} />
-        </View>
-        <View style={styles.headerText}>
-          <Text style={styles.title} numberOfLines={1}>
-            {player?.displayName ?? fallbackName}
-          </Text>
-        </View>
         {!isMe && status === 'ready' && (
-          <Pressable onPress={report} hitSlop={10} accessibilityRole="button" accessibilityLabel="Пожаловаться">
-            <Text style={styles.report}>Пожаловаться</Text>
+          <Pressable onPress={report} hitSlop={8} style={styles.roundButton} accessibilityRole="button" accessibilityLabel="Пожаловаться">
+            <SvgIcon name="flag" size={20} color={c.textMuted} />
           </Pressable>
         )}
+      </View>
+      <View style={styles.identity}>
+        <View style={styles.avatarRing}>
+          <Avatar uri={avatarUrl(client, player?.avatarPath ?? null)} name={player?.displayName ?? fallbackName} size={92} />
+        </View>
+        <Text style={styles.title} numberOfLines={1}>
+          {player?.displayName ?? fallbackName}
+        </Text>
       </View>
 
       {status === 'loading' && <ActivityIndicator style={styles.loader} />}
@@ -95,16 +97,20 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.tiles}>
             <View style={styles.tile}>
-              <Text style={styles.tileValue}>{player.foundCount}</Text>
-              <Text style={styles.tileLabel}>Мест найдено</Text>
+              <Text style={styles.tileValue}>{player.distanceKm.toFixed(1)}</Text>
+              <Text style={styles.tileLabel}>км</Text>
             </View>
             <View style={styles.tile}>
-              <Text style={styles.tileValue}>{player.distanceKm.toFixed(1)} км</Text>
-              <Text style={styles.tileLabel}>Пройдено</Text>
+              <Text style={styles.tileValue}>{player.foundCount}</Text>
+              <Text style={styles.tileLabel}>мест</Text>
+            </View>
+            <View style={styles.tile}>
+              <Text style={styles.tileValue}>{player.countries.length}</Text>
+              <Text style={styles.tileLabel}>стран</Text>
             </View>
           </View>
 
-          <Text style={styles.sectionTitle}>Страны · {player.countries.length}</Text>
+          <Text style={styles.sectionTitle}>СТРАНЫ</Text>
           {player.countries.length === 0 && <Text style={styles.muted}>Пока нет данных.</Text>}
           {player.countries.map((country) => (
             <Pressable
@@ -114,34 +120,50 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
               accessibilityRole="button"
             >
               <Image source={{ uri: flagUrl(country.code), cache: 'force-cache' }} style={styles.flag} resizeMode="contain" />
-              <Text style={styles.name} numberOfLines={1}>
-                {country.name}
-              </Text>
-              <Text style={styles.value}>{formatPercent(country.percent)}</Text>
+              <View style={styles.rowBody}>
+                <View style={styles.rowTop}>
+                  <Text style={styles.name} numberOfLines={1}>
+                    {country.name}
+                  </Text>
+                  <Text style={styles.value}>{formatPercent(country.percent)}</Text>
+                </View>
+                <View style={styles.barTrack}>
+                  <View style={[styles.barFill, { width: `${Math.min(100, Math.max(4, country.percent))}%` }]} />
+                </View>
+              </View>
               <Text style={styles.chevron}>›</Text>
             </Pressable>
           ))}
 
-          {player.cities.length > 0 && <Text style={styles.sectionTitle}>Города · {player.cities.length}</Text>}
+          {player.cities.length > 0 && <Text style={styles.sectionTitle}>ГОРОДА</Text>}
           {player.cities.map((city) => (
             <View key={city.name} style={styles.row}>
               <View style={styles.cityBadge}>
                 <Text style={styles.cityLetter}>{city.name.slice(0, 1).toUpperCase()}</Text>
               </View>
-              <Text style={styles.name} numberOfLines={1}>
-                {city.name}
-              </Text>
-              <Text style={styles.value}>
-                {city.percent !== null ? formatPercent(city.percent) : formatKm2(city.exploredKm2)}
-              </Text>
+              <View style={styles.rowBody}>
+                <View style={styles.rowTop}>
+                  <Text style={styles.name} numberOfLines={1}>
+                    {city.name}
+                  </Text>
+                  <Text style={styles.value}>
+                    {city.percent !== null ? formatPercent(city.percent) : formatKm2(city.exploredKm2)}
+                  </Text>
+                </View>
+                {city.percent !== null && (
+                  <View style={styles.barTrack}>
+                    <View style={[styles.barFill, { width: `${Math.min(100, Math.max(4, city.percent))}%` }]} />
+                  </View>
+                )}
+              </View>
             </View>
           ))}
 
-          <Text style={styles.sectionTitle}>Найденные места · {player.foundCount}</Text>
+          <Text style={styles.sectionTitle}>НАЙДЕННЫЕ МЕСТА</Text>
           {player.places.map((place, index) => (
             <View key={`${place.name}-${index}`} style={styles.row}>
-              <View style={styles.badge}>
-                <KindIcon kind={place.kind} size={18} color={c.badgeFg} />
+              <View style={[styles.badge, { backgroundColor: kindTint(place.kind) }]}>
+                <KindIcon kind={place.kind} size={18} color={KIND_COLOR[place.kind]} />
               </View>
               <Text style={styles.name} numberOfLines={1}>
                 {place.name}
@@ -158,28 +180,31 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
 const makeStyles = (c: Colors) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: c.bg },
-    header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
-    back: { fontSize: 36, lineHeight: 36, color: c.text, marginRight: 12, marginTop: -4 },
-    avatar: { marginRight: 12 },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 12 },
+    roundButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: c.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
+    identity: { alignItems: 'center', paddingTop: 4, paddingBottom: 16 },
+    avatarRing: { padding: 3, borderRadius: 50, borderWidth: 2, borderColor: c.accent },
     pressed: { opacity: 0.5 },
     chevron: { fontSize: 24, color: c.chevron, marginLeft: 8 },
-    report: { color: c.danger, fontWeight: '600', marginLeft: 8 },
-    headerText: { flex: 1 },
-    title: { fontSize: 26, fontFamily: FONT.display, letterSpacing: -0.8, color: c.text },
+    title: { fontSize: 26, fontFamily: FONT.display, letterSpacing: -0.6, color: c.text, marginTop: 12, paddingHorizontal: 24 },
     loader: { marginTop: 32 },
     empty: { marginTop: 24, paddingHorizontal: 16, textAlign: 'center', color: c.textMuted },
     content: { paddingBottom: 32 },
     tiles: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginTop: 4 },
-    tile: { flex: 1, backgroundColor: c.surface, borderRadius: 14, padding: 14 },
-    tileValue: { fontSize: 22, fontWeight: '800', color: c.text },
+    tile: { flex: 1, backgroundColor: c.surface, borderRadius: 24, padding: 14, shadowColor: c.shadow, ...CARD_SHADOW },
+    tileValue: { fontSize: 26, fontFamily: FONT.display, letterSpacing: -0.5, color: c.text },
     tileLabel: { marginTop: 2, color: c.textMuted },
-    sectionTitle: { fontSize: 16, fontWeight: '700', color: c.text, paddingHorizontal: 16, paddingTop: 22, paddingBottom: 6 },
+    sectionTitle: { fontSize: 13, fontWeight: '700', letterSpacing: 0.8, color: c.textMuted, paddingHorizontal: 16, paddingTop: 22, paddingBottom: 6 },
     muted: { paddingHorizontal: 16, color: c.textMuted },
     row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 16 },
-    flag: { width: 36, height: 26, borderRadius: 4, backgroundColor: c.surfaceAlt, marginRight: 12 },
+    rowBody: { flex: 1 },
+    rowTop: { flexDirection: 'row', alignItems: 'center' },
+    barTrack: { height: 5, borderRadius: 3, backgroundColor: c.surfaceAlt, marginTop: 8, overflow: 'hidden' },
+    barFill: { height: '100%', borderRadius: 3, backgroundColor: c.accent },
+    flag: { width: 40, height: 28, borderRadius: 6, backgroundColor: c.surfaceAlt, marginRight: 12 },
     badge: { width: 36, height: 36, borderRadius: 18, backgroundColor: c.badgeBg, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
     cityBadge: { width: 36, height: 36, borderRadius: 18, backgroundColor: c.cityBadgeBg, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-    cityLetter: { fontSize: 16, fontWeight: '800', color: c.link },
+    cityLetter: { fontSize: 16, fontFamily: FONT.display, color: c.accent },
     name: { flex: 1, fontSize: 15, fontWeight: '600', color: c.text },
     value: { fontSize: 15, fontWeight: '700', color: c.text, marginLeft: 12 },
     date: { color: c.textMuted, marginLeft: 12 },

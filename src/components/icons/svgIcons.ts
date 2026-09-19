@@ -8,6 +8,9 @@ export type IconName =
   | 'cloud'
   | 'moon'
   | 'bell'
+  | 'flag'
+  | 'close'
+  | 'book'
   | 'sort-distance'
   | 'sort-name'
   | 'grid'
@@ -116,6 +119,9 @@ export const ICONS: Record<IconName, { outline: IconLayer[]; active: IconLayer[]
   grid: shapes([
     { d: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z', mode: 'stroke' },
   ]),
+  close: line('M6 6l12 12M18 6L6 18'),
+  book: line('M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5'),
+  flag: line('M4 22V4M4 4h13l-2 4 2 4H4'),
   bell: line('M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0'),
   'poi-viewpoint': shapes([
     { d: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z', mode: 'stroke' },
