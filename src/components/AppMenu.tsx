@@ -21,6 +21,8 @@ export interface AppMenuProps {
   onFogAnimatedChange: (next: boolean) => void;
   placeNotifications: boolean;
   onPlaceNotificationsChange: (next: boolean) => Promise<void>;
+  weeklySummary: boolean;
+  onWeeklySummaryChange: (next: boolean) => Promise<void>;
   backgroundEnabled: boolean;
   onEnableBackground: () => Promise<boolean>;
   onSignOut: () => Promise<void>;
@@ -42,6 +44,8 @@ export default function AppMenu({
   onFogAnimatedChange,
   placeNotifications,
   onPlaceNotificationsChange,
+  weeklySummary,
+  onWeeklySummaryChange,
   backgroundEnabled,
   onEnableBackground,
   onSignOut,
@@ -168,6 +172,13 @@ export default function AppMenu({
       label: 'Уведомления о местах',
       value: placeNotifications ? 'Включены' : 'Выключены',
       onPress: () => void onPlaceNotificationsChange(!placeNotifications),
+    },
+    {
+      key: 'weeklySummary',
+      icon: 'award',
+      label: 'Итоги недели',
+      value: weeklySummary ? 'Включены' : 'Выключены',
+      onPress: () => void onWeeklySummaryChange(!weeklySummary),
     },
   ];
 

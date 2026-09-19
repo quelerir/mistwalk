@@ -3,7 +3,6 @@ import { Linking, StyleSheet, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { LocationSubscription } from 'expo-location';
-import * as Notifications from 'expo-notifications';
 import { useStyles } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import AppMenu from '../components/AppMenu';
@@ -16,6 +15,10 @@ import type { MapView } from '../lib/geo/projection';
 import { performSignOut } from '../lib/session/signOutFlow';
 import { FOG_PALETTES, getFogAnimated, getFogStyle, resolveFogStyle, setFogAnimated, setFogStyle, type FogSetting } from '../lib/settings/fogStyle';
 import { getPlaceNotifications, setPlaceNotifications } from '../lib/settings/placeNotifications';
+import { getWeeklySummary, setWeeklySummary } from '../lib/settings/weeklySummary';
+import { weekSummary } from '../lib/stats/weekly';
+import { ensureNotificationPermission } from '../services/notificationPermission';
+import { cancelWeeklySummary, scheduleWeeklySummary } from '../services/weeklySummaryNotification';
 import { signOut, signOutLocal } from '../lib/supabase/auth';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
 import { stopBackgroundTracking } from '../services/backgroundLocationTask';
@@ -88,6 +91,7 @@ export default function MainScreen({
   // Only "auto" fog reads the hour; checking once a minute is enough to switch at the boundary.
   const [hour, setHour] = useState(() => new Date().getHours());
   const [placeNotifications, setPlaceNotificationsState] = useState(false);
+  const [weeklySummaryOn, setWeeklySummaryOn] = useState(false);
   const { pois, discovered, discoveredIds, greeting, dismissGreeting } = usePlaces({
     client,
     userId,
@@ -117,6 +121,7 @@ export default function MainScreen({
   }
 
   const stats = useStats(points, discovered.length, true);
+  const week = useMemo(() => weekSummary(points, discovered, Date.now()), [points, discovered]);
 
   const countryStats = useCountryStats(points, true);
   // Found places are stored without OpenStreetMap's wiki links; take them from the loaded POI.
@@ -197,6 +202,7 @@ export default function MainScreen({
     const tick = setInterval(() => setHour(new Date().getHours()), 60000);
     void getFogAnimated(AsyncStorage).then(setFogAnimatedState);
     void getPlaceNotifications(AsyncStorage).then((s) => setPlaceNotificationsState(s.enabled && s.userId === userId));
+    void getWeeklySummary(AsyncStorage).then(setWeeklySummaryOn);
     return () => clearInterval(tick);
   }, []);
 
@@ -211,21 +217,29 @@ export default function MainScreen({
   }
 
   async function handlePlaceNotificationsChange(next: boolean) {
-    if (next) {
-      const current = await Notifications.getPermissionsAsync();
-      const granted =
-        current.status === 'granted' || (current.canAskAgain && (await Notifications.requestPermissionsAsync()).status === 'granted');
-      // iOS asks only once; after a refusal the switch has to be flipped in the system settings.
-      if (!granted) {
-        await Linking.openSettings();
-        return;
-      }
+    // iOS asks only once; after a refusal the switch has to be flipped in the system settings.
+    if (next && !(await ensureNotificationPermission())) {
+      await Linking.openSettings();
+      return;
     }
     setPlaceNotificationsState(next);
     await setPlaceNotifications(AsyncStorage, { enabled: next, userId: next ? userId : null });
   }
 
+  async function handleWeeklySummaryChange(next: boolean) {
+    if (next && !(await ensureNotificationPermission())) {
+      await Linking.openSettings();
+      return;
+    }
+    setWeeklySummaryOn(next);
+    await setWeeklySummary(AsyncStorage, next);
+    if (next) await scheduleWeeklySummary();
+    else await cancelWeeklySummary();
+  }
+
   function handleSignOut() {
+    void setWeeklySummary(AsyncStorage, false);
+    void cancelWeeklySummary();
     void setPlaceNotifications(AsyncStorage, { enabled: false, userId: null });
     return performSignOut({
       stopForeground: () => stopForegroundTracking(subscription),
@@ -317,6 +331,7 @@ export default function MainScreen({
           ) : (
             <CollectionScreen
               stats={stats}
+              week={week}
               countries={countryStats.countries}
               onOpenCountries={() => setShowCountries(true)}
               onOpenLeaderboard={() => setShowLeaderboard(true)}
@@ -350,6 +365,8 @@ export default function MainScreen({
         onFogAnimatedChange={handleFogAnimatedChange}
         placeNotifications={placeNotifications}
         onPlaceNotificationsChange={handlePlaceNotificationsChange}
+        weeklySummary={weeklySummaryOn}
+        onWeeklySummaryChange={handleWeeklySummaryChange}
         backgroundEnabled={backgroundEnabled}
         onEnableBackground={onEnableBackground}
         onSignOut={handleSignOut}
