@@ -9,12 +9,14 @@ export interface CollectionScreenProps {
   stats: Stats;
   countries: CountryStat[];
   onOpenCountries: () => void;
+  onOpenLeaderboard: () => void;
 }
 
 export default function CollectionScreen({
   stats,
   countries,
   onOpenCountries,
+  onOpenLeaderboard,
 }: CollectionScreenProps) {
   const styles = useStyles(makeStyles);
   const visitedCountries = useMemo(() => countries.filter((c) => c.percent > 0).length, [countries]);
@@ -47,6 +49,18 @@ export default function CollectionScreen({
           <Text style={styles.countriesSub}>
             Открыто {visitedCountries} из {countries.length}
           </Text>
+        </View>
+        <Text style={styles.chevron}>›</Text>
+      </Pressable>
+
+      <Pressable
+        style={({ pressed }) => [styles.countriesButton, pressed && styles.pressed]}
+        onPress={onOpenLeaderboard}
+        accessibilityRole="button"
+      >
+        <View style={styles.countriesText}>
+          <Text style={styles.countriesTitle}>Рейтинг игроков</Text>
+          <Text style={styles.countriesSub}>Сравните себя с другими</Text>
         </View>
         <Text style={styles.chevron}>›</Text>
       </Pressable>

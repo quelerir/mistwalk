@@ -29,6 +29,9 @@ import type { DiscoveredPlace, Poi } from '../lib/poi/types';
 import { useStats } from '../hooks/useStats';
 import { useCountryStats } from '../hooks/useCountryStats';
 import { useCityStats } from '../hooks/useCityStats';
+import LeaderboardScreen from './LeaderboardScreen';
+import PlayerScreen from './PlayerScreen';
+import { buildSnapshot, type LeaderboardEntry } from '../lib/social/profiles';
 
 const NO_PLACES: DiscoveredPlace[] = [];
 
@@ -69,6 +72,8 @@ export default function MainScreen({
   const [menuOpen, setMenuOpen] = useState(false);
   const [showCountries, setShowCountries] = useState(false);
   const [openCountry, setOpenCountry] = useState<CountryStat | null>(null);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [openPlayer, setOpenPlayer] = useState<LeaderboardEntry | null>(null);
   const [selected, setSelected] = useState<Poi | null>(null);
   const [detailPlace, setDetailPlace] = useState<Poi | null>(null);
   const [routing, setRouting] = useState(false);
@@ -123,6 +128,13 @@ export default function MainScreen({
   const placesByCountry = useMemo(
     () => groupPlacesByCountry(discovered, pois, discoveredIds, countryStats.cells),
     [discovered, pois, discoveredIds, countryStats.cells]
+  );
+
+  // The public snapshot needs every city, so resolve them all while the leaderboard is open.
+  const allCityStats = useCityStats(points, discovered, showLeaderboard);
+  const snapshot = useMemo(
+    () => buildSnapshot(stats.distanceKm, countryStats.countries, allCityStats.cities),
+    [stats.distanceKm, countryStats.countries, allCityStats.cities]
   );
 
   const cityStats = useCityStats(
@@ -187,7 +199,22 @@ export default function MainScreen({
           />
         )}
         {tab === 'collection' &&
-          (showCountries && openCountry ? (
+          (showLeaderboard && openPlayer ? (
+            <PlayerScreen
+              client={client}
+              playerId={openPlayer.userId}
+              fallbackName={openPlayer.displayName}
+              onBack={() => setOpenPlayer(null)}
+            />
+          ) : showLeaderboard ? (
+            <LeaderboardScreen
+              client={client}
+              userId={userId}
+              snapshot={snapshot}
+              onBack={() => setShowLeaderboard(false)}
+              onOpenPlayer={setOpenPlayer}
+            />
+          ) : showCountries && openCountry ? (
             <CountryPlacesScreen
               country={openCountry}
               places={placesByCountry.get(openCountry.code)}
@@ -217,6 +244,7 @@ export default function MainScreen({
               stats={stats}
               countries={countryStats.countries}
               onOpenCountries={() => setShowCountries(true)}
+              onOpenLeaderboard={() => setShowLeaderboard(true)}
             />
           ))}
         <DiscoveryCard place={greeting} onDismiss={dismissGreeting} onOpen={setDetailPlace} />
@@ -231,6 +259,8 @@ export default function MainScreen({
             if (key !== 'collection') {
               setShowCountries(false);
               setOpenCountry(null);
+              setShowLeaderboard(false);
+              setOpenPlayer(null);
             }
           }
         }}
