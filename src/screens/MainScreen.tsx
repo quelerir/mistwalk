@@ -240,8 +240,6 @@ export default function MainScreen({
         onFogStyleChange={handleFogStyleChange}
         backgroundEnabled={backgroundEnabled}
         onEnableBackground={onEnableBackground}
-        onOpenCollection={() => setTab('collection')}
-        onOpenNearby={() => setTab('nearby')}
         onSignOut={handleSignOut}
       />
     </View>

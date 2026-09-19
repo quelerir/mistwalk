@@ -15,8 +15,6 @@ export interface AppMenuProps {
   onFogStyleChange: (style: FogStyle) => void;
   backgroundEnabled: boolean;
   onEnableBackground: () => Promise<boolean>;
-  onOpenCollection: () => void;
-  onOpenNearby: () => void;
   onSignOut: () => Promise<void>;
 }
 
@@ -27,11 +25,14 @@ export default function AppMenu({
   onFogStyleChange,
   backgroundEnabled,
   onEnableBackground,
-  onOpenCollection,
-  onOpenNearby,
   onSignOut,
 }: AppMenuProps) {
   const [accuracy, setAccuracy] = useState<AccuracyProfile>('battery-saver');
+  const [page, setPage] = useState<'main' | 'settings'>('main');
+
+  useEffect(() => {
+    if (!visible) setPage('main');
+  }, [visible]);
 
   useEffect(() => {
     void getAccuracyProfile(AsyncStorage).then(setAccuracy);
@@ -49,9 +50,19 @@ export default function AppMenu({
     };
   }
 
-  const items: MenuItem[] = [
-    { key: 'collection', icon: 'award', label: 'Коллекция', onPress: closeThen(onOpenCollection) },
-    { key: 'nearby', icon: 'compass', label: 'Что рядом', onPress: closeThen(onOpenNearby) },
+  const mainItems: MenuItem[] = [
+    { key: 'settings', icon: 'settings', label: 'Настройки', onPress: () => setPage('settings') },
+    {
+      key: 'signout',
+      icon: 'logout',
+      label: 'Выйти',
+      destructive: true,
+      onPress: closeThen(() => void onSignOut()),
+    },
+  ];
+
+  const settingsItems: MenuItem[] = [
+    { key: 'back', icon: 'back', label: 'Назад', onPress: () => setPage('main') },
     {
       key: 'fog',
       icon: 'cloud',
@@ -75,14 +86,9 @@ export default function AppMenu({
         if (!backgroundEnabled) void onEnableBackground();
       },
     },
-    {
-      key: 'signout',
-      icon: 'logout',
-      label: 'Выйти',
-      destructive: true,
-      onPress: closeThen(() => void onSignOut()),
-    },
   ];
+
+  const items = page === 'main' ? mainItems : settingsItems;
 
   return <MenuSheet visible={visible} items={items} onClose={onClose} />;
 }

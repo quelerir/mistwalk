@@ -9,6 +9,8 @@ export type IconName =
   | 'moon'
   | 'logout'
   | 'navigate'
+  | 'settings'
+  | 'back'
   | 'poi-viewpoint'
   | 'poi-monument'
   | 'poi-castle'
@@ -122,6 +124,13 @@ export const ICONS: Record<IconName, { outline: IconLayer[]; active: IconLayer[]
     { d: circle(12, 7.5, 1), mode: 'fill' },
     { d: circle(16, 10, 1), mode: 'fill' },
   ]),
+  settings: shapes([
+    { d: 'M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1', mode: 'stroke' },
+    { d: circle(15, 6, 2), mode: 'stroke' },
+    { d: circle(9, 12, 2), mode: 'stroke' },
+    { d: circle(17, 18, 2), mode: 'stroke' },
+  ]),
+  back: line('M15 18l-6-6 6-6'),
   navigate: line('M3 11l19-9-9 19-2-8-8-2z'),
   logout: line('M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9'),
 };
