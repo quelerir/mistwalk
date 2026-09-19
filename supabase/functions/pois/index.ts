@@ -3,6 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const TILE_ZOOM = 13;
 const Q = String.fromCharCode(34);
+const MIRROR_TIMEOUT_MS = 12000;
 const OVERPASS_URLS = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter"];
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 
@@ -59,6 +60,7 @@ async function fetchOverpass(query: string) {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "FogOfWarMap/0.1 (edge function)" },
         body: "data=" + encodeURIComponent(query),
+        signal: AbortSignal.timeout(MIRROR_TIMEOUT_MS),
       });
       if (response.ok) return await response.json();
       errors += url + " responded " + response.status + "; ";
