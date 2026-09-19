@@ -93,5 +93,5 @@ export function useCountryStats(points: VisitedPoint[], enabled: boolean) {
   );
 
   const pending = enabled && (!ready || unresolved.length > 0) && !failed;
-  return { countries, pending, failed };
+  return { countries, cells, pending, failed };
 }

@@ -3,6 +3,7 @@ import {
   cellKey,
   fetchCountryAt,
   formatPercent,
+  groupPlacesByCountry,
   groupPointsByCountry,
 } from './countryStats';
 
@@ -67,5 +68,22 @@ describe('formatPercent', () => {
     expect(formatPercent(0.00123)).toBe('0,0012 %');
     expect(formatPercent(0.0000431)).toBe('0,000043 %');
     expect(formatPercent(0.0000001)).toBe('< 0,000001 %');
+  });
+});
+
+describe('groupPlacesByCountry', () => {
+  const vienna = { lat: 48.2082, lng: 16.3738 };
+  const cells = { [cellKey(vienna.lat, vienna.lng)]: AT };
+  const found = (id: string, at: number) => ({ id, name: id, kind: 'monument' as const, ...vienna, discoveredAt: at });
+  const poi = (id: string, lat = vienna.lat, lng = vienna.lng) => ({ id, name: id, kind: 'viewpoint' as const, lat, lng });
+
+  it('splits found and unvisited places per country, newest found first', () => {
+    const discovered = [found('a', 1), found('b', 5)];
+    const pois = [poi('a'), poi('b'), poi('c'), poi('far', 0, 0)];
+    const groups = groupPlacesByCountry(discovered, pois, new Set(['a', 'b']), cells);
+    const at = groups.get('AT');
+    expect(at?.discovered.map((p) => p.id)).toEqual(['b', 'a']);
+    expect(at?.hidden.map((p) => p.id)).toEqual(['c']);
+    expect(groups.size).toBe(1);
   });
 });

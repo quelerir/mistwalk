@@ -1,4 +1,5 @@
 import { computeAreaKm2, type TimedPoint } from '../stats/coverage';
+import type { DiscoveredPlace, Poi } from '../poi/types';
 import { COUNTRIES, COUNTRY_BY_CODE } from './countries';
 
 export interface CountryRef {
@@ -52,6 +53,34 @@ export function groupPointsByCountry(
     groups.set(country.code, group);
   }
   return groups;
+}
+
+export interface CountryPlaces {
+  discovered: DiscoveredPlace[];
+  hidden: Poi[];
+}
+
+// Splits known places by country: found ones (newest first) and still-unvisited ones.
+export function groupPlacesByCountry(
+  discovered: DiscoveredPlace[],
+  pois: Poi[],
+  discoveredIds: ReadonlySet<string>,
+  cellCountries: Readonly<Record<string, CountryRef | null>>
+): Map<string, CountryPlaces> {
+  const result = new Map<string, CountryPlaces>();
+  const entry = (lat: number, lng: number): CountryPlaces | null => {
+    const country = cellCountries[cellKey(lat, lng)];
+    if (!country) return null;
+    const existing = result.get(country.code) ?? { discovered: [], hidden: [] };
+    result.set(country.code, existing);
+    return existing;
+  };
+  for (const place of discovered) entry(place.lat, place.lng)?.discovered.push(place);
+  for (const poi of pois) {
+    if (!discoveredIds.has(poi.id)) entry(poi.lat, poi.lng)?.hidden.push(poi);
+  }
+  for (const group of result.values()) group.discovered.sort((a, b) => b.discoveredAt - a.discoveredAt);
+  return result;
 }
 
 // Every country in the table with its explored share; visited ones first, then alphabetical.

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -19,6 +19,8 @@ import MapScreen from './MapScreen';
 import NearbyScreen from './NearbyScreen';
 import CollectionScreen from './CollectionScreen';
 import CountriesScreen from './CountriesScreen';
+import CountryPlacesScreen from './CountryPlacesScreen';
+import { groupPlacesByCountry, type CountryStat } from '../lib/geo/countryStats';
 import { useRoute } from '../hooks/useRoute';
 import type { Poi } from '../lib/poi/types';
 import { useStats } from '../hooks/useStats';
@@ -59,6 +61,7 @@ export default function MainScreen({
   const [tab, setTab] = useState<Exclude<TabKey, 'menu'>>('map');
   const [menuOpen, setMenuOpen] = useState(false);
   const [showCountries, setShowCountries] = useState(false);
+  const [openCountry, setOpenCountry] = useState<CountryStat | null>(null);
   const [selected, setSelected] = useState<Poi | null>(null);
   const [routing, setRouting] = useState(false);
   const [view, setView] = useState<MapView | null>(null);
@@ -94,6 +97,10 @@ export default function MainScreen({
   const stats = useStats(points, discovered, tab === 'collection');
 
   const countryStats = useCountryStats(points, tab === 'collection');
+  const placesByCountry = useMemo(
+    () => groupPlacesByCountry(discovered, pois, discoveredIds, countryStats.cells),
+    [discovered, pois, discoveredIds, countryStats.cells]
+  );
 
   useEffect(() => {
     void getFogStyle(AsyncStorage).then(setFogStyleState);
@@ -150,12 +157,26 @@ export default function MainScreen({
           />
         )}
         {tab === 'collection' &&
-          (showCountries ? (
+          (showCountries && openCountry ? (
+            <CountryPlacesScreen
+              country={openCountry}
+              places={placesByCountry.get(openCountry.code)}
+              origin={livePosition}
+              onBack={() => setOpenCountry(null)}
+              onSelectHidden={(poi) => {
+                setShowCountries(false);
+                setOpenCountry(null);
+                handleSelect(poi);
+              }}
+            />
+          ) : showCountries ? (
             <CountriesScreen
               countries={countryStats.countries}
               pending={countryStats.pending}
               failed={countryStats.failed}
+              placesByCountry={placesByCountry}
               onBack={() => setShowCountries(false)}
+              onOpenCountry={setOpenCountry}
             />
           ) : (
             <CollectionScreen
@@ -174,7 +195,10 @@ export default function MainScreen({
           if (key === 'menu') setMenuOpen(true);
           else {
             setTab(key);
-            if (key !== 'collection') setShowCountries(false);
+            if (key !== 'collection') {
+              setShowCountries(false);
+              setOpenCountry(null);
+            }
           }
         }}
       />
