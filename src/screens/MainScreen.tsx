@@ -244,6 +244,7 @@ export default function MainScreen({
         backgroundEnabled={backgroundEnabled}
         onEnableBackground={onEnableBackground}
         onSignOut={handleSignOut}
+        email={email}
       />
     </View>
   );

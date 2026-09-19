@@ -18,6 +18,7 @@ export interface AppMenuProps {
   backgroundEnabled: boolean;
   onEnableBackground: () => Promise<boolean>;
   onSignOut: () => Promise<void>;
+  email: string;
 }
 
 export default function AppMenu({
@@ -28,10 +29,11 @@ export default function AppMenu({
   backgroundEnabled,
   onEnableBackground,
   onSignOut,
+  email,
 }: AppMenuProps) {
   const [accuracy, setAccuracy] = useState<AccuracyProfile>('battery-saver');
   const { preference, setPreference } = useTheme();
-  const [page, setPage] = useState<'main' | 'settings'>('main');
+  const [page, setPage] = useState<'main' | 'settings' | 'account'>('main');
 
   useEffect(() => {
     if (!visible) setPage('main');
@@ -55,6 +57,12 @@ export default function AppMenu({
 
   const mainItems: MenuItem[] = [
     { key: 'settings', icon: 'settings', label: 'Настройки', onPress: () => setPage('settings') },
+    { key: 'account', icon: 'user', label: 'Аккаунт', onPress: () => setPage('account') },
+  ];
+
+  const accountItems: MenuItem[] = [
+    { key: 'back', icon: 'back', label: 'Назад', onPress: () => setPage('main') },
+    { key: 'email', icon: 'user', label: email || 'Без почты', onPress: () => {} },
     {
       key: 'signout',
       icon: 'logout',
@@ -98,7 +106,7 @@ export default function AppMenu({
     },
   ];
 
-  const items = page === 'main' ? mainItems : settingsItems;
+  const items = page === 'main' ? mainItems : page === 'settings' ? settingsItems : accountItems;
 
   return <MenuSheet visible={visible} items={items} onClose={onClose} />;
 }
