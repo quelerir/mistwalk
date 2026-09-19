@@ -1,4 +1,4 @@
-import { buildCityList, cityCellKey, fetchCityAt, formatKm2 } from './cityStats';
+import { buildCityList, cityCellKey, fetchCityAt, formatKm2, geometryAreaKm2 } from './cityStats';
 
 const vienna = { lat: 48.2082, lng: 16.3738 };
 const salzburg = { lat: 47.8, lng: 13.04 };
@@ -9,9 +9,17 @@ describe('fetchCityAt', () => {
     jest.fn().mockResolvedValue({ ok: true, json: async () => json }) as unknown as typeof fetch;
 
   it('prefers city over town, village and the generic name', async () => {
-    expect(await fetchCityAt(1, 1, respond({ address: { city: 'Вена', town: 'X' } }))).toBe('Вена');
-    expect(await fetchCityAt(1, 1, respond({ address: { village: 'Kleinarl' } }))).toBe('Kleinarl');
-    expect(await fetchCityAt(1, 1, respond({ name: 'Где-то' }))).toBe('Где-то');
+    expect((await fetchCityAt(1, 1, respond({ address: { city: 'Вена', town: 'X' } })))?.name).toBe('Вена');
+    expect((await fetchCityAt(1, 1, respond({ address: { village: 'Kleinarl' } })))?.name).toBe('Kleinarl');
+    expect((await fetchCityAt(1, 1, respond({ name: 'Где-то' })))?.name).toBe('Где-то');
+  });
+
+  it('reads the boundary area, or null when only a point is known', async () => {
+    const square = { type: 'Polygon', coordinates: [[[0, 0], [0, 0.1], [0.1, 0.1], [0.1, 0], [0, 0]]] };
+    const withArea = await fetchCityAt(1, 1, respond({ name: 'Q', geojson: square }));
+    expect(withArea?.areaKm2).toBeGreaterThan(100);
+    const point = await fetchCityAt(1, 1, respond({ name: 'Q', geojson: { type: 'Point', coordinates: [0, 0] } }));
+    expect(point?.areaKm2).toBeNull();
   });
 
   it('returns null when nothing names the place', async () => {
@@ -25,7 +33,10 @@ describe('fetchCityAt', () => {
 });
 
 describe('buildCityList', () => {
-  const cells = { [cityCellKey(vienna.lat, vienna.lng)]: 'Вена', [cityCellKey(salzburg.lat, salzburg.lng)]: 'Зальцбург' };
+  const cells = {
+    [cityCellKey(vienna.lat, vienna.lng)]: { name: 'Вена', areaKm2: 415 },
+    [cityCellKey(salzburg.lat, salzburg.lng)]: { name: 'Зальцбург', areaKm2: null },
+  };
   const place = (p: { lat: number; lng: number }, id: string) => ({
     id,
     name: id,
@@ -46,6 +57,12 @@ describe('buildCityList', () => {
     expect(list[0].exploredKm2).toBeGreaterThan(list[1].exploredKm2);
   });
 
+  it('computes the explored share of the city area when it is known', () => {
+    const [vienna_, salzburg_] = buildCityList([point(vienna), point(salzburg)], [], cells);
+    expect(vienna_.percent).toBeCloseTo((vienna_.exploredKm2 / 415) * 100, 10);
+    expect(salzburg_.percent).toBeNull();
+  });
+
   it('ignores points in unresolved or nameless cells', () => {
     expect(buildCityList([point(vienna)], [], { [cityCellKey(vienna.lat, vienna.lng)]: null })).toEqual([]);
     expect(buildCityList([point(vienna)], [], {})).toEqual([]);
@@ -58,5 +75,18 @@ describe('formatKm2', () => {
     expect(formatKm2(0.234)).toBe('0,23 км²');
     expect(formatKm2(3.14)).toBe('3,1 км²');
     expect(formatKm2(250.4)).toBe('250 км²');
+  });
+});
+
+describe('geometryAreaKm2', () => {
+  it('handles holes and multipolygons', () => {
+    const outer = [[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]];
+    const hole = [[0.25, 0.25], [0.25, 0.75], [0.75, 0.75], [0.75, 0.25], [0.25, 0.25]];
+    const solid = geometryAreaKm2({ type: 'Polygon', coordinates: [outer] } as never) ?? 0;
+    const holed = geometryAreaKm2({ type: 'Polygon', coordinates: [outer, hole] } as never) ?? 0;
+    expect(holed).toBeCloseTo(solid * 0.75, 0);
+    const twice = geometryAreaKm2({ type: 'MultiPolygon', coordinates: [[outer], [outer]] } as never) ?? 0;
+    expect(twice).toBeCloseTo(solid * 2, 5);
+    expect(geometryAreaKm2({ type: 'Point' } as never)).toBeNull();
   });
 });

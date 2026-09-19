@@ -101,9 +101,14 @@ export default function CountryPlacesScreen({
                   <Text style={styles.name} numberOfLines={1}>
                     {item.city.name}
                   </Text>
-                  {item.city.found > 0 && <Text style={styles.where}>Найдено мест: {item.city.found}</Text>}
+                  <Text style={styles.where}>
+                    {item.city.totalKm2
+                      ? `${formatKm2(item.city.exploredKm2)} из ${formatKm2(item.city.totalKm2)}`
+                      : formatKm2(item.city.exploredKm2)}
+                    {item.city.found > 0 ? ` · мест: ${item.city.found}` : ''}
+                  </Text>
                 </View>
-                <Text style={styles.date}>{formatKm2(item.city.exploredKm2)}</Text>
+                {item.city.percent !== null && <Text style={styles.cityPercent}>{formatPercent(item.city.percent)}</Text>}
               </View>
             ) : item.kind === 'found' ? (
               <View style={styles.row}>
@@ -167,6 +172,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
+  cityPercent: { fontSize: 15, fontWeight: '700', color: '#262626', marginLeft: 8 },
   cityLetter: { fontSize: 17, fontWeight: '800', color: '#2f6fdd' },
   badgeHidden: { backgroundColor: '#f3f3f3' },
   icon: { fontSize: 18, color: '#8a5a00' },

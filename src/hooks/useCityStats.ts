@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { buildCityList, cityCellKey, fetchCityAt, type CityStat } from '../lib/geo/cityStats';
+import { buildCityList, cityCellKey, fetchCityAt, type CityRef, type CityStat } from '../lib/geo/cityStats';
 import type { DiscoveredPlace } from '../lib/poi/types';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
 
-const CELLS_KEY = 'geo.cityCells.v1';
+const CELLS_KEY = 'geo.cityCells.v2';
 const GEOCODE_GAP_MS = 1100;
 
-type CityCells = Record<string, string | null>;
+type CityCells = Record<string, CityRef | null>;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
