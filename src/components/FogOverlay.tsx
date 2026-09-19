@@ -1,11 +1,23 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { BlurMask, Canvas, Circle, ColorMatrix, FractalNoise, Group, Paint, Path, Rect, Skia, useClock } from '@shopify/react-native-skia';
 import { useDerivedValue } from 'react-native-reanimated';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
 import type { FogPalette } from '../lib/settings/fogStyle';
 import { haversineDistanceMeters } from '../lib/geo/distance';
-import { metersPerPixel, projectToScreen, type MapView, type Size } from '../lib/geo/projection';
+import {
+  WORLD_ZOOM,
+  metersPerPixel,
+  originOnScreen,
+  projectToScreen,
+  worldPoint,
+  worldScale,
+  worldTransform,
+  type MapView,
+  type Size,
+  type WorldOrigin,
+} from '../lib/geo/projection';
+import { readView, type ViewShared } from '../lib/map/viewShared';
 
 export interface LivePosition {
   lat: number;
@@ -15,6 +27,8 @@ export interface LivePosition {
 export interface FogOverlayProps {
   points: VisitedPoint[];
   livePosition: LivePosition | null;
+  // The view as shared values (moves the scene every frame) and a slower JS copy (origin and which points to draw).
+  shared: ViewShared;
   view: MapView | null;
   fog: FogPalette;
   animated?: boolean;
@@ -26,7 +40,9 @@ export interface FogOverlayProps {
 
 const REVEAL_RADIUS_METERS = 60;
 const MAX_LINK_METERS = 300;
-const OFFSCREEN_MARGIN_PX = 150;
+// How far around the view (in screen diagonals) the reveal path is built; it is rebuilt when the view leaves it.
+const WINDOW_FACTOR = 1.6;
+const ORIGIN_REANCHOR_KM = 60;
 
 interface Node {
   lat: number;
@@ -73,83 +89,66 @@ function CloudLayer({ extent, color, freq, seed, gain }: CloudLayerProps) {
   );
 }
 
-const CLOUD_REFERENCE_ZOOM = 16;
 const CLOUD_MIN_SCALE = 0.35;
 const CLOUD_MAX_SCALE = 4;
-const CLOUD_MAX_OFFSET_PX = 50000;
+// The cloud rect is centred on the origin and must reach the screen from wherever the view is (up to the re-anchor
+// distance), so it is simply very large; only the visible part is ever drawn.
+const CLOUD_EXTENT = 150000;
 // Screen-space offset of the shadow copy: light comes from the top-left.
 const CLOUD_SHADOW_OFFSET = { x: 9, y: 12 };
-
-interface FogCloudsProps {
-  view: MapView | null;
-  size: Size;
-  fog: FogPalette;
-  animated: boolean;
-}
 
 // Each cloud layer sways on its own slow loop (different axes and periods), so the billows slide past
 // each other and the fog seems to churn. Bounded, so no wrap-around jump and no growing offsets.
 const DRIFT_AMPLITUDE = 45;
 const TAU = Math.PI * 2;
 
-// Clouds are laid out in map space around a fixed origin, so they pan, zoom and rotate with the map.
-function FogClouds({ view, size, fog, animated }: FogCloudsProps) {
-  const origin = useRef<[number, number] | null>(null);
-  const clock = useClock();
+interface FogCloudsProps {
+  shared: ViewShared;
+  origin: WorldOrigin;
+  fog: FogPalette;
+  animated: boolean;
+}
 
-  let at = { x: 0, y: 0 };
-  let scale = 1;
-  let rotation = 0;
-  let extent = 0;
-  if (view) {
-    if (!origin.current) origin.current = [view.center[0], view.center[1]];
-    at = projectToScreen(origin.current[0], origin.current[1], view, size);
-    if (Math.abs(at.x) > CLOUD_MAX_OFFSET_PX || Math.abs(at.y) > CLOUD_MAX_OFFSET_PX) {
-      // Far from the origin (first real fix or a long trip): re-anchor to keep float precision.
-      origin.current = [view.center[0], view.center[1]];
-      at = projectToScreen(origin.current[0], origin.current[1], view, size);
-    }
-    scale = Math.min(CLOUD_MAX_SCALE, Math.max(CLOUD_MIN_SCALE, 2 ** (view.zoom - CLOUD_REFERENCE_ZOOM)));
-    rotation = (-view.bearing * Math.PI) / 180;
-    // The cloud rect is centred on the anchor, so it must reach the farthest screen corner (plus the sway).
-    const reach = Math.hypot(
-      Math.max(Math.abs(at.x), Math.abs(at.x - size.width)),
-      Math.max(Math.abs(at.y), Math.abs(at.y - size.height))
-    );
-    extent = reach / scale + DRIFT_AMPLITUDE * 1.5;
-  }
-  const { x: atX, y: atY } = at;
-  const mapTransform = (layer: 'a' | 'b') => {
+// Clouds are laid out around a fixed origin, so they pan, zoom and rotate with the map: the transform is derived from
+// the shared view on the UI thread, with no React render per frame.
+function FogClouds({ shared, origin, fog, animated }: FogCloudsProps) {
+  const clock = useClock();
+  const anchor = useDerivedValue(() => {
+    const v = readView(shared);
+    const at = originOnScreen(v, origin);
+    const scale = Math.min(CLOUD_MAX_SCALE, Math.max(CLOUD_MIN_SCALE, worldScale(v.zoom)));
+    return { x: at.x, y: at.y, scale, rotation: (-v.bearing * Math.PI) / 180 };
+  }, [origin]);
+  const layer = (which: 'a' | 'b') => {
     'worklet';
+    const a = anchor.value;
     const t = animated ? clock.value / 1000 : 0;
-    const dx = layer === 'a' ? Math.sin((t / 23) * TAU) : -Math.cos((t / 17) * TAU);
-    const dy = layer === 'a' ? Math.cos((t / 31) * TAU) * 0.7 : Math.sin((t / 29) * TAU);
+    const dx = which === 'a' ? Math.sin((t / 23) * TAU) : -Math.cos((t / 17) * TAU);
+    const dy = which === 'a' ? Math.cos((t / 31) * TAU) * 0.7 : Math.sin((t / 29) * TAU);
     return [
-      { translateX: atX },
-      { translateY: atY },
-      { rotate: rotation },
-      { scale },
+      { translateX: a.x },
+      { translateY: a.y },
+      { rotate: a.rotation },
+      { scale: a.scale },
       { translateX: dx * DRIFT_AMPLITUDE },
       { translateY: dy * DRIFT_AMPLITUDE },
     ];
   };
-  const layerA = useDerivedValue(() => mapTransform('a'), [atX, atY, rotation, scale, animated]);
-  const layerB = useDerivedValue(() => mapTransform('b'), [atX, atY, rotation, scale, animated]);
-
-  if (!view) return null;
+  const layerA = useDerivedValue(() => layer('a'), [animated]);
+  const layerB = useDerivedValue(() => layer('b'), [animated]);
 
   return (
     <>
       <Group transform={[{ translateX: CLOUD_SHADOW_OFFSET.x }, { translateY: CLOUD_SHADOW_OFFSET.y }]}>
         <Group transform={layerA}>
-          <CloudLayer extent={extent} color={fog.shadow} freq={0.006} seed={3} gain={3.2} />
+          <CloudLayer extent={CLOUD_EXTENT} color={fog.shadow} freq={0.006} seed={3} gain={3.2} />
         </Group>
       </Group>
       <Group transform={layerA}>
-        <CloudLayer extent={extent} color={fog.light} freq={0.006} seed={3} gain={3.2} />
+        <CloudLayer extent={CLOUD_EXTENT} color={fog.light} freq={0.006} seed={3} gain={3.2} />
       </Group>
       <Group transform={layerB}>
-        <CloudLayer extent={extent} color={fog.light} freq={0.02} seed={11} gain={1.6} />
+        <CloudLayer extent={CLOUD_EXTENT} color={fog.light} freq={0.02} seed={11} gain={1.6} />
       </Group>
     </>
   );
@@ -237,61 +236,82 @@ function Rain({ size, rain, animated }: RainProps) {
   );
 }
 
-export default function FogOverlay({ points, livePosition, view, fog, animated = true, rain = 0, userDot = false }: FogOverlayProps) {
-  const [size, setSize] = useState<Size>({ width: 0, height: 0 });
+function distanceKm(a: WorldOrigin, b: WorldOrigin): number {
+  return haversineDistanceMeters({ lat: a.lat, lng: a.lng }, { lat: b.lat, lng: b.lng }) / 1000;
+}
 
-  const dot = useMemo(
-    () => (view && livePosition && size.width > 0 ? projectToScreen(livePosition.lng, livePosition.lat, view, size) : null),
-    [view, livePosition, size]
-  );
+export default function FogOverlay({ points, livePosition, shared, view, fog, animated = true, rain = 0, userDot = false }: FogOverlayProps) {
+  const [size, setSize] = useState<Size>({ width: 0, height: 0 });
+  const [origin, setOrigin] = useState<WorldOrigin | null>(null);
+
+  // The world origin: where the view first is, and again when it is more than a long way off (keeps numbers small).
+  useEffect(() => {
+    if (!view) return;
+    const here = { lng: view.center[0], lat: view.center[1] };
+    if (!origin || distanceKm(origin, here) > ORIGIN_REANCHOR_KM) setOrigin(here);
+  }, [view, origin]);
 
   const trail = useMemo(() => buildTrail(points, livePosition), [points, livePosition]);
 
-  const revealPath = useMemo(() => {
-    if (!view || size.width === 0 || trail.length === 0) return null;
+  // Which part of the world the path covers: a window around the view, rebuilt when the view leaves its middle.
+  const windowKey = useMemo(() => {
+    if (!view || !origin || size.width === 0) return null;
+    const half = (WINDOW_FACTOR * Math.hypot(size.width, size.height)) / worldScale(view.zoom);
+    const c = worldPoint(view.center[0], view.center[1], origin);
+    const step = half / 2;
+    return { half, cx: Math.round(c.x / step) * step, cy: Math.round(c.y / step) * step, zoom: Math.round(view.zoom) };
+  }, [view, origin, size.width, size.height]);
+  const windowId = windowKey ? `${windowKey.cx.toFixed(0)}:${windowKey.cy.toFixed(0)}:${windowKey.zoom}` : '';
 
-    const screen = trail.map((n) => projectToScreen(n.lng, n.lat, view, size));
-    const visible = screen.map(
-      (s) =>
-        s.x > -OFFSCREEN_MARGIN_PX &&
-        s.x < size.width + OFFSCREEN_MARGIN_PX &&
-        s.y > -OFFSCREEN_MARGIN_PX &&
-        s.y < size.height + OFFSCREEN_MARGIN_PX
-    );
+  const revealPath = useMemo(() => {
+    if (!origin || !windowKey || trail.length === 0) return null;
+    const { half, cx, cy } = windowKey;
+    const world = trail.map((n) => worldPoint(n.lng, n.lat, origin));
+    const inside = world.map((w) => Math.abs(w.x - cx) < half && Math.abs(w.y - cy) < half);
 
     const path = Skia.Path.Make();
     let penDown = false;
     for (let i = 0; i < trail.length; i++) {
-      const linked =
-        i > 0 && haversineDistanceMeters(trail[i - 1], trail[i]) <= MAX_LINK_METERS;
-      const onScreen = visible[i] || (i > 0 && visible[i - 1] && linked);
+      const linked = i > 0 && haversineDistanceMeters(trail[i - 1], trail[i]) <= MAX_LINK_METERS;
+      const wanted = inside[i] || (i > 0 && inside[i - 1] && linked);
 
-      if (!onScreen) {
+      if (!wanted) {
         penDown = false;
         continue;
       }
       if (linked) {
-        if (!penDown) path.moveTo(screen[i - 1].x, screen[i - 1].y);
-        path.lineTo(screen[i].x, screen[i].y);
+        if (!penDown) path.moveTo(world[i - 1].x, world[i - 1].y);
+        path.lineTo(world[i].x, world[i].y);
       } else {
-        path.moveTo(screen[i].x, screen[i].y);
+        path.moveTo(world[i].x, world[i].y);
         // A zero-length segment still paints a round cap, so lone points show as dots.
-        path.lineTo(screen[i].x + 0.01, screen[i].y);
+        path.lineTo(world[i].x + 0.01, world[i].y);
       }
       penDown = true;
     }
     return path;
-  }, [trail, view, size]);
+    // windowKey is covered by windowId: the path only changes when the window (or the points) do.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trail, origin, windowId]);
 
-  const revealWidth = useMemo(() => {
-    if (!view) return 0;
-    const lat = view.center[1];
-    return (2 * REVEAL_RADIUS_METERS) / metersPerPixel(view.zoom, lat);
-  }, [view]);
+  const revealWidth = origin ? (2 * REVEAL_RADIUS_METERS) / metersPerPixel(WORLD_ZOOM, origin.lat) : 0;
+
+  const sceneTransform = useDerivedValue(
+    () => (origin ? worldTransform(readView(shared), origin) : []),
+    [origin]
+  );
+  const dotTransform = useDerivedValue(() => {
+    if (!livePosition) return [];
+    const v = readView(shared);
+    const p = projectToScreen(livePosition.lng, livePosition.lat, { center: [v.lng, v.lat], zoom: v.zoom, bearing: v.bearing }, { width: v.width, height: v.height });
+    return [{ translateX: p.x }, { translateY: p.y }];
+  }, [livePosition?.lng, livePosition?.lat]);
 
   function onLayout(e: LayoutChangeEvent) {
     const { width, height } = e.nativeEvent.layout;
     setSize({ width, height });
+    shared.width.value = width;
+    shared.height.value = height;
   }
 
   return (
@@ -299,28 +319,30 @@ export default function FogOverlay({ points, livePosition, view, fog, animated =
       <Canvas style={StyleSheet.absoluteFill}>
         <Group layer={<Paint />}>
           <Rect x={0} y={0} width={size.width} height={size.height} color={fog.base} />
-          <FogClouds view={view} size={size} fog={fog} animated={animated} />
-          {revealPath && (
-            <Path
-              path={revealPath}
-              style="stroke"
-              strokeWidth={revealWidth}
-              strokeCap="round"
-              strokeJoin="round"
-              color="black"
-              blendMode="dstOut"
-            >
-              <BlurMask blur={revealWidth * 0.18} style="normal" />
-            </Path>
+          {origin && <FogClouds shared={shared} origin={origin} fog={fog} animated={animated} />}
+          {origin && revealPath && (
+            <Group transform={sceneTransform}>
+              <Path
+                path={revealPath}
+                style="stroke"
+                strokeWidth={revealWidth}
+                strokeCap="round"
+                strokeJoin="round"
+                color="black"
+                blendMode="dstOut"
+              >
+                <BlurMask blur={revealWidth * 0.18} style="normal" />
+              </Path>
+            </Group>
           )}
         </Group>
         {rain > 0 && size.width > 0 && <Rain size={size} rain={rain} animated={animated} />}
-        {userDot && dot && (
-          <>
-            <Circle cx={dot.x} cy={dot.y} r={22} color="rgba(47, 143, 255, 0.18)" />
-            <Circle cx={dot.x} cy={dot.y} r={10} color="#FFFFFF" />
-            <Circle cx={dot.x} cy={dot.y} r={7} color="#2F8FFF" />
-          </>
+        {userDot && livePosition && (
+          <Group transform={dotTransform}>
+            <Circle cx={0} cy={0} r={22} color="rgba(47, 143, 255, 0.18)" />
+            <Circle cx={0} cy={0} r={10} color="#FFFFFF" />
+            <Circle cx={0} cy={0} r={7} color="#2F8FFF" />
+          </Group>
         )}
       </Canvas>
     </View>

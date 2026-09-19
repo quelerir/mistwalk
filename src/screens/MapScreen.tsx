@@ -20,6 +20,7 @@ import PoiMarkers from '../components/PoiMarkers';
 import SvgIcon from '../components/icons/SvgIcon';
 import type { MapView } from '../lib/geo/projection';
 import { MAP_STYLES } from '../lib/map/styles';
+import { useViewShared, writeView } from '../lib/map/viewShared';
 import type { Poi } from '../lib/poi/types';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
@@ -27,6 +28,7 @@ import type { Colors } from '../theme/palettes';
 
 const FOLLOW_ZOOM = 16;
 const FOLLOW_EASE_MS = 900;
+const VIEW_PUBLISH_MS = 250;
 
 export interface MapScreenProps {
   points: VisitedPoint[];
@@ -75,6 +77,9 @@ export default function MapScreen({
   const { colors: c, scheme } = useTheme();
   const mapRef = useRef<MapRef>(null) as React.RefObject<MapRef>;
   const cameraRef = useRef<CameraRef>(null);
+  const shared = useViewShared();
+  const publishTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingView = useRef<MapView | null>(null);
   const hasCenteredRef = useRef(false);
   const [following, setFollowing] = useState(true);
   const fittedFor = useRef<string | null>(null);
@@ -130,16 +135,33 @@ export default function MapScreen({
     setFollowing(true);
   }
 
-  function handleRegion(e: NativeSyntheticEvent<ViewStateChangeEvent>) {
+  // The overlays read the view from shared values on every frame; the rest of the app gets a copy a few times a
+  // second while the map moves (and at once when it settles), so panning does not re-render the screens.
+  function flushView() {
+    if (publishTimer.current) clearTimeout(publishTimer.current);
+    publishTimer.current = null;
+    if (pendingView.current) onViewChange(pendingView.current);
+    pendingView.current = null;
+  }
+
+  function handleRegion(e: NativeSyntheticEvent<ViewStateChangeEvent>, settled: boolean) {
     const { center, zoom, bearing, userInteraction } = e.nativeEvent;
     if (userInteraction) setFollowing(false);
-    onViewChange({ center, zoom, bearing });
+    const next = { center, zoom, bearing };
+    writeView(shared, next);
+    pendingView.current = next;
+    if (settled) flushView();
+    else if (!publishTimer.current) publishTimer.current = setTimeout(flushView, VIEW_PUBLISH_MS);
   }
 
   async function handleMapLoaded() {
     try {
       const state = await mapRef.current?.getViewState();
-      if (state) onViewChange({ center: state.center, zoom: state.zoom, bearing: state.bearing });
+      if (state) {
+        const v = { center: state.center, zoom: state.zoom, bearing: state.bearing };
+        writeView(shared, v);
+        onViewChange(v);
+      }
     } catch {
       // The native map isn't ready yet; region events will provide the view.
     }
@@ -153,18 +175,19 @@ export default function MapScreen({
         mapStyle={MAP_STYLES[scheme]}
         touchPitch={false}
         onDidFinishLoadingMap={() => void handleMapLoaded()}
-        onRegionIsChanging={handleRegion}
-        onRegionDidChange={handleRegion}
+        onRegionIsChanging={(e) => handleRegion(e, false)}
+        onRegionDidChange={(e) => handleRegion(e, true)}
       >
         <Camera ref={cameraRef} initialViewState={{ zoom: FOLLOW_ZOOM }} />
         {Platform.OS !== 'android' && <UserLocation />}
       </Map>
-      <FogOverlay points={points} livePosition={livePosition} view={view} fog={fog} animated={fogAnimated} rain={rain} userDot={Platform.OS === 'android'} />
-      <RouteOverlay coordinates={progress?.coordinates ?? route?.coordinates ?? null} view={view} />
+      <FogOverlay points={points} livePosition={livePosition} shared={shared} view={view} fog={fog} animated={fogAnimated} rain={rain} userDot={Platform.OS === 'android'} />
+      <RouteOverlay coordinates={progress?.coordinates ?? route?.coordinates ?? null} shared={shared} />
       <PoiMarkers
         pois={pois}
         discoveredIds={discoveredIds}
         view={view}
+        shared={shared}
         selectedId={selectedId}
         onSelect={onSelect}
         onOpenFound={onOpenFound}

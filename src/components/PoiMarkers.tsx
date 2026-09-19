@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { projectToScreen, type MapView, type Size } from '../lib/geo/projection';
+import { readView, type ViewShared } from '../lib/map/viewShared';
 import { KIND_LABEL } from '../lib/poi/greeting';
 import KindIcon from './KindIcon';
 import type { Poi } from '../lib/poi/types';
@@ -11,19 +13,48 @@ import { KIND_COLOR } from '../lib/poi/kindColors';
 export interface PoiMarkersProps {
   pois: Poi[];
   discoveredIds: ReadonlySet<string>;
+  // The slow copy of the view picks which markers exist; the shared view moves them every frame.
   view: MapView | null;
+  shared: ViewShared;
   selectedId?: string | null;
   onSelect?: (poi: Poi) => void;
   onOpenFound?: (poi: Poi) => void;
 }
 
 const MAX_MARKERS = 60;
-const MARGIN_PX = 30;
+// Wide, because the list is refreshed a few times a second while the map keeps moving under the markers.
+const MARGIN_PX = 400;
+
+interface MarkerAnchorProps {
+  shared: ViewShared;
+  lng: number;
+  lat: number;
+  children: React.ReactNode;
+}
+
+// Positions itself from the shared view on the UI thread, so it stays glued to the map while it is dragged.
+function MarkerAnchor({ shared, lng, lat, children }: MarkerAnchorProps) {
+  const style = useAnimatedStyle(() => {
+    const v = readView(shared);
+    const p = projectToScreen(lng, lat, { center: [v.lng, v.lat], zoom: v.zoom, bearing: v.bearing }, { width: v.width, height: v.height });
+    return { transform: [{ translateX: p.x - 60 }, { translateY: p.y - 16 }] };
+  });
+  return (
+    <Animated.View pointerEvents="box-none" style={[markerStyles.anchor, style]}>
+      {children}
+    </Animated.View>
+  );
+}
+
+const markerStyles = StyleSheet.create({
+  anchor: { position: 'absolute', left: 0, top: 0, width: 120, alignItems: 'center' },
+});
 
 export default function PoiMarkers({
   pois,
   discoveredIds,
   view,
+  shared,
   selectedId = null,
   onSelect,
   onOpenFound,
@@ -63,7 +94,7 @@ export default function PoiMarkers({
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none" onLayout={onLayout}>
       {visible.map(({ poi, x, y, showLabel }) =>
         discoveredIds.has(poi.id) ? (
-          <View key={poi.id} pointerEvents="box-none" style={[styles.anchor, { left: x - 60, top: y - 16 }]}>
+          <MarkerAnchor key={poi.id} shared={shared} lng={poi.lng} lat={poi.lat}>
             <Pressable
               onPress={() => onOpenFound?.(poi)}
               hitSlop={8}
@@ -78,9 +109,9 @@ export default function PoiMarkers({
                 {poi.name}
               </Text>
             )}
-          </View>
+          </MarkerAnchor>
         ) : (
-          <View key={poi.id} pointerEvents="box-none" style={[styles.anchor, { left: x - 60, top: y - 16 }]}>
+          <MarkerAnchor key={poi.id} shared={shared} lng={poi.lng} lat={poi.lat}>
             <Pressable
               onPress={() => onSelect?.(poi)}
               hitSlop={8}
@@ -90,7 +121,7 @@ export default function PoiMarkers({
             >
               <KindIcon kind={poi.kind} size={18} color={KIND_COLOR[poi.kind]} />
             </Pressable>
-          </View>
+          </MarkerAnchor>
         )
       )}
     </View>
@@ -98,7 +129,6 @@ export default function PoiMarkers({
 }
 
 const makeStyles = (c: Colors) => StyleSheet.create({
-  anchor: { position: 'absolute', width: 120, alignItems: 'center' },
   unknown: {
     width: 30,
     height: 30,
