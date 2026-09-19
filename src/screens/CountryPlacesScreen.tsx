@@ -119,7 +119,7 @@ export default function CountryPlacesScreen({
                 accessibilityRole="button"
               >
                 <View style={styles.badge}>
-                  <KindIcon kind={item.icon} size={20} color="#8a5a00" />
+                  <KindIcon kind={item.icon} size={20} color="#3b4560" />
                 </View>
                 <Text style={styles.name} numberOfLines={1}>
                   {item.place.name}
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#fff3cf',
+    backgroundColor: '#eef1f6',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   cityPercent: { fontSize: 15, fontWeight: '700', color: '#262626', marginLeft: 8 },
   cityLetter: { fontSize: 17, fontWeight: '800', color: '#2f6fdd' },
   badgeHidden: { backgroundColor: '#f3f3f3' },
-  icon: { fontSize: 18, color: '#8a5a00' },
+  icon: { fontSize: 18, color: '#3b4560' },
   iconHidden: { color: '#a8a8a8' },
   name: { flex: 1, fontSize: 15, fontWeight: '600', color: '#262626' },
   muted: { color: '#8e8e8e', fontWeight: '500' },

@@ -27,7 +27,7 @@ export default function PlaceSheet({ place, onClose }: PlaceSheetProps) {
             ) : null}
             <View style={styles.body}>
               <View style={styles.kindRow}>
-                <KindIcon kind={place.kind} size={18} color="#8a5a00" />
+                <KindIcon kind={place.kind} size={18} color="#3b4560" />
                 <Text style={styles.kind}>{KIND_LABEL[place.kind]}</Text>
               </View>
               <Text style={styles.title}>{place.name}</Text>
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
   photo: { width: '100%', height: 220, backgroundColor: '#efefef' },
   body: { padding: 16 },
   kindRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  kind: { color: '#8a5a00', fontWeight: '700' },
+  kind: { color: '#3b4560', fontWeight: '700' },
   title: { fontSize: 22, fontWeight: '800', color: '#262626', marginBottom: 12 },
   text: { fontSize: 15, lineHeight: 22, color: '#262626' },
   muted: { fontSize: 15, color: '#8e8e8e' },

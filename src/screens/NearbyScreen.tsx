@@ -51,7 +51,7 @@ export default function NearbyScreen({ pois, discoveredIds, origin, onSelect }: 
               accessibilityLabel="Показать на карте"
             >
               <View style={styles.iconBadge}>
-                <KindIcon kind={item.poi.kind} size={22} color="#8a5a00" />
+                <KindIcon kind={item.poi.kind} size={22} color="#3b4560" />
               </View>
               <View style={styles.rowText}>
                 <Text style={styles.name}>Тайное место</Text>
@@ -77,12 +77,12 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#fff3cf',
+    backgroundColor: '#eef1f6',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
-  icon: { fontSize: 20, color: '#8a5a00' },
+  icon: { fontSize: 20, color: '#3b4560' },
   rowText: { flex: 1 },
   name: { fontSize: 16, fontWeight: '600', color: '#262626' },
   distance: { marginTop: 2, color: '#8e8e8e' },

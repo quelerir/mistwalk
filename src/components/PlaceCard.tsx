@@ -27,7 +27,7 @@ export default function PlaceCard({ poi, origin, onBuildRoute, onClose }: PlaceC
     <View style={styles.card}>
       <View style={styles.header}>
         <View style={styles.badge}>
-          <KindIcon kind={poi.kind} size={22} color="#8a5a00" />
+          <KindIcon kind={poi.kind} size={22} color="#3b4560" />
         </View>
         <View style={styles.text}>
           <Text style={styles.title}>{KIND_LABEL[poi.kind]}</Text>
@@ -68,12 +68,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#fff3cf',
+    backgroundColor: '#eef1f6',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
   },
-  icon: { fontSize: 18, color: '#8a5a00' },
+  icon: { fontSize: 18, color: '#3b4560' },
   text: { flex: 1 },
   title: { fontWeight: '700', color: '#262626', fontSize: 16 },
   subtitle: { marginTop: 2, color: '#8e8e8e' },

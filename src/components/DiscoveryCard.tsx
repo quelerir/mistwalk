@@ -22,7 +22,7 @@ export default function DiscoveryCard({ place, onDismiss, onOpen }: DiscoveryCar
     >
       <View style={styles.card}>
         <View style={styles.titleRow}>
-          <KindIcon kind={place.kind} size={22} color="#ffc83c" />
+          <KindIcon kind={place.kind} size={22} color="#ffffff" />
           <Text style={styles.title}>Вы нашли: {place.name}</Text>
         </View>
         <Text style={styles.text}>{greetingFor(place.kind)}</Text>
@@ -39,10 +39,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 200, 60, 0.8)',
+    borderColor: 'rgba(255, 255, 255, 0.55)',
   },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  title: { flex: 1, color: '#ffc83c', fontSize: 18, fontWeight: '800' },
+  title: { flex: 1, color: '#ffffff', fontSize: 18, fontWeight: '800' },
   text: { color: 'white', fontSize: 15 },
-  more: { color: '#ffc83c', fontWeight: '700', marginTop: 8 },
+  more: { color: '#ffffff', fontWeight: '700', marginTop: 8 },
 });
