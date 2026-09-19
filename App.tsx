@@ -234,10 +234,11 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
+  // Signed in, MainScreen handles the top inset itself so the map can run under the status bar.
   return (
     <SafeAreaProvider>
     <StatusBar barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'} />
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={session ? [] : ['top']}>
       <RootNavigator client={client} session={session} onSignedIn={() => getSession(client).then(setSession)}>
         <OfflineBanner />
         <LocationPermissionBanner stage={stage} onRequestForeground={requestForeground} />

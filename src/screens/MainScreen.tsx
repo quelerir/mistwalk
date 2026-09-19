@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { LocationSubscription } from 'expo-location';
@@ -133,6 +134,7 @@ export default function MainScreen({
       .then((state) => setFollowCounts({ followers: state.followers, following: state.followingCount }))
       .catch(() => {});
   }, [client, userId, showFollows]);
+  const insets = useSafeAreaInsets();
   const week = useMemo(() => weekSummary(points, discovered, Date.now()), [points, discovered]);
   const daily = useMemo(() => dailyKm(points, Date.now()), [points]);
 
@@ -266,7 +268,7 @@ export default function MainScreen({
 
   return (
     <View style={styles.container}>
-      <View style={styles.content}>
+      <View style={[styles.content, { paddingTop: tab === 'map' ? 0 : insets.top }]}>
         <View
           style={[StyleSheet.absoluteFill, tab !== 'map' && styles.hidden]}
           pointerEvents={tab === 'map' ? 'auto' : 'none'}
