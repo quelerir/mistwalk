@@ -37,7 +37,7 @@ type TabKey = 'map' | 'nearby' | 'collection' | 'menu';
 const TABS: Array<TabItem<TabKey>> = [
   { key: 'map', label: 'Карта', icon: 'map' },
   { key: 'nearby', label: 'Рядом', icon: 'compass' },
-  { key: 'collection', label: 'Коллекция', icon: 'award' },
+  { key: 'collection', label: 'Достижения', icon: 'award' },
   { key: 'menu', label: 'Меню', icon: 'menu' },
 ];
 

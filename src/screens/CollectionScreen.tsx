@@ -26,7 +26,7 @@ export default function CollectionScreen({
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Коллекция</Text>
+      <Text style={styles.title}>Достижения</Text>
 
       <View style={styles.tiles}>
         {tiles.map((tile) => (
