@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import MenuSheet, { type MenuItem } from '../components/MenuSheet';
+import SvgIcon from '../components/icons/SvgIcon';
 import {
   FOG_COLORS,
+  nextFogStyle,
   FOG_STYLES,
   FOG_STYLE_LABELS,
   type FogStyle,
@@ -21,6 +24,8 @@ export interface ProfileScreenProps {
   onSignOut: () => Promise<void>;
   backgroundEnabled: boolean;
   onEnableBackground: () => Promise<boolean>;
+  onOpenCollection: () => void;
+  onOpenNearby: () => void;
 }
 
 const ACCURACY_OPTIONS: Array<{ key: AccuracyProfile; label: string }> = [
@@ -36,9 +41,12 @@ export default function ProfileScreen({
   onSignOut,
   backgroundEnabled,
   onEnableBackground,
+  onOpenCollection,
+  onOpenNearby,
 }: ProfileScreenProps) {
   const [accuracy, setAccuracy] = useState<AccuracyProfile>('battery-saver');
   const [signingOut, setSigningOut] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     void getAccuracyProfile(AsyncStorage).then(setAccuracy);
@@ -58,6 +66,58 @@ export default function ProfileScreen({
     }
   }
 
+  function closeThen(action: () => void) {
+    return () => {
+      setMenuOpen(false);
+      action();
+    };
+  }
+
+  const menuItems: MenuItem[] = [
+    {
+      key: 'collection',
+      icon: 'award',
+      label: 'Коллекция',
+      onPress: closeThen(onOpenCollection),
+    },
+    {
+      key: 'nearby',
+      icon: 'compass',
+      label: 'Что рядом',
+      onPress: closeThen(onOpenNearby),
+    },
+    {
+      key: 'fog',
+      icon: 'cloud',
+      label: 'Стиль тумана',
+      value: FOG_STYLE_LABELS[fogStyle],
+      onPress: () => onFogStyleChange(nextFogStyle(fogStyle)),
+    },
+    {
+      key: 'accuracy',
+      icon: 'locate',
+      label: 'Точность GPS',
+      value: accuracy === 'precise' ? 'Точный' : 'Экономия',
+      onPress: () => chooseAccuracy(accuracy === 'precise' ? 'battery-saver' : 'precise'),
+    },
+    {
+      key: 'background',
+      icon: 'moon',
+      label: 'Работа в фоне',
+      value: backgroundEnabled ? 'Включена' : 'Включить',
+      onPress: () => {
+        if (!backgroundEnabled) void onEnableBackground();
+      },
+    },
+    {
+      key: 'signout',
+      icon: 'logout',
+      label: 'Выйти',
+      destructive: true,
+      onPress: closeThen(() => void handleSignOut()),
+    },
+  ];
+
   const initial = (email.trim()[0] ?? '?').toUpperCase();
 
   return (
@@ -72,7 +132,17 @@ export default function ProfileScreen({
           </Text>
           <Text style={styles.stat}>Открыто мест: {discoveredCount}</Text>
         </View>
+        <Pressable
+          style={styles.menuButton}
+          onPress={() => setMenuOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Меню"
+          hitSlop={10}
+        >
+          <SvgIcon name="menu" size={28} />
+        </Pressable>
       </View>
+      <MenuSheet visible={menuOpen} items={menuItems} onClose={() => setMenuOpen(false)} />
 
       <Text style={styles.sectionTitle}>Туман</Text>
       <View style={styles.row}>
@@ -152,6 +222,7 @@ const styles = StyleSheet.create({
   },
   avatarText: { color: 'white', fontSize: 30, fontWeight: '700' },
   headerText: { flex: 1 },
+  menuButton: { marginLeft: 12 },
   email: { fontSize: 17, fontWeight: '700', color: '#262626' },
   stat: { marginTop: 4, color: '#8e8e8e' },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: '#262626', marginTop: 20, marginBottom: 10 },

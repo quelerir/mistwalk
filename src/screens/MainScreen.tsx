@@ -111,6 +111,8 @@ export default function MainScreen({
             onSignOut={handleSignOut}
             backgroundEnabled={backgroundEnabled}
             onEnableBackground={onEnableBackground}
+            onOpenCollection={() => setTab('collection')}
+            onOpenNearby={() => setTab('nearby')}
           />
         )}
         <DiscoveryCard place={greeting} onDismiss={dismissGreeting} />
