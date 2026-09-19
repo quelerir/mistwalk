@@ -1,8 +1,10 @@
 import type { KeyValueStorage } from './accuracyProfile';
 
 export type FogStyle = 'ink' | 'mist' | 'night';
+// What the player picks: a fixed style, or "auto", which follows the time of day.
+export type FogSetting = FogStyle | 'auto';
 
-export const FOG_STYLES: FogStyle[] = ['ink', 'mist', 'night'];
+export const FOG_STYLES: FogSetting[] = ['ink', 'mist', 'night', 'auto'];
 
 export interface FogPalette {
   base: string;
@@ -23,26 +25,35 @@ export const FOG_COLORS: Record<FogStyle, string> = {
   night: FOG_PALETTES.night.base,
 };
 
-export const FOG_STYLE_LABELS: Record<FogStyle, string> = {
+export const FOG_STYLE_LABELS: Record<FogSetting, string> = {
   ink: 'Чернила',
   mist: 'Дымка',
   night: 'Ночь',
+  auto: 'Авто',
 };
 
 const STORAGE_KEY = 'settings.fogStyle.v1';
 
-export function nextFogStyle(current: FogStyle): FogStyle {
+// Day is light mist, evening ink, night deep blue.
+export function resolveFogStyle(setting: FogSetting, hour: number): FogStyle {
+  if (setting !== 'auto') return setting;
+  if (hour >= 6 && hour < 18) return 'mist';
+  if (hour >= 18 && hour < 22) return 'ink';
+  return 'night';
+}
+
+export function nextFogStyle(current: FogSetting): FogSetting {
   return FOG_STYLES[(FOG_STYLES.indexOf(current) + 1) % FOG_STYLES.length];
 }
 
-export async function getFogStyle(storage: Pick<KeyValueStorage, 'getItem'>): Promise<FogStyle> {
+export async function getFogStyle(storage: Pick<KeyValueStorage, 'getItem'>): Promise<FogSetting> {
   const raw = await storage.getItem(STORAGE_KEY);
-  return FOG_STYLES.includes(raw as FogStyle) ? (raw as FogStyle) : 'ink';
+  return FOG_STYLES.includes(raw as FogSetting) ? (raw as FogSetting) : 'ink';
 }
 
 export async function setFogStyle(
   storage: Pick<KeyValueStorage, 'setItem'>,
-  style: FogStyle
+  style: FogSetting
 ): Promise<void> {
   await storage.setItem(STORAGE_KEY, style);
 }

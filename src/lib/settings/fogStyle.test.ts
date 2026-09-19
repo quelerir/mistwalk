@@ -1,4 +1,4 @@
-import { getFogStyle, nextFogStyle, setFogStyle } from './fogStyle';
+import { getFogStyle, nextFogStyle, resolveFogStyle, setFogStyle } from './fogStyle';
 
 function fakeStorage(initial: Record<string, string> = {}) {
   const store = { ...initial };
@@ -22,6 +22,26 @@ describe('fogStyle', () => {
   it('cycles through all styles and wraps around', () => {
     expect(nextFogStyle('ink')).toBe('mist');
     expect(nextFogStyle('mist')).toBe('night');
-    expect(nextFogStyle('night')).toBe('ink');
+    expect(nextFogStyle('night')).toBe('auto');
+    expect(nextFogStyle('auto')).toBe('ink');
+  });
+
+  it('auto picks the fog by the hour and a fixed style ignores the hour', () => {
+    expect(resolveFogStyle('auto', 6)).toBe('mist');
+    expect(resolveFogStyle('auto', 12)).toBe('mist');
+    expect(resolveFogStyle('auto', 17)).toBe('mist');
+    expect(resolveFogStyle('auto', 18)).toBe('ink');
+    expect(resolveFogStyle('auto', 21)).toBe('ink');
+    expect(resolveFogStyle('auto', 22)).toBe('night');
+    expect(resolveFogStyle('auto', 3)).toBe('night');
+    expect(resolveFogStyle('auto', 5)).toBe('night');
+    expect(resolveFogStyle('night', 12)).toBe('night');
+    expect(resolveFogStyle('ink', 3)).toBe('ink');
+  });
+
+  it('persists and restores the auto choice', async () => {
+    const s = fakeStorage();
+    await setFogStyle(s, 'auto');
+    expect(await getFogStyle(s)).toBe('auto');
   });
 });

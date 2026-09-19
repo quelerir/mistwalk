@@ -14,7 +14,7 @@ import type { LivePosition } from '../components/FogOverlay';
 import { usePlaces } from '../hooks/usePlaces';
 import type { MapView } from '../lib/geo/projection';
 import { performSignOut } from '../lib/session/signOutFlow';
-import { FOG_PALETTES, getFogAnimated, getFogStyle, setFogAnimated, setFogStyle, type FogStyle } from '../lib/settings/fogStyle';
+import { FOG_PALETTES, getFogAnimated, getFogStyle, resolveFogStyle, setFogAnimated, setFogStyle, type FogSetting } from '../lib/settings/fogStyle';
 import { getPlaceNotifications, setPlaceNotifications } from '../lib/settings/placeNotifications';
 import { signOut, signOutLocal } from '../lib/supabase/auth';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
@@ -83,8 +83,10 @@ export default function MainScreen({
   const [detailPlace, setDetailPlace] = useState<Poi | null>(null);
   const [routing, setRouting] = useState(false);
   const [view, setView] = useState<MapView | null>(null);
-  const [fogStyle, setFogStyleState] = useState<FogStyle>('ink');
+  const [fogStyle, setFogStyleState] = useState<FogSetting>('ink');
   const [fogAnimated, setFogAnimatedState] = useState(true);
+  // Only "auto" fog reads the hour; checking once a minute is enough to switch at the boundary.
+  const [hour, setHour] = useState(() => new Date().getHours());
   const [placeNotifications, setPlaceNotificationsState] = useState(false);
   const { pois, discovered, discoveredIds, greeting, dismissGreeting } = usePlaces({
     client,
@@ -192,11 +194,13 @@ export default function MainScreen({
 
   useEffect(() => {
     void getFogStyle(AsyncStorage).then(setFogStyleState);
+    const tick = setInterval(() => setHour(new Date().getHours()), 60000);
     void getFogAnimated(AsyncStorage).then(setFogAnimatedState);
     void getPlaceNotifications(AsyncStorage).then((s) => setPlaceNotificationsState(s.enabled && s.userId === userId));
+    return () => clearInterval(tick);
   }, []);
 
-  function handleFogStyleChange(style: FogStyle) {
+  function handleFogStyleChange(style: FogSetting) {
     setFogStyleState(style);
     void setFogStyle(AsyncStorage, style);
   }
@@ -245,7 +249,7 @@ export default function MainScreen({
             livePosition={livePosition}
             pois={pois}
             discoveredIds={discoveredIds}
-            fog={FOG_PALETTES[fogStyle]}
+            fog={FOG_PALETTES[resolveFogStyle(fogStyle, hour)]}
             fogAnimated={fogAnimated}
             view={view}
             onViewChange={setView}

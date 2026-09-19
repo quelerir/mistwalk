@@ -5,7 +5,7 @@ import Avatar from './Avatar';
 import MenuSheet, { type MenuItem } from './MenuSheet';
 import { useTheme } from '../theme/ThemeProvider';
 import { nextThemePreference, THEME_LABELS } from '../theme/palettes';
-import { FOG_STYLE_LABELS, nextFogStyle, type FogStyle } from '../lib/settings/fogStyle';
+import { FOG_STYLE_LABELS, nextFogStyle, type FogSetting } from '../lib/settings/fogStyle';
 import {
   getAccuracyProfile,
   setAccuracyProfile,
@@ -15,8 +15,8 @@ import {
 export interface AppMenuProps {
   visible: boolean;
   onClose: () => void;
-  fogStyle: FogStyle;
-  onFogStyleChange: (style: FogStyle) => void;
+  fogStyle: FogSetting;
+  onFogStyleChange: (style: FogSetting) => void;
   fogAnimated: boolean;
   onFogAnimatedChange: (next: boolean) => void;
   placeNotifications: boolean;
