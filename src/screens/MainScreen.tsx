@@ -36,6 +36,8 @@ import { useCountryStats } from '../hooks/useCountryStats';
 import { useCityStats } from '../hooks/useCityStats';
 import { cityCellKey } from '../lib/geo/cityStats';
 import LeaderboardScreen from './LeaderboardScreen';
+import FollowsScreen from './FollowsScreen';
+import { fetchFollowState } from '../lib/social/follows';
 import PlayerScreen from './PlayerScreen';
 import { useProfileSync } from '../hooks/useProfileSync';
 import { pickAvatar } from '../lib/social/pickAvatar';
@@ -81,7 +83,9 @@ export default function MainScreen({
   const [showCountries, setShowCountries] = useState(false);
   const [openCountry, setOpenCountry] = useState<CountryStat | null>(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [openPlayer, setOpenPlayer] = useState<LeaderboardEntry | null>(null);
+  const [openPlayer, setOpenPlayer] = useState<{ userId: string; displayName: string } | null>(null);
+  const [showFollows, setShowFollows] = useState(false);
+  const [followCounts, setFollowCounts] = useState<{ followers: number; following: number } | null>(null);
   const [selected, setSelected] = useState<Poi | null>(null);
   const [detailPlace, setDetailPlace] = useState<Poi | null>(null);
   const [routing, setRouting] = useState(false);
@@ -121,6 +125,13 @@ export default function MainScreen({
   }
 
   const stats = useStats(points, discovered.length, true);
+  // Counters for the "Подписки" row; refreshed whenever the followers screen is left.
+  useEffect(() => {
+    if (showFollows) return;
+    fetchFollowState(client, userId)
+      .then((state) => setFollowCounts({ followers: state.followers, following: state.followingCount }))
+      .catch(() => {});
+  }, [client, userId, showFollows]);
   const week = useMemo(() => weekSummary(points, discovered, Date.now()), [points, discovered]);
   const daily = useMemo(() => dailyKm(points, Date.now()), [points]);
 
@@ -289,7 +300,7 @@ export default function MainScreen({
           />
         )}
         {tab === 'collection' &&
-          (showLeaderboard && openPlayer ? (
+          ((showLeaderboard || showFollows) && openPlayer ? (
             <PlayerScreen
               client={client}
               playerId={openPlayer.userId}
@@ -297,6 +308,8 @@ export default function MainScreen({
               onBack={() => setOpenPlayer(null)}
               isMe={openPlayer.userId === userId}
             />
+          ) : showFollows ? (
+            <FollowsScreen client={client} onBack={() => setShowFollows(false)} onOpenPlayer={setOpenPlayer} />
           ) : showLeaderboard ? (
             <LeaderboardScreen
               client={client}
@@ -337,6 +350,8 @@ export default function MainScreen({
               countries={countryStats.countries}
               onOpenCountries={() => setShowCountries(true)}
               onOpenLeaderboard={() => setShowLeaderboard(true)}
+              onOpenFollows={() => setShowFollows(true)}
+              followCounts={followCounts}
             />
           ))}
         <DiscoveryCard place={greeting} onDismiss={dismissGreeting} onOpen={setDetailPlace} />
@@ -352,6 +367,7 @@ export default function MainScreen({
               setShowCountries(false);
               setOpenCountry(null);
               setShowLeaderboard(false);
+              setShowFollows(false);
               setOpenPlayer(null);
             }
           }

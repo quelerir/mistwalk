@@ -15,6 +15,8 @@ export interface CollectionScreenProps {
   countries: CountryStat[];
   onOpenCountries: () => void;
   onOpenLeaderboard: () => void;
+  onOpenFollows: () => void;
+  followCounts: { followers: number; following: number } | null;
 }
 
 function delta(now: number, before: number, digits = 0): string {
@@ -33,6 +35,8 @@ export default function CollectionScreen({
   countries,
   onOpenCountries,
   onOpenLeaderboard,
+  onOpenFollows,
+  followCounts,
 }: CollectionScreenProps) {
   const styles = useStyles(makeStyles);
   const dayLabels = useMemo(() => {
@@ -115,6 +119,21 @@ export default function CollectionScreen({
         <View style={styles.countriesText}>
           <Text style={styles.countriesTitle}>Рейтинг игроков</Text>
           <Text style={styles.countriesSub}>Сравните себя с другими</Text>
+        </View>
+        <Text style={styles.chevron}>›</Text>
+      </Pressable>
+      <Pressable
+        style={({ pressed }) => [styles.countriesButton, pressed && styles.pressed]}
+        onPress={onOpenFollows}
+        accessibilityRole="button"
+      >
+        <View style={styles.countriesText}>
+          <Text style={styles.countriesTitle}>Подписки</Text>
+          <Text style={styles.countriesSub}>
+            {followCounts
+              ? `Подписчики: ${followCounts.followers} · Вы подписаны: ${followCounts.following}`
+              : 'Кто на вас подписан'}
+          </Text>
         </View>
         <Text style={styles.chevron}>›</Text>
       </Pressable>

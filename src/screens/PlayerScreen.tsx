@@ -9,6 +9,8 @@ import { formatKm2 } from '../lib/geo/cityStats';
 import SvgIcon from '../components/icons/SvgIcon';
 import { KIND_COLOR, kindTint } from '../lib/poi/kindColors';
 import { avatarUrl, fetchPlayerProfile, reportPlayer, type PlayerProfile, type ReportReason } from '../lib/social/profiles';
+import FollowButton from '../components/FollowButton';
+import { fetchFollowState, followPlayer, unfollowPlayer, type FollowState } from '../lib/social/follows';
 import PlayerCountryScreen from './PlayerCountryScreen';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
@@ -32,6 +34,8 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
   const [player, setPlayer] = useState<PlayerProfile | null>(null);
   const [countryCode, setCountryCode] = useState<string | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'hidden' | 'error'>('loading');
+  const [follow, setFollow] = useState<FollowState | null>(null);
+  const [followBusy, setFollowBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,6 +54,38 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
       cancelled = true;
     };
   }, [client, playerId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setFollow(null);
+    fetchFollowState(client, playerId)
+      .then((state) => {
+        if (!cancelled) setFollow(state);
+      })
+      .catch((err) => console.warn('[player] follow state failed', err));
+    return () => {
+      cancelled = true;
+    };
+  }, [client, playerId]);
+
+  async function toggleFollow() {
+    if (!follow || followBusy) return;
+    setFollowBusy(true);
+    try {
+      if (follow.following) await unfollowPlayer(client, playerId);
+      else await followPlayer(client, playerId);
+      setFollow({
+        ...follow,
+        following: !follow.following,
+        followers: Math.max(0, follow.followers + (follow.following ? -1 : 1)),
+      });
+    } catch (err) {
+      console.warn('[player] follow failed', err);
+      Alert.alert('Не удалось', 'Проверьте интернет и попробуйте ещё раз.');
+    } finally {
+      setFollowBusy(false);
+    }
+  }
 
   function report() {
     const send = (reason: ReportReason) =>
@@ -87,6 +123,16 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
         <Text style={styles.title} numberOfLines={1}>
           {player?.displayName ?? fallbackName}
         </Text>
+        {follow && (
+          <Text style={styles.counts}>
+            Подписчики {follow.followers} · Подписки {follow.followingCount}
+          </Text>
+        )}
+        {!isMe && status === 'ready' && follow && (
+          <View style={styles.followWrap}>
+            <FollowButton iFollow={follow.following} followsMe={follow.followsMe} busy={followBusy} onPress={() => void toggleFollow()} />
+          </View>
+        )}
       </View>
 
       {status === 'loading' && <ActivityIndicator style={styles.loader} />}
@@ -187,6 +233,8 @@ const makeStyles = (c: Colors) =>
     pressed: { opacity: 0.5 },
     chevron: { fontSize: 24, color: c.chevron, marginLeft: 8 },
     title: { fontSize: 26, fontFamily: FONT.display, letterSpacing: -0.6, color: c.text, marginTop: 12, paddingHorizontal: 24 },
+    counts: { marginTop: 6, color: c.textMuted, fontSize: 14 },
+    followWrap: { marginTop: 14 },
     loader: { marginTop: 32 },
     empty: { marginTop: 24, paddingHorizontal: 16, textAlign: 'center', color: c.textMuted },
     content: { paddingBottom: 32 },
