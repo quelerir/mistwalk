@@ -9,7 +9,7 @@ import type { LivePosition } from '../components/FogOverlay';
 import { usePlaces } from '../hooks/usePlaces';
 import type { MapView } from '../lib/geo/projection';
 import { performSignOut } from '../lib/session/signOutFlow';
-import { FOG_COLORS, getFogStyle, setFogStyle, type FogStyle } from '../lib/settings/fogStyle';
+import { FOG_PALETTES, getFogStyle, setFogStyle, type FogStyle } from '../lib/settings/fogStyle';
 import { signOut, signOutLocal } from '../lib/supabase/auth';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
 import { stopBackgroundTracking } from '../services/backgroundLocationTask';
@@ -93,7 +93,7 @@ export default function MainScreen({
             livePosition={livePosition}
             pois={pois}
             discoveredIds={discoveredIds}
-            fogColor={FOG_COLORS[fogStyle]}
+            fog={FOG_PALETTES[fogStyle]}
             view={view}
             onViewChange={setView}
           />

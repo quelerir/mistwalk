@@ -8,6 +8,7 @@ import {
   type MapRef,
   type ViewStateChangeEvent,
 } from '@maplibre/maplibre-react-native';
+import type { FogPalette } from '../lib/settings/fogStyle';
 import FogOverlay, { type LivePosition } from '../components/FogOverlay';
 import PoiMarkers from '../components/PoiMarkers';
 import SvgIcon from '../components/icons/SvgIcon';
@@ -24,7 +25,7 @@ export interface MapScreenProps {
   livePosition: LivePosition | null;
   pois: Poi[];
   discoveredIds: ReadonlySet<string>;
-  fogColor: string;
+  fog: FogPalette;
   view: MapView | null;
   onViewChange: (view: MapView) => void;
 }
@@ -34,7 +35,7 @@ export default function MapScreen({
   livePosition,
   pois,
   discoveredIds,
-  fogColor,
+  fog,
   view,
   onViewChange,
 }: MapScreenProps) {
@@ -88,7 +89,7 @@ export default function MapScreen({
         <Camera ref={cameraRef} initialViewState={{ zoom: FOLLOW_ZOOM }} />
         <UserLocation />
       </Map>
-      <FogOverlay points={points} livePosition={livePosition} view={view} fogColor={fogColor} />
+      <FogOverlay points={points} livePosition={livePosition} view={view} fog={fog} />
       <PoiMarkers pois={pois} discoveredIds={discoveredIds} view={view} />
       {!following && (
         <Pressable

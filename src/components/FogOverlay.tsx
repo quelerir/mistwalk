@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
-import { BlurMask, Canvas, Group, Paint, Path, Rect, Skia } from '@shopify/react-native-skia';
+import { BlurMask, Canvas, ColorMatrix, FractalNoise, Group, Paint, Path, Rect, Skia } from '@shopify/react-native-skia';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
+import type { FogPalette } from '../lib/settings/fogStyle';
 import { haversineDistanceMeters } from '../lib/geo/distance';
 import { metersPerPixel, projectToScreen, type MapView, type Size } from '../lib/geo/projection';
 
@@ -14,7 +15,7 @@ export interface FogOverlayProps {
   points: VisitedPoint[];
   livePosition: LivePosition | null;
   view: MapView | null;
-  fogColor: string;
+  fog: FogPalette;
 }
 
 const REVEAL_RADIUS_METERS = 60;
@@ -34,7 +35,38 @@ function buildTrail(points: VisitedPoint[], livePosition: LivePosition | null): 
   return trail;
 }
 
-export default function FogOverlay({ points, livePosition, view, fogColor }: FogOverlayProps) {
+function parseHex(hex: string): [number, number, number] {
+  const n = parseInt(hex.slice(1), 16);
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+}
+
+interface CloudLayerProps {
+  size: Size;
+  color: string;
+  freq: number;
+  seed: number;
+  alpha: number;
+}
+
+// Fractal noise recoloured to one tint: alpha follows the noise so the billows fade in and out.
+function CloudLayer({ size, color, freq, seed, alpha }: CloudLayerProps) {
+  const [r, g, b] = parseHex(color);
+  // prettier-ignore
+  const matrix = [
+    0, 0, 0, 0, r,
+    0, 0, 0, 0, g,
+    0, 0, 0, 0, b,
+    alpha * 2.4, 0, 0, 0, -alpha * 0.9,
+  ];
+  return (
+    <Rect x={0} y={0} width={size.width} height={size.height}>
+      <FractalNoise freqX={freq} freqY={freq} octaves={4} seed={seed} />
+      <ColorMatrix matrix={matrix} />
+    </Rect>
+  );
+}
+
+export default function FogOverlay({ points, livePosition, view, fog }: FogOverlayProps) {
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
 
   const trail = useMemo(() => buildTrail(points, livePosition), [points, livePosition]);
@@ -90,7 +122,9 @@ export default function FogOverlay({ points, livePosition, view, fogColor }: Fog
     <View style={StyleSheet.absoluteFill} pointerEvents="none" onLayout={onLayout}>
       <Canvas style={StyleSheet.absoluteFill}>
         <Group layer={<Paint />}>
-          <Rect x={0} y={0} width={size.width} height={size.height} color={fogColor} />
+          <Rect x={0} y={0} width={size.width} height={size.height} color={fog.base} />
+          <CloudLayer size={size} color={fog.shadow} freq={0.011} seed={7} alpha={0.55} />
+          <CloudLayer size={size} color={fog.light} freq={0.006} seed={3} alpha={0.9} />
           {revealPath && (
             <Path
               path={revealPath}

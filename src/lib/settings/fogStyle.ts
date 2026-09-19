@@ -4,10 +4,23 @@ export type FogStyle = 'ink' | 'mist' | 'night';
 
 export const FOG_STYLES: FogStyle[] = ['ink', 'mist', 'night'];
 
+export interface FogPalette {
+  base: string;
+  light: string;
+  shadow: string;
+}
+
+// Cloud-like fog: `base` fills the map, `light` and `shadow` tint the billows drawn on top.
+export const FOG_PALETTES: Record<FogStyle, FogPalette> = {
+  mist: { base: '#dfe5ec', light: '#ffffff', shadow: '#9fb0c4' },
+  ink: { base: '#3b404d', light: '#7b8394', shadow: '#0c0e15' },
+  night: { base: '#1c3068', light: '#4f74c4', shadow: '#050b24' },
+};
+
 export const FOG_COLORS: Record<FogStyle, string> = {
-  ink: 'rgba(10, 12, 20, 0.85)',
-  mist: 'rgba(225, 230, 238, 0.92)',
-  night: 'rgba(8, 20, 60, 0.88)',
+  ink: FOG_PALETTES.ink.base,
+  mist: FOG_PALETTES.mist.base,
+  night: FOG_PALETTES.night.base,
 };
 
 export const FOG_STYLE_LABELS: Record<FogStyle, string> = {
