@@ -26,7 +26,7 @@ describe('buildSnapshot', () => {
     );
     expect(s.distanceKm).toBe(3.5);
     expect(s.countries).toEqual([{ code: 'AT', name: 'Австрия', percent: 1 }]);
-    expect(s.cities).toEqual([{ name: 'Вена', country: 'AT', percent: 0.07, exploredKm2: 0.3 }]);
+    expect(s.cities).toEqual([{ name: 'Вена', country: 'AT', wikidata: 'Q1741', percent: 0.07, exploredKm2: 0.3 }]);
     expect(s.placeRegions).toEqual({ 'node/1': { c: 'AT', t: 'Вена' } });
   });
 });
@@ -57,7 +57,7 @@ describe('fetchPlayerProfile', () => {
         distance_km: 5,
         found_count: 2,
         countries: [{ code: 'AT', name: 'Австрия', percent: 0.1 }],
-        cities: [{ name: 'Вена', country: 'AT', percent: null, explored_km2: 0.2 }],
+        cities: [{ name: 'Вена', country: 'AT', wikidata: 'Q1741', percent: null, explored_km2: 0.2 }],
         places: [
           { name: 'Опера', kind: 'attraction', discovered_at: '2026-09-19T10:00:00Z', country: 'AT', city: 'Вена' },
           { name: 'Старое', kind: 'monument', discovered_at: '2026-09-18T10:00:00Z' },
@@ -67,7 +67,7 @@ describe('fetchPlayerProfile', () => {
     });
     const p = await fetchPlayerProfile({ rpc } as unknown as SupabaseClient, 'u1');
     expect(p?.foundCount).toBe(2);
-    expect(p?.cities[0]).toEqual({ name: 'Вена', country: 'AT', percent: null, exploredKm2: 0.2 });
+    expect(p?.cities[0]).toEqual({ name: 'Вена', country: 'AT', wikidata: 'Q1741', percent: null, exploredKm2: 0.2 });
     expect(p?.places[0]).toMatchObject({ country: 'AT', city: 'Вена' });
     expect(p?.places[1]).toMatchObject({ country: null, city: null });
     expect(p?.places[0].discoveredAt).toBe(Date.parse('2026-09-19T10:00:00Z'));

@@ -11,7 +11,13 @@ export interface PlaceRegion {
 export interface ProfileSnapshot {
   distanceKm: number;
   countries: Array<{ code: string; name: string; percent: number }>;
-  cities: Array<{ name: string; country: string | null; percent: number | null; exploredKm2: number }>;
+  cities: Array<{
+    name: string;
+    country: string | null;
+    wikidata: string | null;
+    percent: number | null;
+    exploredKm2: number;
+  }>;
   // Found place id -> its country (ISO code) and city, for browsing a player's page by country.
   placeRegions: Record<string, PlaceRegion>;
 }
@@ -60,6 +66,7 @@ export function buildSnapshot(
     cities: cities.slice(0, MAX_CITIES).map((c) => ({
       name: c.name,
       country: c.country,
+      wikidata: c.wikidata,
       percent: c.percent,
       exploredKm2: c.exploredKm2,
     })),
@@ -146,6 +153,7 @@ interface PlayerRow {
   cities: Array<{
     name: string;
     country?: string | null;
+    wikidata?: string | null;
     percent: number | null;
     exploredKm2?: number;
     explored_km2?: number;
@@ -171,6 +179,7 @@ export async function fetchPlayerProfile(
     cities: (row.cities ?? []).map((c) => ({
       name: c.name,
       country: c.country ?? null,
+      wikidata: c.wikidata ?? null,
       percent: c.percent,
       exploredKm2: c.exploredKm2 ?? c.explored_km2 ?? 0,
     })),

@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
 import { Image, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
+import CityBadge from '../components/CityBadge';
+import { useCrests } from '../hooks/useCrests';
 import KindIcon from '../components/KindIcon';
 import { COUNTRY_BY_CODE, flagUrl } from '../lib/geo/countries';
 import { formatKm2 } from '../lib/geo/cityStats';
@@ -27,6 +29,8 @@ export default function PlayerCountryScreen({ player, countryCode, onBack }: Pla
   const { colors: c } = useTheme();
   const country = player.countries.find((x) => x.code === countryCode);
   const name = country?.name ?? COUNTRY_BY_CODE[countryCode]?.name ?? countryCode;
+
+  const crests = useCrests(player.cities.filter((city) => city.country === countryCode).map((city) => city.wikidata));
 
   const sections = useMemo(() => {
     const cities: Row[] = player.cities
@@ -69,8 +73,8 @@ export default function PlayerCountryScreen({ player, countryCode, onBack }: Pla
           renderItem={({ item }) =>
             item.kind === 'city' ? (
               <View style={styles.row}>
-                <View style={styles.cityBadge}>
-                  <Text style={styles.cityLetter}>{item.city.name.slice(0, 1).toUpperCase()}</Text>
+                <View style={styles.cityBadgeWrap}>
+                  <CityBadge name={item.city.name} crestUrl={item.city.wikidata ? crests[item.city.wikidata] : null} />
                 </View>
                 <Text style={styles.name} numberOfLines={1}>
                   {item.city.name}
@@ -113,6 +117,7 @@ const makeStyles = (c: Colors) =>
     sectionTitle: { fontSize: 16, fontWeight: '700', color: c.text, paddingHorizontal: 16, paddingTop: 20, paddingBottom: 6 },
     row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 16 },
     badge: { width: 40, height: 40, borderRadius: 20, backgroundColor: c.badgeBg, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+    cityBadgeWrap: { marginRight: 12 },
     cityBadge: { width: 40, height: 40, borderRadius: 20, backgroundColor: c.cityBadgeBg, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
     cityLetter: { fontSize: 17, fontWeight: '800', color: c.link },
     placeText: { flex: 1 },
