@@ -18,7 +18,7 @@ function makeFakeClient(remotePoints: Array<{ lat: number; lng: number; radius: 
   const select = jest.fn().mockReturnValue({ eq });
   const insert = jest.fn().mockResolvedValue({ error: null });
   const from = jest.fn().mockReturnValue({ select, insert });
-  return { from } as unknown as SupabaseClient;
+  return Object.assign({ from } as unknown as SupabaseClient, { insertMock: insert });
 }
 
 describe('createProgressStore', () => {
@@ -127,5 +127,28 @@ describe('createProgressStore', () => {
     const state = useProgressStore.getState();
     expect(state.points).toHaveLength(1);
     expect(state.hydrated).toBe(true);
+  });
+
+  it('hydrateFromRemote uploads local points the server does not have, and only those', async () => {
+    const storage = makeFakeStorage();
+    await storage.setItem(
+      'progressStore.points.v1',
+      JSON.stringify([
+        { lat: 1, lng: 2, radius: 30, ts: 1000 },
+        { lat: 3, lng: 4, radius: 30, ts: 2000 },
+      ])
+    );
+    const client = makeFakeClient([
+      { lat: 1, lng: 2, radius: 30, created_at: '2026-01-01T00:00:00.000Z' },
+    ]) as SupabaseClient & { insertMock: jest.Mock };
+    const { useProgressStore } = createProgressStore({ client, userId: 'u1', storage });
+
+    await useProgressStore.getState().loadFromDisk();
+    await useProgressStore.getState().hydrateFromRemote();
+
+    expect(client.insertMock).toHaveBeenCalledTimes(1);
+    expect(client.insertMock).toHaveBeenCalledWith([
+      { user_id: 'u1', lat: 3, lng: 4, radius: 30, created_at: new Date(2000).toISOString() },
+    ]);
   });
 });

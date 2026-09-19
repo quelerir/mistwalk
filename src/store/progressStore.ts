@@ -15,6 +15,7 @@ const STORAGE_KEY = 'progressStore.points.v1';
 const DEFAULT_THROTTLE_METERS = 30;
 const DEFAULT_BATCH_SIZE = 5;
 const DEFAULT_BATCH_WAIT_MS = 12000;
+const BACKFILL_CHUNK = 200;
 
 export interface ProgressState {
   points: VisitedPoint[];
@@ -79,10 +80,27 @@ export function createProgressStore(options: CreateProgressStoreOptions) {
     },
 
     hydrateFromRemote: async () => {
+      const startedAt = Date.now();
+      // Points still waiting in the queue must reach the server first, or they would be re-sent below.
+      await queue.flush().catch(() => {});
       const remotePoints = await fetchVisitedPoints(options.client, options.userId);
-      const merged = mergePoints(get().points, remotePoints);
+      const local = get().points;
+      const merged = mergePoints(local, remotePoints);
       set({ points: merged, hydrated: true });
       await storage.setItem(STORAGE_KEY, JSON.stringify(merged));
+
+      // A point that was recorded but never uploaded (app closed before the batch went out, or offline)
+      // stays only on the phone; send it now so the server totals match.
+      const remoteKeys = new Set(remotePoints.map((p) => `${p.lat},${p.lng}`));
+      const missing = local.filter((p) => p.ts < startedAt && !remoteKeys.has(`${p.lat},${p.lng}`));
+      for (let i = 0; i < missing.length; i += BACKFILL_CHUNK) {
+        try {
+          await insertVisitedPoints(options.client, options.userId, missing.slice(i, i + BACKFILL_CHUNK));
+        } catch (err) {
+          console.warn('[progressStore] backfill of unsent points failed', err);
+          break;
+        }
+      }
     },
 
     addPoint: async (coord, radius) => {
