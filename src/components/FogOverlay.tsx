@@ -153,9 +153,10 @@ function FogClouds({ view, size, fog, animated }: FogCloudsProps) {
   );
 }
 
-const MAX_DROPS = 90;
-const DROP_SPEED = 900; // px/s
-const DROP_SLANT = 0.22;
+const MAX_DROPS = 80;
+const MAX_SPLASHES = 22;
+const DROP_SPEED = 820; // px/s
+const DROP_SLANT = 0.1;
 
 // Deterministic pseudo-random numbers, so drops keep their places between frames.
 function unit(i: number, salt: number): number {
@@ -170,25 +171,68 @@ interface RainProps {
   animated: boolean;
 }
 
-// Slanted streaks falling over the whole map (not only the fog), each on its own speed and phase.
+// Short round drops fall from the top over the whole map (not only the fog). Splashes bloom at random spots:
+// a ring grows and fades while a few tiny droplets jump up and out. Each splash has its own rhythm and moves to a
+// new place every cycle. The ring fades in three steps, because a single path has one colour.
 function Rain({ size, rain, animated }: RainProps) {
   const clock = useClock();
-  const count = Math.round(20 + rain * (MAX_DROPS - 20));
-  const path = useDerivedValue(() => {
+  const dropCount = Math.round(18 + rain * (MAX_DROPS - 18));
+  const splashCount = Math.round(7 + rain * (MAX_SPLASHES - 7));
+
+  const dropPath = useDerivedValue(() => {
     const p = Skia.Path.Make();
     const t = animated ? clock.value / 1000 : 0;
     const span = size.height + 40;
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < dropCount; i++) {
       const speed = DROP_SPEED * (0.75 + unit(i, 3) * 0.5);
-      const len = 12 + unit(i, 5) * 12;
+      const len = 8 + unit(i, 5) * 8;
       const x0 = unit(i, 1) * (size.width + 60) - 30;
       const y = ((unit(i, 2) * span + t * speed) % span) - 20;
-      p.moveTo(x0 + y * DROP_SLANT * -1, y);
-      p.lineTo(x0 + (y + len) * DROP_SLANT * -1, y + len);
+      p.moveTo(x0 - y * DROP_SLANT, y);
+      p.lineTo(x0 - (y + len) * DROP_SLANT, y + len);
     }
     return p;
-  }, [size.width, size.height, count, animated]);
-  return <Path path={path} style="stroke" strokeWidth={1.6} strokeCap="round" color="rgba(225, 236, 255, 0.55)" />;
+  }, [size.width, size.height, dropCount, animated]);
+
+  const splashes = useDerivedValue(() => {
+    const early = Skia.Path.Make();
+    const mid = Skia.Path.Make();
+    const late = Skia.Path.Make();
+    const t = animated ? clock.value / 1000 : 0;
+    for (let i = 0; i < splashCount; i++) {
+      const period = 0.9 + unit(i, 21) * 0.7;
+      const shifted = t / period + unit(i, 22);
+      const cycle = Math.floor(shifted);
+      const phase = shifted - cycle;
+      const seed = i * 13 + cycle;
+      const x = unit(seed, 23) * size.width;
+      const y = unit(seed, 24) * size.height;
+      const r = 2 + phase * 13;
+      const bucket = phase < 0.33 ? early : phase < 0.66 ? mid : late;
+      bucket.addCircle(x, y, r);
+      if (phase < 0.55) {
+        const lift = Math.sin((phase / 0.55) * Math.PI) * 9;
+        for (let a = 0; a < 4; a++) {
+          const angle = (a / 4) * Math.PI * 2 + unit(seed, 30 + a) * 1.2;
+          const reach = r * 1.15 + phase * 10;
+          bucket.addCircle(x + Math.cos(angle) * reach, y + Math.sin(angle) * reach * 0.6 - lift, 1.2);
+        }
+      }
+    }
+    return { early, mid, late };
+  }, [size.width, size.height, splashCount, animated]);
+  const early = useDerivedValue(() => splashes.value.early);
+  const mid = useDerivedValue(() => splashes.value.mid);
+  const late = useDerivedValue(() => splashes.value.late);
+
+  return (
+    <>
+      <Path path={dropPath} style="stroke" strokeWidth={2.4} strokeCap="round" color="rgba(225, 236, 255, 0.6)" />
+      <Path path={early} style="stroke" strokeWidth={1.6} color="rgba(235, 243, 255, 0.8)" />
+      <Path path={mid} style="stroke" strokeWidth={1.5} color="rgba(235, 243, 255, 0.45)" />
+      <Path path={late} style="stroke" strokeWidth={1.3} color="rgba(235, 243, 255, 0.2)" />
+    </>
+  );
 }
 
 export default function FogOverlay({ points, livePosition, view, fog, animated = true, rain = 0 }: FogOverlayProps) {
