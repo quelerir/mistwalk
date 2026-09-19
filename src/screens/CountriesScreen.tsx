@@ -55,7 +55,7 @@ export default function CountriesScreen({
               onPress={() => onOpenCountry(item)}
               accessibilityRole="button"
             >
-              <Image source={{ uri: flagUrl(item.code) }} style={styles.flag} resizeMode="contain" />
+              <Image source={{ uri: flagUrl(item.code), cache: 'force-cache' }} style={styles.flag} resizeMode="contain" />
               <View style={styles.nameWrap}>
                 <Text style={[styles.name, item.percent === 0 && styles.muted]} numberOfLines={1}>
                   {item.name}

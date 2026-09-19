@@ -51,7 +51,7 @@ export default function PlayerCountryScreen({ player, countryCode, onBack }: Pla
         <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel="Назад">
           <Text style={styles.back}>‹</Text>
         </Pressable>
-        <Image source={{ uri: flagUrl(countryCode) }} style={styles.flag} resizeMode="contain" />
+        <Image source={{ uri: flagUrl(countryCode), cache: 'force-cache' }} style={styles.flag} resizeMode="contain" />
         <View style={styles.headerText}>
           <Text style={styles.title} numberOfLines={1}>
             {name}

@@ -112,7 +112,7 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
               onPress={() => setCountryCode(country.code)}
               accessibilityRole="button"
             >
-              <Image source={{ uri: flagUrl(country.code) }} style={styles.flag} resizeMode="contain" />
+              <Image source={{ uri: flagUrl(country.code), cache: 'force-cache' }} style={styles.flag} resizeMode="contain" />
               <Text style={styles.name} numberOfLines={1}>
                 {country.name}
               </Text>
