@@ -8,6 +8,7 @@ import type { Colors } from '../theme/palettes';
 export interface RouteCardProps {
   status: RouteStatus;
   route: WalkingRoute | null;
+  title: string;
   onCancel: () => void;
 }
 
@@ -15,7 +16,7 @@ function formatDistance(meters: number): string {
   return meters < 1000 ? `${Math.round(meters / 10) * 10} м` : `${(meters / 1000).toFixed(1)} км`;
 }
 
-export default function RouteCard({ status, route, onCancel }: RouteCardProps) {
+export default function RouteCard({ status, route, title, onCancel }: RouteCardProps) {
   const styles = useStyles(makeStyles);
   if (status === 'idle') return null;
 
@@ -29,7 +30,7 @@ export default function RouteCard({ status, route, onCancel }: RouteCardProps) {
   return (
     <View style={styles.card}>
       <View style={styles.text}>
-        <Text style={styles.title}>Маршрут до тайного места</Text>
+        <Text style={styles.title}>{title}</Text>
         <Text style={[styles.subtitle, status === 'error' && styles.error]}>{subtitle}</Text>
       </View>
       <Pressable style={styles.cancel} onPress={onCancel} accessibilityRole="button" accessibilityLabel="Отменить маршрут">

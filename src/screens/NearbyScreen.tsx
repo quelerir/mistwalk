@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from 'react-native';
 import { haversineDistanceMeters } from '../lib/geo/distance';
-import { bearingLabel } from '../lib/poi/discovery';
+import { KIND_LABEL } from '../lib/poi/greeting';
 import KindIcon from '../components/KindIcon';
 import type { Poi } from '../lib/poi/types';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
@@ -58,9 +58,9 @@ export default function NearbyScreen({ pois, discoveredIds, origin, onSelect }: 
                 <KindIcon kind={item.poi.kind} size={22} color={c.badgeFg} />
               </View>
               <View style={styles.rowText}>
-                <Text style={styles.name}>Тайное место</Text>
+                <Text style={styles.name}>{KIND_LABEL[item.poi.kind]}</Text>
                 <Text style={styles.distance}>
-                  {formatDistance(item.meters)}, {bearingLabel(origin!, item.poi)}
+                  {formatDistance(item.meters)}
                 </Text>
               </View>
             </Pressable>

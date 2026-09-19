@@ -1,7 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { haversineDistanceMeters, type Coordinate } from '../lib/geo/distance';
-import { bearingLabel } from '../lib/poi/discovery';
 import { KIND_LABEL } from '../lib/poi/greeting';
 import KindIcon from './KindIcon';
 import type { Poi } from '../lib/poi/types';
@@ -24,7 +23,7 @@ export default function PlaceCard({ poi, origin, onBuildRoute, onClose }: PlaceC
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   const where = origin
-    ? `${formatDistance(haversineDistanceMeters(origin, poi))}, ${bearingLabel(origin, poi)}`
+    ? formatDistance(haversineDistanceMeters(origin, poi))
     : 'Ждём вашу позицию…';
 
   return (

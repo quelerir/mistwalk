@@ -3,7 +3,7 @@ import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import { haversineDistanceMeters, type Coordinate } from '../lib/geo/distance';
 import { formatKm2, type CityStat } from '../lib/geo/cityStats';
 import { formatPercent, type CountryPlaces, type CountryStat } from '../lib/geo/countryStats';
-import { bearingLabel } from '../lib/poi/discovery';
+import { KIND_LABEL } from '../lib/poi/greeting';
 import KindIcon from '../components/KindIcon';
 import type { PoiKind } from '../lib/poi/types';
 import type { DiscoveredPlace, Poi } from '../lib/poi/types';
@@ -62,7 +62,7 @@ export default function CountryPlacesScreen({
         kind: 'hidden',
         poi,
         icon: poi.kind,
-        where: origin ? `${formatDistance(meters)}, ${bearingLabel(origin, poi)}` : null,
+        where: origin ? formatDistance(meters) : null,
       }));
     const cityRows: Row[] = cities.map((city) => ({ kind: 'city', city }));
     return [
@@ -141,7 +141,7 @@ export default function CountryPlacesScreen({
                   <KindIcon kind={item.icon} size={20} color={c.textFaint} />
                 </View>
                 <View style={styles.hiddenText}>
-                  <Text style={[styles.name, styles.muted]}>Тайное место</Text>
+                  <Text style={[styles.name, styles.muted]}>{KIND_LABEL[item.icon]}</Text>
                   {item.where && <Text style={styles.where}>{item.where}</Text>}
                 </View>
               </Pressable>

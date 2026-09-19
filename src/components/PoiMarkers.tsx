@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { projectToScreen, type MapView, type Size } from '../lib/geo/projection';
+import { KIND_LABEL } from '../lib/poi/greeting';
 import KindIcon from './KindIcon';
 import type { Poi } from '../lib/poi/types';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
@@ -84,7 +85,7 @@ export default function PoiMarkers({
               hitSlop={8}
               style={[styles.unknown, poi.id === selectedId && styles.selected]}
               accessibilityRole="button"
-              accessibilityLabel="Тайное место"
+              accessibilityLabel={KIND_LABEL[poi.kind]}
             >
               <KindIcon kind={poi.kind} size={18} color="#374151" />
             </Pressable>
