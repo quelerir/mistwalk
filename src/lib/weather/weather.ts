@@ -7,13 +7,10 @@ export interface Weather {
 
 const ENDPOINT = 'https://api.open-meteo.com/v1/forecast';
 
-// 0 = thinnest fog (clear sky), 1 = thickest (heavy rain); 0.5 is the fog as it was drawn before weather.
-export function fogDensity({ cloudCover, precipitation }: Weather): number {
-  const clouds = Math.min(100, Math.max(0, cloudCover)) / 100;
-  let density = 0.25 + clouds * 0.35;
-  if (precipitation > 0) density += 0.25;
-  if (precipitation > 2.5) density += 0.1;
-  return Math.min(1, Math.max(0, density));
+// 0 = no rain; light drizzle is about 0.25, and it reaches 1 at heavy rain (6 mm/h and more).
+export function rainIntensity({ precipitation }: Weather): number {
+  if (precipitation <= 0) return 0;
+  return Math.min(1, 0.25 + precipitation / 6);
 }
 
 export function parseWeather(json: unknown): Weather | null {

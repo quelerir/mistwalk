@@ -163,7 +163,7 @@ export default function AppMenu({
     {
       key: 'weatherFog',
       icon: 'weather',
-      label: 'Погода в тумане',
+      label: 'Дождь на карте',
       on: weatherFog,
       onPress: () => onWeatherFogChange(!weatherFog),
     },

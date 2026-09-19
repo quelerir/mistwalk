@@ -1,19 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Coordinate } from '../lib/geo/distance';
-import { fetchWeather, fogDensity } from '../lib/weather/weather';
+import { fetchWeather, rainIntensity } from '../lib/weather/weather';
 
 const REFRESH_MS = 30 * 60 * 1000;
 
-// Fog density for the weather at your position, refreshed every half hour; null until known, or when off.
-export function useWeatherFog(position: Coordinate | null, enabled: boolean): number | null {
-  const [density, setDensity] = useState<number | null>(null);
+// Rain intensity (0..1) at your position, refreshed every half hour; 0 until known, or when off.
+export function useRain(position: Coordinate | null, enabled: boolean): number {
+  const [rain, setRain] = useState(0);
   const latest = useRef<Coordinate | null>(position);
   latest.current = position;
   const hasPosition = position !== null;
+  // Weather is regional, so a move of roughly ten kilometres (a tenth of a degree) asks again.
+  const area = position ? `${position.lat.toFixed(1)},${position.lng.toFixed(1)}` : '';
 
   useEffect(() => {
     if (!enabled || !hasPosition) {
-      if (!enabled) setDensity(null);
+      if (!enabled) setRain(0);
       return;
     }
     let cancelled = false;
@@ -21,7 +23,7 @@ export function useWeatherFog(position: Coordinate | null, enabled: boolean): nu
       const at = latest.current;
       if (!at) return;
       void fetchWeather(at).then((weather) => {
-        if (!cancelled && weather) setDensity(fogDensity(weather));
+        if (!cancelled && weather) setRain(rainIntensity(weather));
       });
     };
     load();
@@ -30,7 +32,7 @@ export function useWeatherFog(position: Coordinate | null, enabled: boolean): nu
       cancelled = true;
       clearInterval(timer);
     };
-  }, [enabled, hasPosition]);
+  }, [enabled, hasPosition, area]);
 
-  return enabled ? density : null;
+  return enabled ? rain : 0;
 }

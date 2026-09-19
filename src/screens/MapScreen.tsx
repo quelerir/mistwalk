@@ -35,7 +35,7 @@ export interface MapScreenProps {
   discoveredIds: ReadonlySet<string>;
   fog: FogPalette;
   fogAnimated: boolean;
-  fogDensity: number;
+  rain: number;
   view: MapView | null;
   onViewChange: (view: MapView) => void;
   route: WalkingRoute | null;
@@ -57,7 +57,7 @@ export default function MapScreen({
   discoveredIds,
   fog,
   fogAnimated,
-  fogDensity,
+  rain,
   view,
   onViewChange,
   route,
@@ -159,7 +159,7 @@ export default function MapScreen({
         <Camera ref={cameraRef} initialViewState={{ zoom: FOLLOW_ZOOM }} />
         <UserLocation />
       </Map>
-      <FogOverlay points={points} livePosition={livePosition} view={view} fog={fog} animated={fogAnimated} density={fogDensity} />
+      <FogOverlay points={points} livePosition={livePosition} view={view} fog={fog} animated={fogAnimated} rain={rain} />
       <RouteOverlay coordinates={progress?.coordinates ?? route?.coordinates ?? null} view={view} />
       <PoiMarkers
         pois={pois}

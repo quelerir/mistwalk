@@ -1,19 +1,18 @@
-import { fetchWeather, fogDensity, parseWeather } from './weather';
+import { fetchWeather, parseWeather, rainIntensity } from './weather';
 
-describe('fogDensity', () => {
-  it('is thin in clear weather, thick under rain', () => {
-    const clear = fogDensity({ cloudCover: 0, precipitation: 0 });
-    const overcast = fogDensity({ cloudCover: 100, precipitation: 0 });
-    const rain = fogDensity({ cloudCover: 100, precipitation: 1 });
-    const storm = fogDensity({ cloudCover: 100, precipitation: 6 });
-    expect(clear).toBeLessThan(overcast);
-    expect(overcast).toBeLessThan(rain);
-    expect(rain).toBeLessThan(storm);
+describe('rainIntensity', () => {
+  it('is zero when it does not rain', () => {
+    expect(rainIntensity({ cloudCover: 100, precipitation: 0 })).toBe(0);
   });
 
-  it('stays within 0..1', () => {
-    expect(fogDensity({ cloudCover: 0, precipitation: 0 })).toBeGreaterThanOrEqual(0);
-    expect(fogDensity({ cloudCover: 100, precipitation: 50 })).toBeLessThanOrEqual(1);
+  it('grows with the amount of rain and stays within 0..1', () => {
+    const drizzle = rainIntensity({ cloudCover: 90, precipitation: 0.1 });
+    const rain = rainIntensity({ cloudCover: 90, precipitation: 2 });
+    const storm = rainIntensity({ cloudCover: 100, precipitation: 50 });
+    expect(drizzle).toBeGreaterThan(0);
+    expect(drizzle).toBeLessThan(rain);
+    expect(rain).toBeLessThan(storm);
+    expect(storm).toBe(1);
   });
 });
 

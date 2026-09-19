@@ -18,8 +18,8 @@ export interface FogOverlayProps {
   view: MapView | null;
   fog: FogPalette;
   animated?: boolean;
-  // 0 (thin, clear sky) .. 1 (thick, rain); 0.5 leaves the fog as designed.
-  density?: number;
+  // 0 = dry; above 0 falling drops are drawn over the map, more of them the stronger it is (max 1).
+  rain?: number;
 }
 
 const REVEAL_RADIUS_METERS = 60;
@@ -44,32 +44,24 @@ function parseHex(hex: string): [number, number, number] {
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
 }
 
-function mixHex(a: string, b: string, t: number): string {
-  const [ar, ag, ab] = parseHex(a);
-  const [br, bg, bb] = parseHex(b);
-  const to = (x: number, y: number) => Math.round((x + (y - x) * t) * 255).toString(16).padStart(2, '0');
-  return `#${to(ar, br)}${to(ag, bg)}${to(ab, bb)}`;
-}
-
 interface CloudLayerProps {
   extent: number;
   color: string;
   freq: number;
   seed: number;
   gain: number;
-  shift?: number;
 }
 
 // Fractal noise recoloured to one tint: alpha rises steeply above the noise midpoint, so the
 // billows get defined edges instead of a uniform haze.
-function CloudLayer({ extent, color, freq, seed, gain, shift = 0 }: CloudLayerProps) {
+function CloudLayer({ extent, color, freq, seed, gain }: CloudLayerProps) {
   const [r, g, b] = parseHex(color);
   // prettier-ignore
   const matrix = [
     0, 0, 0, 0, r,
     0, 0, 0, 0, g,
     0, 0, 0, 0, b,
-    gain, 0, 0, 0, -gain * 0.4 + shift,
+    gain, 0, 0, 0, -gain * 0.4,
   ];
   return (
     <Rect x={-extent} y={-extent} width={extent * 2} height={extent * 2}>
@@ -91,7 +83,6 @@ interface FogCloudsProps {
   size: Size;
   fog: FogPalette;
   animated: boolean;
-  density: number;
 }
 
 // Each cloud layer sways on its own slow loop (different axes and periods), so the billows slide past
@@ -100,7 +91,7 @@ const DRIFT_AMPLITUDE = 45;
 const TAU = Math.PI * 2;
 
 // Clouds are laid out in map space around a fixed origin, so they pan, zoom and rotate with the map.
-function FogClouds({ view, size, fog, animated, density }: FogCloudsProps) {
+function FogClouds({ view, size, fog, animated }: FogCloudsProps) {
   const origin = useRef<[number, number] | null>(null);
   const clock = useClock();
 
@@ -126,10 +117,6 @@ function FogClouds({ view, size, fog, animated, density }: FogCloudsProps) {
     extent = reach / scale + DRIFT_AMPLITUDE * 1.5;
   }
   const { x: atX, y: atY } = at;
-  // Weather: denser clouds cover more, and rain pulls the light clouds towards the shadow colour.
-  const shift = (density - 0.5) * 0.5;
-  const lightColor = density > 0.5 ? mixHex(fog.light, fog.shadow, (density - 0.5) * 0.5) : fog.light;
-
   const mapTransform = (layer: 'a' | 'b') => {
     'worklet';
     const t = animated ? clock.value / 1000 : 0;
@@ -153,20 +140,58 @@ function FogClouds({ view, size, fog, animated, density }: FogCloudsProps) {
     <>
       <Group transform={[{ translateX: CLOUD_SHADOW_OFFSET.x }, { translateY: CLOUD_SHADOW_OFFSET.y }]}>
         <Group transform={layerA}>
-          <CloudLayer extent={extent} color={fog.shadow} freq={0.006} seed={3} gain={3.2} shift={shift} />
+          <CloudLayer extent={extent} color={fog.shadow} freq={0.006} seed={3} gain={3.2} />
         </Group>
       </Group>
       <Group transform={layerA}>
-        <CloudLayer extent={extent} color={lightColor} freq={0.006} seed={3} gain={3.2} shift={shift} />
+        <CloudLayer extent={extent} color={fog.light} freq={0.006} seed={3} gain={3.2} />
       </Group>
       <Group transform={layerB}>
-        <CloudLayer extent={extent} color={lightColor} freq={0.02} seed={11} gain={1.6} shift={shift} />
+        <CloudLayer extent={extent} color={fog.light} freq={0.02} seed={11} gain={1.6} />
       </Group>
     </>
   );
 }
 
-export default function FogOverlay({ points, livePosition, view, fog, animated = true, density = 0.5 }: FogOverlayProps) {
+const MAX_DROPS = 90;
+const DROP_SPEED = 900; // px/s
+const DROP_SLANT = 0.22;
+
+// Deterministic pseudo-random numbers, so drops keep their places between frames.
+function unit(i: number, salt: number): number {
+  'worklet';
+  const x = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+interface RainProps {
+  size: Size;
+  rain: number;
+  animated: boolean;
+}
+
+// Slanted streaks falling over the whole map (not only the fog), each on its own speed and phase.
+function Rain({ size, rain, animated }: RainProps) {
+  const clock = useClock();
+  const count = Math.round(20 + rain * (MAX_DROPS - 20));
+  const path = useDerivedValue(() => {
+    const p = Skia.Path.Make();
+    const t = animated ? clock.value / 1000 : 0;
+    const span = size.height + 40;
+    for (let i = 0; i < count; i++) {
+      const speed = DROP_SPEED * (0.75 + unit(i, 3) * 0.5);
+      const len = 12 + unit(i, 5) * 12;
+      const x0 = unit(i, 1) * (size.width + 60) - 30;
+      const y = ((unit(i, 2) * span + t * speed) % span) - 20;
+      p.moveTo(x0 + y * DROP_SLANT * -1, y);
+      p.lineTo(x0 + (y + len) * DROP_SLANT * -1, y + len);
+    }
+    return p;
+  }, [size.width, size.height, count, animated]);
+  return <Path path={path} style="stroke" strokeWidth={1.6} strokeCap="round" color="rgba(225, 236, 255, 0.55)" />;
+}
+
+export default function FogOverlay({ points, livePosition, view, fog, animated = true, rain = 0 }: FogOverlayProps) {
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
 
   const trail = useMemo(() => buildTrail(points, livePosition), [points, livePosition]);
@@ -223,7 +248,7 @@ export default function FogOverlay({ points, livePosition, view, fog, animated =
       <Canvas style={StyleSheet.absoluteFill}>
         <Group layer={<Paint />}>
           <Rect x={0} y={0} width={size.width} height={size.height} color={fog.base} />
-          <FogClouds view={view} size={size} fog={fog} animated={animated} density={density} />
+          <FogClouds view={view} size={size} fog={fog} animated={animated} />
           {revealPath && (
             <Path
               path={revealPath}
@@ -238,6 +263,7 @@ export default function FogOverlay({ points, livePosition, view, fog, animated =
             </Path>
           )}
         </Group>
+        {rain > 0 && size.width > 0 && <Rain size={size} rain={rain} animated={animated} />}
       </Canvas>
     </View>
   );
