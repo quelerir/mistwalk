@@ -22,6 +22,8 @@ export interface AppMenuProps {
   placeNotifications: boolean;
   onPlaceNotificationsChange: (next: boolean) => Promise<void>;
   weeklySummary: boolean;
+  weatherFog: boolean;
+  onWeatherFogChange: (next: boolean) => void;
   offlineMap: boolean;
   offlineMapMb: number | null;
   onOfflineMapChange: (next: boolean) => Promise<void>;
@@ -48,6 +50,8 @@ export default function AppMenu({
   placeNotifications,
   onPlaceNotificationsChange,
   weeklySummary,
+  weatherFog,
+  onWeatherFogChange,
   offlineMap,
   offlineMapMb,
   onOfflineMapChange,
@@ -155,6 +159,13 @@ export default function AppMenu({
       label: 'Анимация тумана',
       on: fogAnimated,
       onPress: () => onFogAnimatedChange(!fogAnimated),
+    },
+    {
+      key: 'weatherFog',
+      icon: 'weather',
+      label: 'Погода в тумане',
+      on: weatherFog,
+      onPress: () => onWeatherFogChange(!weatherFog),
     },
     {
       key: 'accuracy',

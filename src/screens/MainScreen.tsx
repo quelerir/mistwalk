@@ -18,6 +18,8 @@ import { FOG_PALETTES, getFogAnimated, getFogStyle, resolveFogStyle, setFogAnima
 import { getPlaceNotifications, setPlaceNotifications } from '../lib/settings/placeNotifications';
 import { getWeeklySummary, setWeeklySummary } from '../lib/settings/weeklySummary';
 import { getOfflineMap, setOfflineMap } from '../lib/settings/offlineMap';
+import { getWeatherFog, setWeatherFog } from '../lib/settings/weatherFog';
+import { useWeatherFog } from '../hooks/useWeatherFog';
 import { MAP_STYLES } from '../lib/map/styles';
 import { clearOfflineAreas, ensureOfflineArea, offlineMapBytes } from '../services/offlineMap';
 import { dailyKm, weekSummary } from '../lib/stats/weekly';
@@ -101,6 +103,7 @@ export default function MainScreen({
   const [hour, setHour] = useState(() => new Date().getHours());
   const [placeNotifications, setPlaceNotificationsState] = useState(false);
   const [weeklySummaryOn, setWeeklySummaryOn] = useState(false);
+  const [weatherFogOn, setWeatherFogOn] = useState(true);
   const [offlineMapOn, setOfflineMapOn] = useState(true);
   const [offlineMb, setOfflineMb] = useState<number | null>(null);
   const { scheme } = useTheme();
@@ -141,6 +144,7 @@ export default function MainScreen({
       .catch(() => {});
   }, [client, userId, showFollows]);
   const insets = useSafeAreaInsets();
+  const fogDensity = useWeatherFog(livePosition, weatherFogOn) ?? 0.5;
   // Keep the area around you on the phone (Wi-Fi only; the service decides when a download is due).
   useEffect(() => {
     if (offlineMapOn && livePosition) void ensureOfflineArea(livePosition, MAP_STYLES[scheme]);
@@ -234,6 +238,7 @@ export default function MainScreen({
     void getPlaceNotifications(AsyncStorage).then((s) => setPlaceNotificationsState(s.enabled && s.userId === userId));
     void getWeeklySummary(AsyncStorage).then(setWeeklySummaryOn);
     void getOfflineMap(AsyncStorage).then(setOfflineMapOn);
+    void getWeatherFog(AsyncStorage).then(setWeatherFogOn);
     return () => clearInterval(tick);
   }, []);
 
@@ -279,6 +284,11 @@ export default function MainScreen({
     }
   }
 
+  function handleWeatherFogChange(next: boolean) {
+    setWeatherFogOn(next);
+    void setWeatherFog(AsyncStorage, next);
+  }
+
   function handleSignOut() {
     void setWeeklySummary(AsyncStorage, false);
     void cancelWeeklySummary();
@@ -307,6 +317,7 @@ export default function MainScreen({
             discoveredIds={discoveredIds}
             fog={FOG_PALETTES[resolveFogStyle(fogStyle, hour)]}
             fogAnimated={fogAnimated}
+            fogDensity={fogDensity}
             view={view}
             onViewChange={setView}
             route={route}
@@ -417,6 +428,8 @@ export default function MainScreen({
         placeNotifications={placeNotifications}
         onPlaceNotificationsChange={handlePlaceNotificationsChange}
         weeklySummary={weeklySummaryOn}
+        weatherFog={weatherFogOn}
+        onWeatherFogChange={handleWeatherFogChange}
         offlineMap={offlineMapOn}
         offlineMapMb={offlineMb}
         onOfflineMapChange={handleOfflineMapChange}

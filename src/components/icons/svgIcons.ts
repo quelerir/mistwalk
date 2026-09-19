@@ -10,6 +10,7 @@ export type IconName =
   | 'bell'
   | 'flag'
   | 'download'
+  | 'weather'
   | 'close'
   | 'book'
   | 'sort-distance'
@@ -122,6 +123,7 @@ export const ICONS: Record<IconName, { outline: IconLayer[]; active: IconLayer[]
   ]),
   close: line('M6 6l12 12M18 6L6 18'),
   book: line('M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5'),
+  weather: line('M17.5 16H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9zM9 19v2M13 19v2M17 19v2'),
   download: line('M12 3v12M7 10l5 5 5-5M4 21h16'),
   flag: line('M4 22V4M4 4h13l-2 4 2 4H4'),
   bell: line('M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0'),

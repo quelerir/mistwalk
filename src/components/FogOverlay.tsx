@@ -18,6 +18,8 @@ export interface FogOverlayProps {
   view: MapView | null;
   fog: FogPalette;
   animated?: boolean;
+  // 0 (thin, clear sky) .. 1 (thick, rain); 0.5 leaves the fog as designed.
+  density?: number;
 }
 
 const REVEAL_RADIUS_METERS = 60;
@@ -42,24 +44,32 @@ function parseHex(hex: string): [number, number, number] {
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
 }
 
+function mixHex(a: string, b: string, t: number): string {
+  const [ar, ag, ab] = parseHex(a);
+  const [br, bg, bb] = parseHex(b);
+  const to = (x: number, y: number) => Math.round((x + (y - x) * t) * 255).toString(16).padStart(2, '0');
+  return `#${to(ar, br)}${to(ag, bg)}${to(ab, bb)}`;
+}
+
 interface CloudLayerProps {
   extent: number;
   color: string;
   freq: number;
   seed: number;
   gain: number;
+  shift?: number;
 }
 
 // Fractal noise recoloured to one tint: alpha rises steeply above the noise midpoint, so the
 // billows get defined edges instead of a uniform haze.
-function CloudLayer({ extent, color, freq, seed, gain }: CloudLayerProps) {
+function CloudLayer({ extent, color, freq, seed, gain, shift = 0 }: CloudLayerProps) {
   const [r, g, b] = parseHex(color);
   // prettier-ignore
   const matrix = [
     0, 0, 0, 0, r,
     0, 0, 0, 0, g,
     0, 0, 0, 0, b,
-    gain, 0, 0, 0, -gain * 0.4,
+    gain, 0, 0, 0, -gain * 0.4 + shift,
   ];
   return (
     <Rect x={-extent} y={-extent} width={extent * 2} height={extent * 2}>
@@ -81,6 +91,7 @@ interface FogCloudsProps {
   size: Size;
   fog: FogPalette;
   animated: boolean;
+  density: number;
 }
 
 // Each cloud layer sways on its own slow loop (different axes and periods), so the billows slide past
@@ -89,7 +100,7 @@ const DRIFT_AMPLITUDE = 45;
 const TAU = Math.PI * 2;
 
 // Clouds are laid out in map space around a fixed origin, so they pan, zoom and rotate with the map.
-function FogClouds({ view, size, fog, animated }: FogCloudsProps) {
+function FogClouds({ view, size, fog, animated, density }: FogCloudsProps) {
   const origin = useRef<[number, number] | null>(null);
   const clock = useClock();
 
@@ -115,6 +126,9 @@ function FogClouds({ view, size, fog, animated }: FogCloudsProps) {
     extent = reach / scale + DRIFT_AMPLITUDE * 1.5;
   }
   const { x: atX, y: atY } = at;
+  // Weather: denser clouds cover more, and rain pulls the light clouds towards the shadow colour.
+  const shift = (density - 0.5) * 0.5;
+  const lightColor = density > 0.5 ? mixHex(fog.light, fog.shadow, (density - 0.5) * 0.5) : fog.light;
 
   const mapTransform = (layer: 'a' | 'b') => {
     'worklet';
@@ -139,20 +153,20 @@ function FogClouds({ view, size, fog, animated }: FogCloudsProps) {
     <>
       <Group transform={[{ translateX: CLOUD_SHADOW_OFFSET.x }, { translateY: CLOUD_SHADOW_OFFSET.y }]}>
         <Group transform={layerA}>
-          <CloudLayer extent={extent} color={fog.shadow} freq={0.006} seed={3} gain={3.2} />
+          <CloudLayer extent={extent} color={fog.shadow} freq={0.006} seed={3} gain={3.2} shift={shift} />
         </Group>
       </Group>
       <Group transform={layerA}>
-        <CloudLayer extent={extent} color={fog.light} freq={0.006} seed={3} gain={3.2} />
+        <CloudLayer extent={extent} color={lightColor} freq={0.006} seed={3} gain={3.2} shift={shift} />
       </Group>
       <Group transform={layerB}>
-        <CloudLayer extent={extent} color={fog.light} freq={0.02} seed={11} gain={1.6} />
+        <CloudLayer extent={extent} color={lightColor} freq={0.02} seed={11} gain={1.6} shift={shift} />
       </Group>
     </>
   );
 }
 
-export default function FogOverlay({ points, livePosition, view, fog, animated = true }: FogOverlayProps) {
+export default function FogOverlay({ points, livePosition, view, fog, animated = true, density = 0.5 }: FogOverlayProps) {
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
 
   const trail = useMemo(() => buildTrail(points, livePosition), [points, livePosition]);
@@ -209,7 +223,7 @@ export default function FogOverlay({ points, livePosition, view, fog, animated =
       <Canvas style={StyleSheet.absoluteFill}>
         <Group layer={<Paint />}>
           <Rect x={0} y={0} width={size.width} height={size.height} color={fog.base} />
-          <FogClouds view={view} size={size} fog={fog} animated={animated} />
+          <FogClouds view={view} size={size} fog={fog} animated={animated} density={density} />
           {revealPath && (
             <Path
               path={revealPath}
