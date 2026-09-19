@@ -43,6 +43,9 @@ import { useCityStats } from '../hooks/useCityStats';
 import { cityCellKey } from '../lib/geo/cityStats';
 import LeaderboardScreen from './LeaderboardScreen';
 import FollowsScreen from './FollowsScreen';
+import FeedScreen from './FeedScreen';
+import { countNewer, fetchFeed } from '../lib/social/feed';
+import { getFeedSeen } from '../lib/social/feedSeen';
 import { fetchFollowState } from '../lib/social/follows';
 import PlayerScreen from './PlayerScreen';
 import { useProfileSync } from '../hooks/useProfileSync';
@@ -91,6 +94,8 @@ export default function MainScreen({
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [openPlayer, setOpenPlayer] = useState<{ userId: string; displayName: string } | null>(null);
   const [showFollows, setShowFollows] = useState(false);
+  const [showFeed, setShowFeed] = useState(false);
+  const [feedNew, setFeedNew] = useState<number | null>(null);
   const [followsTab, setFollowsTab] = useState<'followers' | 'following'>('followers');
   const [followCounts, setFollowCounts] = useState<{ followers: number; following: number } | null>(null);
   const [selected, setSelected] = useState<Poi | null>(null);
@@ -154,6 +159,13 @@ export default function MainScreen({
     if (!menuOpen || !offlineMapOn) return;
     void offlineMapBytes().then((bytes) => setOfflineMb(bytes > 0 ? Math.max(1, Math.round(bytes / (1024 * 1024))) : null));
   }, [menuOpen, offlineMapOn]);
+  // How many finds of followed players are new since the feed was last opened; refreshed when it is left.
+  useEffect(() => {
+    if (showFeed) return;
+    Promise.all([fetchFeed(client), getFeedSeen(AsyncStorage)])
+      .then(([items, seen]) => setFeedNew(countNewer(items, seen)))
+      .catch(() => {});
+  }, [client, showFeed]);
   const week = useMemo(() => weekSummary(points, discovered, Date.now()), [points, discovered]);
   const daily = useMemo(() => dailyKm(points, Date.now()), [points]);
 
@@ -341,7 +353,7 @@ export default function MainScreen({
           />
         )}
         {tab === 'collection' &&
-          ((showLeaderboard || showFollows) && openPlayer ? (
+          ((showLeaderboard || showFollows || showFeed) && openPlayer ? (
             <PlayerScreen
               client={client}
               playerId={openPlayer.userId}
@@ -349,6 +361,8 @@ export default function MainScreen({
               onBack={() => setOpenPlayer(null)}
               isMe={openPlayer.userId === userId}
             />
+          ) : showFeed ? (
+            <FeedScreen client={client} onBack={() => setShowFeed(false)} onOpenPlayer={setOpenPlayer} />
           ) : showFollows ? (
             <FollowsScreen client={client} initialTab={followsTab} onBack={() => setShowFollows(false)} onOpenPlayer={setOpenPlayer} />
           ) : showLeaderboard ? (
@@ -396,6 +410,8 @@ export default function MainScreen({
                 setShowFollows(true);
               }}
               followCounts={followCounts}
+              onOpenFeed={() => setShowFeed(true)}
+              feedNew={feedNew}
             />
           ))}
         <DiscoveryCard place={greeting} onDismiss={dismissGreeting} onOpen={setDetailPlace} />
@@ -412,6 +428,7 @@ export default function MainScreen({
               setOpenCountry(null);
               setShowLeaderboard(false);
               setShowFollows(false);
+              setShowFeed(false);
               setOpenPlayer(null);
             }
           }

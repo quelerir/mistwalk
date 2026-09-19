@@ -17,6 +17,9 @@ export interface CollectionScreenProps {
   onOpenLeaderboard: () => void;
   onOpenFollows: (tab: 'followers' | 'following') => void;
   followCounts: { followers: number; following: number } | null;
+  onOpenFeed: () => void;
+  // Finds of followed players since the feed was last opened; null while unknown.
+  feedNew: number | null;
 }
 
 function delta(now: number, before: number, digits = 0): string {
@@ -37,6 +40,8 @@ export default function CollectionScreen({
   onOpenLeaderboard,
   onOpenFollows,
   followCounts,
+  onOpenFeed,
+  feedNew,
 }: CollectionScreenProps) {
   const styles = useStyles(makeStyles);
   const dayLabels = useMemo(() => {
@@ -65,6 +70,24 @@ export default function CollectionScreen({
           <Text style={styles.followLabel}>подписок</Text>
         </Pressable>
       </View>
+
+      <Pressable
+        style={({ pressed }) => [styles.feedButton, pressed && styles.pressed]}
+        onPress={onOpenFeed}
+        accessibilityRole="button"
+      >
+        <View style={styles.countriesText}>
+          <Text style={styles.countriesTitle}>Лента друзей</Text>
+          <Text style={styles.countriesSub}>Находки тех, на кого вы подписаны</Text>
+        </View>
+        {feedNew ? (
+          <View style={styles.feedBadge}>
+            <Text style={styles.feedBadgeText}>{feedNew > 99 ? '99+' : feedNew}</Text>
+          </View>
+        ) : (
+          <Text style={styles.chevron}>›</Text>
+        )}
+      </Pressable>
 
       <View style={styles.tiles}>
         {tiles.map((tile) => (
@@ -161,6 +184,18 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   barOn: { backgroundColor: c.accent },
   barLabel: { fontSize: 11, color: c.textMuted },
   weekNote: { marginTop: 2, fontSize: 12, color: c.textMuted },
+  feedButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: c.surface,
+    borderRadius: 24,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: c.shadow,
+    ...CARD_SHADOW,
+  },
+  feedBadge: { minWidth: 28, height: 28, borderRadius: 14, paddingHorizontal: 8, backgroundColor: c.buttonBg, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
+  feedBadgeText: { color: c.buttonText, fontWeight: '700', fontSize: 14 },
   countriesButton: {
     flexDirection: 'row',
     alignItems: 'center',
