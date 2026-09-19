@@ -20,11 +20,14 @@ import NearbyScreen from './NearbyScreen';
 import CollectionScreen from './CollectionScreen';
 import CountriesScreen from './CountriesScreen';
 import CountryPlacesScreen from './CountryPlacesScreen';
-import { groupPlacesByCountry, type CountryStat } from '../lib/geo/countryStats';
+import { cellKey, groupPlacesByCountry, type CountryStat } from '../lib/geo/countryStats';
 import { useRoute } from '../hooks/useRoute';
-import type { Poi } from '../lib/poi/types';
+import type { DiscoveredPlace, Poi } from '../lib/poi/types';
 import { useStats } from '../hooks/useStats';
 import { useCountryStats } from '../hooks/useCountryStats';
+import { useCityStats } from '../hooks/useCityStats';
+
+const NO_PLACES: DiscoveredPlace[] = [];
 
 type TabKey = 'map' | 'nearby' | 'collection' | 'menu';
 
@@ -97,9 +100,23 @@ export default function MainScreen({
   const stats = useStats(points, discovered.length, tab === 'collection');
 
   const countryStats = useCountryStats(points, tab === 'collection');
+  const openCountryCode = openCountry?.code ?? null;
+  const openCountryPoints = useMemo(
+    () =>
+      openCountryCode
+        ? points.filter((p) => countryStats.cells[cellKey(p.lat, p.lng)]?.code === openCountryCode)
+        : [],
+    [points, countryStats.cells, openCountryCode]
+  );
   const placesByCountry = useMemo(
     () => groupPlacesByCountry(discovered, pois, discoveredIds, countryStats.cells),
     [discovered, pois, discoveredIds, countryStats.cells]
+  );
+
+  const cityStats = useCityStats(
+    openCountryPoints,
+    (openCountryCode && placesByCountry.get(openCountryCode)?.discovered) || NO_PLACES,
+    openCountryCode !== null
   );
 
   useEffect(() => {
@@ -161,6 +178,9 @@ export default function MainScreen({
             <CountryPlacesScreen
               country={openCountry}
               places={placesByCountry.get(openCountry.code)}
+              cities={cityStats.cities}
+              citiesPending={cityStats.pending}
+              citiesFailed={cityStats.failed}
               origin={livePosition}
               onBack={() => setOpenCountry(null)}
               onSelectHidden={(poi) => {

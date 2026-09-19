@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import { haversineDistanceMeters, type Coordinate } from '../lib/geo/distance';
+import { formatKm2, type CityStat } from '../lib/geo/cityStats';
 import { formatPercent, type CountryPlaces, type CountryStat } from '../lib/geo/countryStats';
 import { bearingLabel } from '../lib/poi/discovery';
 import { KIND_ICON } from '../lib/poi/greeting';
@@ -9,6 +10,9 @@ import type { Poi } from '../lib/poi/types';
 export interface CountryPlacesScreenProps {
   country: CountryStat;
   places: CountryPlaces | undefined;
+  cities: CityStat[];
+  citiesPending: boolean;
+  citiesFailed: boolean;
   origin: Coordinate | null;
   onBack: () => void;
   onSelectHidden: (poi: Poi) => void;
@@ -23,12 +27,16 @@ function formatDistance(meters: number): string {
 }
 
 type Row =
+  | { kind: 'city'; city: CityStat }
   | { kind: 'found'; id: string; name: string; icon: string; date: string }
   | { kind: 'hidden'; poi: Poi; icon: string; where: string | null };
 
 export default function CountryPlacesScreen({
   country,
   places,
+  cities,
+  citiesPending,
+  citiesFailed,
   origin,
   onBack,
   onSelectHidden,
@@ -50,11 +58,13 @@ export default function CountryPlacesScreen({
         icon: KIND_ICON[poi.kind],
         where: origin ? `${formatDistance(meters)}, ${bearingLabel(origin, poi)}` : null,
       }));
+    const cityRows: Row[] = cities.map((city) => ({ kind: 'city', city }));
     return [
+      { title: citiesPending ? 'Города · определяем…' : `Города · ${cityRows.length}`, data: cityRows },
       { title: `Найдено · ${found.length}`, data: found },
       { title: `Не посещено · ${hidden.length}`, data: hidden },
     ].filter((section) => section.data.length > 0);
-  }, [places, origin]);
+  }, [places, cities, citiesPending, origin]);
 
   return (
     <View style={styles.container}>
@@ -70,15 +80,32 @@ export default function CountryPlacesScreen({
         </View>
       </View>
       {sections.length === 0 ? (
-        <Text style={styles.empty}>Здесь пока нет известных мест. Пройдитесь по карте.</Text>
+        <Text style={styles.empty}>
+          {citiesFailed ? 'Не удалось определить города. Проверьте интернет.' : 'Здесь пока нет известных мест. Пройдитесь по карте.'}
+        </Text>
       ) : (
         <SectionList
           sections={sections}
-          keyExtractor={(row) => (row.kind === 'found' ? row.id : row.poi.id)}
+          keyExtractor={(row) =>
+            row.kind === 'city' ? `city:${row.city.name}` : row.kind === 'found' ? row.id : row.poi.id
+          }
           stickySectionHeadersEnabled={false}
           renderSectionHeader={({ section }) => <Text style={styles.sectionTitle}>{section.title}</Text>}
           renderItem={({ item }) =>
-            item.kind === 'found' ? (
+            item.kind === 'city' ? (
+              <View style={styles.row}>
+                <View style={styles.cityBadge}>
+                  <Text style={styles.cityLetter}>{item.city.name.slice(0, 1).toUpperCase()}</Text>
+                </View>
+                <View style={styles.hiddenText}>
+                  <Text style={styles.name} numberOfLines={1}>
+                    {item.city.name}
+                  </Text>
+                  {item.city.found > 0 && <Text style={styles.where}>Найдено мест: {item.city.found}</Text>}
+                </View>
+                <Text style={styles.date}>{formatKm2(item.city.exploredKm2)}</Text>
+              </View>
+            ) : item.kind === 'found' ? (
               <View style={styles.row}>
                 <View style={styles.badge}>
                   <Text style={styles.icon}>{item.icon}</Text>
@@ -131,6 +158,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
+  cityBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#e8f0ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  cityLetter: { fontSize: 17, fontWeight: '800', color: '#2f6fdd' },
   badgeHidden: { backgroundColor: '#f3f3f3' },
   icon: { fontSize: 18, color: '#8a5a00' },
   iconHidden: { color: '#a8a8a8' },
