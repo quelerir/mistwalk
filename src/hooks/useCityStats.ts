@@ -4,7 +4,7 @@ import { buildCityList, cityCellKey, fetchCityAt, type CityRef, type CityStat } 
 import type { DiscoveredPlace } from '../lib/poi/types';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
 
-const CELLS_KEY = 'geo.cityCells.v2';
+const CELLS_KEY = 'geo.cityCells.v3';
 const GEOCODE_GAP_MS = 1100;
 
 type CityCells = Record<string, CityRef | null>;

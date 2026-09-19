@@ -21,7 +21,7 @@ describe('buildSnapshot', () => {
         { code: 'AT', name: 'Австрия', exploredKm2: 1, totalKm2: 100, percent: 1 },
         { code: 'FR', name: 'Франция', exploredKm2: 0, totalKm2: 100, percent: 0 },
       ],
-      [{ name: 'Вена', country: 'AT', exploredKm2: 0.3, totalKm2: 412, percent: 0.07, found: 5 }],
+      [{ name: 'Вена', country: 'AT', wikidata: 'Q1741', exploredKm2: 0.3, totalKm2: 412, percent: 0.07, found: 5 }],
       { 'node/1': { c: 'AT', t: 'Вена' } }
     );
     expect(s.distanceKm).toBe(3.5);

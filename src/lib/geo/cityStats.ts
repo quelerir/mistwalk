@@ -5,11 +5,14 @@ export interface CityRef {
   name: string;
   // Boundary area; null when the geocoder only knew a point.
   areaKm2: number | null;
+  // Wikidata item of the settlement, used to find its coat of arms.
+  wikidata?: string | null;
 }
 
 export interface CityStat {
   name: string;
   country: string | null;
+  wikidata: string | null;
   exploredKm2: number;
   totalKm2: number | null;
   percent: number | null;
@@ -65,6 +68,7 @@ export function geometryAreaKm2(geometry: Geometry | undefined): number | null {
 interface NominatimCity {
   name?: string;
   geojson?: Geometry;
+  extratags?: { wikidata?: string };
   address?: {
     city?: string;
     town?: string;
@@ -80,13 +84,16 @@ export async function fetchCityAt(
   lng: number,
   fetchImpl: typeof fetch = fetch
 ): Promise<CityRef | null> {
-  const url = `${NOMINATIM_URL}?format=jsonv2&zoom=10&addressdetails=1&polygon_geojson=1&polygon_threshold=0.0005&lat=${lat}&lon=${lng}`;
+  const url = `${NOMINATIM_URL}?format=jsonv2&zoom=10&addressdetails=1&extratags=1&polygon_geojson=1&polygon_threshold=0.0005&lat=${lat}&lon=${lng}`;
   const response = await fetchImpl(url, { headers: { 'Accept-Language': 'ru' } });
   if (!response.ok) throw new Error(`reverse geocoding responded with ${response.status}`);
   const json = (await response.json()) as NominatimCity;
   const a = json.address;
   const name = a?.city ?? a?.town ?? a?.village ?? a?.municipality ?? a?.county ?? json.name;
-  return name ? { name, areaKm2: geometryAreaKm2(json.geojson) } : null;
+  const wikidata = json.extratags?.wikidata;
+  return name
+    ? { name, areaKm2: geometryAreaKm2(json.geojson), wikidata: wikidata && /^Q\d+$/.test(wikidata) ? wikidata : null }
+    : null;
 }
 
 // Explored area and found places per city; biggest explored area first.
@@ -98,10 +105,11 @@ export function buildCityList(
 ): CityStat[] {
   const byCity = new Map<
     string,
-    { points: TimedPoint[]; found: number; areaKm2: number | null; country: string | null }
+    { points: TimedPoint[]; found: number; areaKm2: number | null; country: string | null; wikidata: string | null }
   >();
   const entry = (city: CityRef, lat: number, lng: number) => {
-    const existing = byCity.get(city.name) ?? { points: [], found: 0, areaKm2: null, country: null };
+    const existing = byCity.get(city.name) ?? { points: [], found: 0, areaKm2: null, country: null, wikidata: null };
+    existing.wikidata = existing.wikidata ?? city.wikidata ?? null;
     existing.country = existing.country ?? countryAt?.(lat, lng) ?? null;
     existing.areaKm2 = existing.areaKm2 ?? city.areaKm2;
     byCity.set(city.name, existing);
@@ -121,6 +129,7 @@ export function buildCityList(
       return {
         name,
         country: group.country,
+        wikidata: group.wikidata,
         exploredKm2,
         totalKm2: group.areaKm2,
         percent: group.areaKm2 ? (exploredKm2 / group.areaKm2) * 100 : null,

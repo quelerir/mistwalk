@@ -4,6 +4,8 @@ import { haversineDistanceMeters, type Coordinate } from '../lib/geo/distance';
 import { formatKm2, type CityStat } from '../lib/geo/cityStats';
 import { formatPercent, type CountryPlaces, type CountryStat } from '../lib/geo/countryStats';
 import { KIND_LABEL } from '../lib/poi/greeting';
+import CityBadge from '../components/CityBadge';
+import { useCrests } from '../hooks/useCrests';
 import KindIcon from '../components/KindIcon';
 import type { PoiKind } from '../lib/poi/types';
 import type { DiscoveredPlace, Poi } from '../lib/poi/types';
@@ -48,6 +50,8 @@ export default function CountryPlacesScreen({
 }: CountryPlacesScreenProps) {
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
+  const crests = useCrests(cities.map((city) => city.wikidata));
+
   const sections = useMemo(() => {
     const found: Row[] = (places?.discovered ?? []).map((p) => ({
       kind: 'found',
@@ -100,8 +104,8 @@ export default function CountryPlacesScreen({
           renderItem={({ item }) =>
             item.kind === 'city' ? (
               <View style={styles.row}>
-                <View style={styles.cityBadge}>
-                  <Text style={styles.cityLetter}>{item.city.name.slice(0, 1).toUpperCase()}</Text>
+                <View style={styles.cityBadgeWrap}>
+                  <CityBadge name={item.city.name} crestUrl={item.city.wikidata ? crests[item.city.wikidata] : null} />
                 </View>
                 <View style={styles.hiddenText}>
                   <Text style={styles.name} numberOfLines={1}>
@@ -175,6 +179,7 @@ const makeStyles = (c: Colors) => StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
+  cityBadgeWrap: { marginRight: 12 },
   cityBadge: {
     width: 40,
     height: 40,
