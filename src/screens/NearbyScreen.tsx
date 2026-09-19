@@ -58,9 +58,11 @@ export default function NearbyScreen({ pois, discoveredIds, origin, onSelect }: 
                 <KindIcon kind={item.poi.kind} size={22} color={c.badgeFg} />
               </View>
               <View style={styles.rowText}>
-                <Text style={styles.name}>{KIND_LABEL[item.poi.kind]}</Text>
+                <Text style={styles.name} numberOfLines={1}>
+                  {item.poi.name}
+                </Text>
                 <Text style={styles.distance}>
-                  {formatDistance(item.meters)}
+                  {formatDistance(item.meters)}, {KIND_LABEL[item.poi.kind].toLowerCase()}
                 </Text>
               </View>
             </Pressable>

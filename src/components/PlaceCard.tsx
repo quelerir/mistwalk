@@ -18,12 +18,11 @@ function formatDistance(meters: number): string {
   return meters < 1000 ? `${Math.round(meters / 10) * 10} м` : `${(meters / 1000).toFixed(1)} км`;
 }
 
-// Undiscovered places stay anonymous: the card only says where the place is.
 export default function PlaceCard({ poi, origin, onBuildRoute, onClose }: PlaceCardProps) {
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   const where = origin
-    ? formatDistance(haversineDistanceMeters(origin, poi))
+    ? `${formatDistance(haversineDistanceMeters(origin, poi))}, ${KIND_LABEL[poi.kind].toLowerCase()}`
     : 'Ждём вашу позицию…';
 
   return (
@@ -33,7 +32,9 @@ export default function PlaceCard({ poi, origin, onBuildRoute, onClose }: PlaceC
           <KindIcon kind={poi.kind} size={22} color={c.badgeFg} />
         </View>
         <View style={styles.text}>
-          <Text style={styles.title}>{KIND_LABEL[poi.kind]}</Text>
+          <Text style={styles.title} numberOfLines={1}>
+            {poi.name}
+          </Text>
           <Text style={styles.subtitle}>{where}</Text>
         </View>
         <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Закрыть">

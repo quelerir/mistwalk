@@ -62,7 +62,7 @@ export default function CountryPlacesScreen({
         kind: 'hidden',
         poi,
         icon: poi.kind,
-        where: origin ? formatDistance(meters) : null,
+        where: origin ? `${formatDistance(meters)}, ${KIND_LABEL[poi.kind].toLowerCase()}` : KIND_LABEL[poi.kind],
       }));
     const cityRows: Row[] = cities.map((city) => ({ kind: 'city', city }));
     return [
@@ -141,7 +141,9 @@ export default function CountryPlacesScreen({
                   <KindIcon kind={item.icon} size={20} color={c.textFaint} />
                 </View>
                 <View style={styles.hiddenText}>
-                  <Text style={[styles.name, styles.muted]}>{KIND_LABEL[item.icon]}</Text>
+                  <Text style={styles.name} numberOfLines={1}>
+                    {item.poi.name}
+                  </Text>
                   {item.where && <Text style={styles.where}>{item.where}</Text>}
                 </View>
               </Pressable>

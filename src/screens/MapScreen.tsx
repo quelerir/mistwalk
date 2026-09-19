@@ -11,7 +11,6 @@ import {
 import type { FogPalette } from '../lib/settings/fogStyle';
 import FogOverlay, { type LivePosition } from '../components/FogOverlay';
 import RouteOverlay from '../components/RouteOverlay';
-import { KIND_LABEL } from '../lib/poi/greeting';
 import PlaceCard from '../components/PlaceCard';
 import RouteCard from '../components/RouteCard';
 import type { RouteStatus } from '../hooks/useRoute';
@@ -168,7 +167,7 @@ export default function MapScreen({
         <RouteCard
           status={routeStatus}
           route={route}
-          title={selected ? `Маршрут: ${KIND_LABEL[selected.kind].toLowerCase()}` : 'Маршрут'}
+          title={selected ? `Маршрут: ${selected.name}` : 'Маршрут'}
           onCancel={onCancelRoute}
         />
       ) : (
