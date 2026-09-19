@@ -10,7 +10,6 @@ import {
 } from '@maplibre/maplibre-react-native';
 import type { FogPalette } from '../lib/settings/fogStyle';
 import FogOverlay, { type LivePosition } from '../components/FogOverlay';
-import TargetArrow from '../components/TargetArrow';
 import { routeProgress } from '../lib/routing/progress';
 import RouteOverlay from '../components/RouteOverlay';
 import PlaceCard from '../components/PlaceCard';
@@ -169,7 +168,6 @@ export default function MapScreen({
         onSelect={onSelect}
         onOpenFound={onOpenFound}
       />
-      <TargetArrow target={selected} origin={livePosition} view={view} />
       {routing ? (
         <RouteCard
           status={routeStatus}
