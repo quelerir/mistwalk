@@ -56,7 +56,8 @@ export default function MainScreen({
 }: MainScreenProps) {
   const [tab, setTab] = useState<Exclude<TabKey, 'menu'>>('map');
   const [menuOpen, setMenuOpen] = useState(false);
-  const [routeTarget, setRouteTarget] = useState<Poi | null>(null);
+  const [selected, setSelected] = useState<Poi | null>(null);
+  const [routing, setRouting] = useState(false);
   const [view, setView] = useState<MapView | null>(null);
   const [fogStyle, setFogStyleState] = useState<FogStyle>('ink');
   const { pois, discovered, discoveredIds, greeting, dismissGreeting } = usePlaces({
@@ -66,16 +67,25 @@ export default function MainScreen({
     livePosition,
   });
 
-  const { route, status: routeStatus } = useRoute(routeTarget, livePosition);
+  const { route, status: routeStatus } = useRoute(routing ? selected : null, livePosition);
 
-  // Arriving discovers the place, which ends the route.
+  // Arriving discovers the place, which ends the selection and its route.
   useEffect(() => {
-    if (routeTarget && discoveredIds.has(routeTarget.id)) setRouteTarget(null);
-  }, [routeTarget, discoveredIds]);
+    if (selected && discoveredIds.has(selected.id)) {
+      setSelected(null);
+      setRouting(false);
+    }
+  }, [selected, discoveredIds]);
 
-  function handleBuildRoute(poi: Poi) {
-    setRouteTarget(poi);
+  function handleSelect(poi: Poi) {
+    setSelected(poi);
+    setRouting(false);
     setTab('map');
+  }
+
+  function handleCloseSelected() {
+    setSelected(null);
+    setRouting(false);
   }
 
   const stats = useStats(points, discovered, tab === 'collection');
@@ -103,7 +113,10 @@ export default function MainScreen({
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <View style={[StyleSheet.absoluteFill, tab !== 'map' && styles.hidden]}>
+        <View
+          style={[StyleSheet.absoluteFill, tab !== 'map' && styles.hidden]}
+          pointerEvents={tab === 'map' ? 'auto' : 'none'}
+        >
           <MapScreen
             points={points}
             livePosition={livePosition}
@@ -114,8 +127,13 @@ export default function MainScreen({
             onViewChange={setView}
             route={route}
             routeStatus={routeStatus}
-            routeTargetId={routeTarget?.id ?? null}
-            onCancelRoute={() => setRouteTarget(null)}
+            active={tab === 'map'}
+            selected={selected}
+            routing={routing}
+            onSelect={handleSelect}
+            onCloseSelected={handleCloseSelected}
+            onBuildRoute={() => setRouting(true)}
+            onCancelRoute={() => setRouting(false)}
           />
         </View>
         {tab === 'nearby' && (
@@ -123,9 +141,7 @@ export default function MainScreen({
             pois={pois}
             discoveredIds={discoveredIds}
             origin={livePosition}
-            routeTargetId={routeTarget?.id ?? null}
-            onRoute={handleBuildRoute}
-            onCancelRoute={() => setRouteTarget(null)}
+            onSelect={handleSelect}
           />
         )}
         {tab === 'collection' && <CollectionScreen stats={stats} discovered={discovered} />}
@@ -154,5 +170,6 @@ export default function MainScreen({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#ffffff' },
   content: { flex: 1 },
-  hidden: { display: 'none' },
+  // Keep the native map alive while another tab is on top; display: none tears it down.
+  hidden: { opacity: 0 },
 });

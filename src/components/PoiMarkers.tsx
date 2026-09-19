@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { projectToScreen, type MapView, type Size } from '../lib/geo/projection';
 import { KIND_ICON } from '../lib/poi/greeting';
 import type { Poi } from '../lib/poi/types';
@@ -8,12 +8,20 @@ export interface PoiMarkersProps {
   pois: Poi[];
   discoveredIds: ReadonlySet<string>;
   view: MapView | null;
+  selectedId?: string | null;
+  onSelect?: (poi: Poi) => void;
 }
 
 const MAX_MARKERS = 60;
 const MARGIN_PX = 30;
 
-export default function PoiMarkers({ pois, discoveredIds, view }: PoiMarkersProps) {
+export default function PoiMarkers({
+  pois,
+  discoveredIds,
+  view,
+  selectedId = null,
+  onSelect,
+}: PoiMarkersProps) {
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
 
   const visible = useMemo(() => {
@@ -44,10 +52,10 @@ export default function PoiMarkers({ pois, discoveredIds, view }: PoiMarkersProp
   }
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none" onLayout={onLayout}>
+    <View style={StyleSheet.absoluteFill} pointerEvents="box-none" onLayout={onLayout}>
       {visible.map(({ poi, x, y, showLabel }) =>
         discoveredIds.has(poi.id) ? (
-          <View key={poi.id} style={[styles.anchor, { left: x - 60, top: y - 16 }]}>
+          <View key={poi.id} pointerEvents="none" style={[styles.anchor, { left: x - 60, top: y - 16 }]}>
             <View style={styles.found}>
               <Text style={styles.foundIcon}>{KIND_ICON[poi.kind]}</Text>
             </View>
@@ -58,10 +66,16 @@ export default function PoiMarkers({ pois, discoveredIds, view }: PoiMarkersProp
             )}
           </View>
         ) : (
-          <View key={poi.id} style={[styles.anchor, { left: x - 60, top: y - 16 }]}>
-            <View style={styles.unknown}>
+          <View key={poi.id} pointerEvents="box-none" style={[styles.anchor, { left: x - 60, top: y - 16 }]}>
+            <Pressable
+              onPress={() => onSelect?.(poi)}
+              hitSlop={8}
+              style={[styles.unknown, poi.id === selectedId && styles.selected]}
+              accessibilityRole="button"
+              accessibilityLabel="Тайное место"
+            >
               <Text style={styles.unknownMark}>?</Text>
-            </View>
+            </Pressable>
           </View>
         )
       )}
@@ -83,6 +97,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 0 },
   },
+  selected: { borderWidth: 3, borderColor: '#ffffff', transform: [{ scale: 1.25 }] },
   unknownMark: { fontSize: 18, fontWeight: '800', color: '#3a2a00' },
   found: {
     width: 32,

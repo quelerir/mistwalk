@@ -11,6 +11,7 @@ import {
 import type { FogPalette } from '../lib/settings/fogStyle';
 import FogOverlay, { type LivePosition } from '../components/FogOverlay';
 import RouteOverlay from '../components/RouteOverlay';
+import PlaceCard from '../components/PlaceCard';
 import RouteCard from '../components/RouteCard';
 import type { RouteStatus } from '../hooks/useRoute';
 import type { WalkingRoute } from '../lib/routing/walkingRoute';
@@ -34,7 +35,12 @@ export interface MapScreenProps {
   onViewChange: (view: MapView) => void;
   route: WalkingRoute | null;
   routeStatus: RouteStatus;
-  routeTargetId: string | null;
+  active: boolean;
+  selected: Poi | null;
+  routing: boolean;
+  onSelect: (poi: Poi) => void;
+  onCloseSelected: () => void;
+  onBuildRoute: () => void;
   onCancelRoute: () => void;
 }
 
@@ -48,7 +54,12 @@ export default function MapScreen({
   onViewChange,
   route,
   routeStatus,
-  routeTargetId,
+  active,
+  selected,
+  routing,
+  onSelect,
+  onCloseSelected,
+  onBuildRoute,
   onCancelRoute,
 }: MapScreenProps) {
   const mapRef = useRef<MapRef>(null) as React.RefObject<MapRef>;
@@ -56,6 +67,20 @@ export default function MapScreen({
   const hasCenteredRef = useRef(false);
   const [following, setFollowing] = useState(true);
   const fittedFor = useRef<string | null>(null);
+  const routeTargetId = routing && selected ? selected.id : null;
+
+  // Bring a picked place into view. The native camera doesn't exist while the tab is hidden,
+  // so wait until the map is on screen.
+  const selectedId = selected?.id ?? null;
+  useEffect(() => {
+    if (!selected || !active) return;
+    setFollowing(false);
+    const timer = setTimeout(() => {
+      cameraRef.current?.easeTo({ center: [selected.lng, selected.lat], duration: 600 });
+    }, 80);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, active]);
 
   // Frame the whole route once per destination; reroutes must not steal the camera again.
   useEffect(() => {
@@ -121,8 +146,25 @@ export default function MapScreen({
       </Map>
       <FogOverlay points={points} livePosition={livePosition} view={view} fog={fog} />
       <RouteOverlay route={route} view={view} />
-      <PoiMarkers pois={pois} discoveredIds={discoveredIds} view={view} />
-      <RouteCard status={routeStatus} route={route} onCancel={onCancelRoute} />
+      <PoiMarkers
+        pois={pois}
+        discoveredIds={discoveredIds}
+        view={view}
+        selectedId={selectedId}
+        onSelect={onSelect}
+      />
+      {routing ? (
+        <RouteCard status={routeStatus} route={route} onCancel={onCancelRoute} />
+      ) : (
+        selected && (
+          <PlaceCard
+            poi={selected}
+            origin={livePosition}
+            onBuildRoute={onBuildRoute}
+            onClose={onCloseSelected}
+          />
+        )
+      )}
       {!following && (
         <Pressable
           style={styles.recenter}
