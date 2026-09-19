@@ -5,6 +5,8 @@ import { usePlaceInfo } from '../hooks/usePlaceInfo';
 import { KIND_LABEL } from '../lib/poi/greeting';
 import KindIcon from './KindIcon';
 import type { Poi } from '../lib/poi/types';
+import { useStyles, useTheme } from '../theme/ThemeProvider';
+import type { Colors } from '../theme/palettes';
 
 export interface PlaceSheetProps {
   place: Poi | null;
@@ -12,6 +14,8 @@ export interface PlaceSheetProps {
 }
 
 export default function PlaceSheet({ place, onClose }: PlaceSheetProps) {
+  const styles = useStyles(makeStyles);
+  const { colors: c } = useTheme();
   const insets = useSafeAreaInsets();
   const { info, status } = usePlaceInfo(place);
 
@@ -27,7 +31,7 @@ export default function PlaceSheet({ place, onClose }: PlaceSheetProps) {
             ) : null}
             <View style={styles.body}>
               <View style={styles.kindRow}>
-                <KindIcon kind={place.kind} size={18} color="#3b4560" />
+                <KindIcon kind={place.kind} size={18} color={c.badgeFg} />
                 <Text style={styles.kind}>{KIND_LABEL[place.kind]}</Text>
               </View>
               <Text style={styles.title}>{place.name}</Text>
@@ -56,17 +60,17 @@ export default function PlaceSheet({ place, onClose }: PlaceSheetProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Colors) => StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
-  sheet: { backgroundColor: '#ffffff', maxHeight: '85%', paddingTop: 10 },
-  handle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: '#d0d0d0', marginBottom: 10 },
-  photo: { width: '100%', height: 220, backgroundColor: '#efefef' },
+  sheet: { backgroundColor: c.card, maxHeight: '85%', paddingTop: 10 },
+  handle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: c.sheetHandle, marginBottom: 10 },
+  photo: { width: '100%', height: 220, backgroundColor: c.surfaceAlt },
   body: { padding: 16 },
   kindRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  kind: { color: '#3b4560', fontWeight: '700' },
-  title: { fontSize: 22, fontWeight: '800', color: '#262626', marginBottom: 12 },
-  text: { fontSize: 15, lineHeight: 22, color: '#262626' },
-  muted: { fontSize: 15, color: '#8e8e8e' },
+  kind: { color: c.badgeFg, fontWeight: '700' },
+  title: { fontSize: 22, fontWeight: '800', color: c.text, marginBottom: 12 },
+  text: { fontSize: 15, lineHeight: 22, color: c.text },
+  muted: { fontSize: 15, color: c.textMuted },
   loader: { marginTop: 16 },
-  source: { marginTop: 14, color: '#2f6fdd', fontWeight: '700' },
+  source: { marginTop: 14, color: c.link, fontWeight: '700' },
 });

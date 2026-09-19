@@ -3,6 +3,8 @@ import { StyleSheet, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { LocationSubscription } from 'expo-location';
+import { useStyles } from '../theme/ThemeProvider';
+import type { Colors } from '../theme/palettes';
 import AppMenu from '../components/AppMenu';
 import PlaceSheet from '../components/PlaceSheet';
 import DiscoveryCard from '../components/DiscoveryCard';
@@ -62,6 +64,7 @@ export default function MainScreen({
   backgroundEnabled,
   onEnableBackground,
 }: MainScreenProps) {
+  const styles = useStyles(makeStyles);
   const [tab, setTab] = useState<Exclude<TabKey, 'menu'>>('map');
   const [menuOpen, setMenuOpen] = useState(false);
   const [showCountries, setShowCountries] = useState(false);
@@ -246,8 +249,8 @@ export default function MainScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff' },
+const makeStyles = (c: Colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.bg },
   content: { flex: 1 },
   // Keep the native map alive while another tab is on top; display: none tears it down.
   hidden: { opacity: 0 },

@@ -7,6 +7,8 @@ import { bearingLabel } from '../lib/poi/discovery';
 import KindIcon from '../components/KindIcon';
 import type { PoiKind } from '../lib/poi/types';
 import type { DiscoveredPlace, Poi } from '../lib/poi/types';
+import { useStyles, useTheme } from '../theme/ThemeProvider';
+import type { Colors } from '../theme/palettes';
 
 export interface CountryPlacesScreenProps {
   country: CountryStat;
@@ -44,6 +46,8 @@ export default function CountryPlacesScreen({
   onSelectHidden,
   onOpenFound,
 }: CountryPlacesScreenProps) {
+  const styles = useStyles(makeStyles);
+  const { colors: c } = useTheme();
   const sections = useMemo(() => {
     const found: Row[] = (places?.discovered ?? []).map((p) => ({
       kind: 'found',
@@ -119,7 +123,7 @@ export default function CountryPlacesScreen({
                 accessibilityRole="button"
               >
                 <View style={styles.badge}>
-                  <KindIcon kind={item.icon} size={20} color="#3b4560" />
+                  <KindIcon kind={item.icon} size={20} color={c.badgeFg} />
                 </View>
                 <Text style={styles.name} numberOfLines={1}>
                   {item.place.name}
@@ -134,7 +138,7 @@ export default function CountryPlacesScreen({
                 accessibilityLabel="Показать на карте"
               >
                 <View style={[styles.badge, styles.badgeHidden]}>
-                  <KindIcon kind={item.icon} size={20} color="#a8a8a8" />
+                  <KindIcon kind={item.icon} size={20} color={c.textFaint} />
                 </View>
                 <View style={styles.hiddenText}>
                   <Text style={[styles.name, styles.muted]}>Тайное место</Text>
@@ -149,22 +153,22 @@ export default function CountryPlacesScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff' },
+const makeStyles = (c: Colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.bg },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
-  back: { fontSize: 36, lineHeight: 36, color: '#262626', marginRight: 12, marginTop: -4 },
+  back: { fontSize: 36, lineHeight: 36, color: c.text, marginRight: 12, marginTop: -4 },
   headerText: { flex: 1 },
-  title: { fontSize: 24, fontWeight: '800', color: '#262626' },
-  subtitle: { marginTop: 2, color: '#8e8e8e' },
-  empty: { marginTop: 32, paddingHorizontal: 16, textAlign: 'center', color: '#8e8e8e' },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#262626', paddingHorizontal: 16, paddingTop: 20, paddingBottom: 6 },
+  title: { fontSize: 24, fontWeight: '800', color: c.text },
+  subtitle: { marginTop: 2, color: c.textMuted },
+  empty: { marginTop: 32, paddingHorizontal: 16, textAlign: 'center', color: c.textMuted },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: c.text, paddingHorizontal: 16, paddingTop: 20, paddingBottom: 6 },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 16 },
   pressed: { opacity: 0.5 },
   badge: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#eef1f6',
+    backgroundColor: c.badgeBg,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -173,19 +177,19 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#e8f0ff',
+    backgroundColor: c.cityBadgeBg,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
-  cityPercent: { fontSize: 15, fontWeight: '700', color: '#262626', marginLeft: 8 },
-  cityLetter: { fontSize: 17, fontWeight: '800', color: '#2f6fdd' },
-  badgeHidden: { backgroundColor: '#f3f3f3' },
-  icon: { fontSize: 18, color: '#3b4560' },
-  iconHidden: { color: '#a8a8a8' },
-  name: { flex: 1, fontSize: 15, fontWeight: '600', color: '#262626' },
-  muted: { color: '#8e8e8e', fontWeight: '500' },
+  cityPercent: { fontSize: 15, fontWeight: '700', color: c.text, marginLeft: 8 },
+  cityLetter: { fontSize: 17, fontWeight: '800', color: c.link },
+  badgeHidden: { backgroundColor: c.badgeHiddenBg },
+  icon: { fontSize: 18, color: c.badgeFg },
+  iconHidden: { color: c.textFaint },
+  name: { flex: 1, fontSize: 15, fontWeight: '600', color: c.text },
+  muted: { color: c.textMuted, fontWeight: '500' },
   hiddenText: { flex: 1 },
-  where: { marginTop: 2, color: '#a8a8a8' },
-  date: { color: '#8e8e8e', marginLeft: 8 },
+  where: { marginTop: 2, color: c.textFaint },
+  date: { color: c.textMuted, marginLeft: 8 },
 });

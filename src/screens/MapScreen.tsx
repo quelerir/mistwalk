@@ -20,10 +20,15 @@ import SvgIcon from '../components/icons/SvgIcon';
 import type { MapView } from '../lib/geo/projection';
 import type { Poi } from '../lib/poi/types';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
+import { useStyles, useTheme } from '../theme/ThemeProvider';
+import type { Colors } from '../theme/palettes';
 
 const FOLLOW_ZOOM = 16;
 const FOLLOW_EASE_MS = 900;
-const MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
+const MAP_STYLES = {
+  light: 'https://tiles.openfreemap.org/styles/liberty',
+  dark: 'https://tiles.openfreemap.org/styles/dark',
+};
 
 export interface MapScreenProps {
   points: VisitedPoint[];
@@ -64,6 +69,8 @@ export default function MapScreen({
   onBuildRoute,
   onCancelRoute,
 }: MapScreenProps) {
+  const styles = useStyles(makeStyles);
+  const { colors: c, scheme } = useTheme();
   const mapRef = useRef<MapRef>(null) as React.RefObject<MapRef>;
   const cameraRef = useRef<CameraRef>(null);
   const hasCenteredRef = useRef(false);
@@ -137,7 +144,7 @@ export default function MapScreen({
       <Map
         ref={mapRef}
         style={styles.map}
-        mapStyle={MAP_STYLE_URL}
+        mapStyle={MAP_STYLES[scheme]}
         touchPitch={false}
         onDidFinishLoadingMap={() => void handleMapLoaded()}
         onRegionIsChanging={handleRegion}
@@ -175,14 +182,14 @@ export default function MapScreen({
           accessibilityRole="button"
           accessibilityLabel="К моей позиции"
         >
-          <SvgIcon name="locate" size={24} color="#262626" />
+          <SvgIcon name="locate" size={24} color={c.text} />
         </Pressable>
       )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Colors) => StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
   recenter: {
@@ -192,7 +199,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'white',
+    backgroundColor: c.card,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',

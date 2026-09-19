@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { CountryStat } from '../lib/geo/countryStats';
 import type { Stats } from '../hooks/useStats';
+import { useStyles } from '../theme/ThemeProvider';
+import type { Colors } from '../theme/palettes';
 
 export interface CollectionScreenProps {
   stats: Stats;
@@ -14,6 +16,7 @@ export default function CollectionScreen({
   countries,
   onOpenCountries,
 }: CollectionScreenProps) {
+  const styles = useStyles(makeStyles);
   const visitedCountries = useMemo(() => countries.filter((c) => c.percent > 0).length, [countries]);
 
   const tiles = [
@@ -51,25 +54,25 @@ export default function CollectionScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff' },
+const makeStyles = (c: Colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.bg },
   content: { padding: 16, paddingBottom: 32 },
-  title: { fontSize: 24, fontWeight: '800', color: '#262626', marginBottom: 12 },
+  title: { fontSize: 24, fontWeight: '800', color: c.text, marginBottom: 12 },
   tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  tile: { flex: 1, backgroundColor: '#f6f6f6', borderRadius: 14, padding: 14 },
-  tileValue: { fontSize: 22, fontWeight: '800', color: '#262626' },
-  tileLabel: { marginTop: 2, color: '#8e8e8e' },
+  tile: { flex: 1, backgroundColor: c.surface, borderRadius: 14, padding: 14 },
+  tileValue: { fontSize: 22, fontWeight: '800', color: c.text },
+  tileLabel: { marginTop: 2, color: c.textMuted },
   countriesButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f6f6f6',
+    backgroundColor: c.surface,
     borderRadius: 14,
     padding: 14,
     marginTop: 10,
   },
   pressed: { opacity: 0.6 },
   countriesText: { flex: 1 },
-  countriesTitle: { fontSize: 16, fontWeight: '700', color: '#262626' },
-  countriesSub: { marginTop: 2, color: '#8e8e8e' },
-  chevron: { fontSize: 28, color: '#8e8e8e', marginLeft: 8 },
+  countriesTitle: { fontSize: 16, fontWeight: '700', color: c.text },
+  countriesSub: { marginTop: 2, color: c.textMuted },
+  chevron: { fontSize: 28, color: c.textMuted, marginLeft: 8 },
 });

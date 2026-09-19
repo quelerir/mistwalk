@@ -3,6 +3,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SvgIcon from './icons/SvgIcon';
 import type { IconName } from './icons/svgIcons';
+import { useStyles, useTheme } from '../theme/ThemeProvider';
+import type { Colors } from '../theme/palettes';
 
 export interface TabItem<K extends string> {
   key: K;
@@ -17,6 +19,8 @@ export interface TabBarProps<K extends string> {
 }
 
 export default function TabBar<K extends string>({ tabs, active, onChange }: TabBarProps<K>) {
+  const styles = useStyles(makeStyles);
+  const { colors: c } = useTheme();
   const insets = useSafeAreaInsets();
 
   return (
@@ -34,7 +38,7 @@ export default function TabBar<K extends string>({ tabs, active, onChange }: Tab
           <SvgIcon
             name={tab.icon}
             active={tab.key === active}
-            color={tab.key === active ? '#262626' : '#8e8e8e'}
+            color={tab.key === active ? c.text : c.textMuted}
           />
         </Pressable>
       ))}
@@ -42,12 +46,12 @@ export default function TabBar<K extends string>({ tabs, active, onChange }: Tab
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Colors) => StyleSheet.create({
   bar: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
+    backgroundColor: c.bg,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#dbdbdb',
+    borderTopColor: c.border,
   },
   tab: { flex: 1, height: 52, alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: 0.5 },

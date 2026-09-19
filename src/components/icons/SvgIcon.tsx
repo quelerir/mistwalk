@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Canvas, Group, Path, Skia } from '@shopify/react-native-skia';
+import { useTheme } from '../../theme/ThemeProvider';
 import { ICONS, type IconName } from './svgIcons';
 
 export interface SvgIconProps {
@@ -17,9 +18,12 @@ export default function SvgIcon({
   name,
   active = false,
   size = 26,
-  color = '#262626',
-  background = '#ffffff',
+  color,
+  background,
 }: SvgIconProps) {
+  const { colors } = useTheme();
+  const stroke = color ?? colors.text;
+  const cutout = background ?? colors.bg;
   const layers = useMemo(
     () =>
       ICONS[name][active ? 'active' : 'outline'].map((layer) => ({
@@ -41,7 +45,7 @@ export default function SvgIcon({
               strokeWidth={STROKE_WIDTH}
               strokeCap="round"
               strokeJoin="round"
-              color={mode === 'cutout' ? background : color}
+              color={mode === 'cutout' ? cutout : stroke}
             />
           ) : null
         )}

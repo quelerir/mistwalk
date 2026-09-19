@@ -18,6 +18,6 @@ export interface KindIconProps {
   color?: string;
 }
 
-export default function KindIcon({ kind, size = 20, color = '#262626' }: KindIconProps) {
+export default function KindIcon({ kind, size = 20, color }: KindIconProps) {
   return <SvgIcon name={KIND_SVG[kind]} size={size} color={color} />;
 }

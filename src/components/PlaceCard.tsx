@@ -5,6 +5,8 @@ import { bearingLabel } from '../lib/poi/discovery';
 import { KIND_LABEL } from '../lib/poi/greeting';
 import KindIcon from './KindIcon';
 import type { Poi } from '../lib/poi/types';
+import { useStyles, useTheme } from '../theme/ThemeProvider';
+import type { Colors } from '../theme/palettes';
 
 export interface PlaceCardProps {
   poi: Poi;
@@ -19,6 +21,8 @@ function formatDistance(meters: number): string {
 
 // Undiscovered places stay anonymous: the card only says where the place is.
 export default function PlaceCard({ poi, origin, onBuildRoute, onClose }: PlaceCardProps) {
+  const styles = useStyles(makeStyles);
+  const { colors: c } = useTheme();
   const where = origin
     ? `${formatDistance(haversineDistanceMeters(origin, poi))}, ${bearingLabel(origin, poi)}`
     : 'Ждём вашу позицию…';
@@ -27,7 +31,7 @@ export default function PlaceCard({ poi, origin, onBuildRoute, onClose }: PlaceC
     <View style={styles.card}>
       <View style={styles.header}>
         <View style={styles.badge}>
-          <KindIcon kind={poi.kind} size={22} color="#3b4560" />
+          <KindIcon kind={poi.kind} size={22} color={c.badgeFg} />
         </View>
         <View style={styles.text}>
           <Text style={styles.title}>{KIND_LABEL[poi.kind]}</Text>
@@ -48,13 +52,13 @@ export default function PlaceCard({ poi, origin, onBuildRoute, onClose }: PlaceC
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Colors) => StyleSheet.create({
   card: {
     position: 'absolute',
     left: 16,
     right: 80,
     bottom: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: c.card,
     borderRadius: 14,
     padding: 12,
     shadowColor: '#000',
@@ -68,23 +72,23 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#eef1f6',
+    backgroundColor: c.badgeBg,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
   },
-  icon: { fontSize: 18, color: '#3b4560' },
+  icon: { fontSize: 18, color: c.badgeFg },
   text: { flex: 1 },
-  title: { fontWeight: '700', color: '#262626', fontSize: 16 },
-  subtitle: { marginTop: 2, color: '#8e8e8e' },
-  close: { fontSize: 16, color: '#8e8e8e', paddingHorizontal: 4 },
+  title: { fontWeight: '700', color: c.text, fontSize: 16 },
+  subtitle: { marginTop: 2, color: c.textMuted },
+  close: { fontSize: 16, color: c.textMuted, paddingHorizontal: 4 },
   button: {
     marginTop: 12,
-    backgroundColor: '#262626',
+    backgroundColor: c.buttonBg,
     borderRadius: 10,
     paddingVertical: 11,
     alignItems: 'center',
   },
   pressed: { opacity: 0.7 },
-  buttonText: { color: '#ffffff', fontWeight: '700' },
+  buttonText: { color: c.buttonText, fontWeight: '700' },
 });

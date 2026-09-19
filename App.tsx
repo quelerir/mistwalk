@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { Linking, StatusBar, StyleSheet, Text, View } from 'react-native';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import NetInfo from '@react-native-community/netinfo';
+import { ThemeProvider, useTheme } from './src/theme/ThemeProvider';
 import { getEnvSupabaseClient } from './src/lib/supabase/client';
 import { getSession } from './src/lib/supabase/auth';
 import { getAccuracyProfile, DISTANCE_INTERVAL_METERS } from './src/lib/settings/accuracyProfile';
@@ -48,10 +49,15 @@ export default function App() {
     );
   }
 
-  return <AuthenticatedApp client={client} />;
+  return (
+    <ThemeProvider>
+      <AuthenticatedApp client={client} />
+    </ThemeProvider>
+  );
 }
 
 function AuthenticatedApp({ client }: { client: SupabaseClient }) {
+  const { colors, scheme } = useTheme();
   const [session, setSession] = useState<Session | null>(null);
   const [points, setPoints] = useState<VisitedPoint[]>([]);
   const [livePosition, setLivePosition] = useState<{ lat: number; lng: number } | null>(null);
@@ -203,7 +209,8 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
 
   return (
     <SafeAreaProvider>
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <StatusBar barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'} />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
       <RootNavigator client={client} session={session} onSignedIn={() => getSession(client).then(setSession)}>
         <OfflineBanner />
         <LocationPermissionBanner stage={stage} onRequestForeground={requestForeground} />

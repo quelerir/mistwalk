@@ -5,6 +5,8 @@ import { haversineDistanceMeters } from '../lib/geo/distance';
 import { bearingLabel } from '../lib/poi/discovery';
 import KindIcon from '../components/KindIcon';
 import type { Poi } from '../lib/poi/types';
+import { useStyles, useTheme } from '../theme/ThemeProvider';
+import type { Colors } from '../theme/palettes';
 
 export interface NearbyScreenProps {
   pois: Poi[];
@@ -21,6 +23,8 @@ function formatDistance(meters: number): string {
 }
 
 export default function NearbyScreen({ pois, discoveredIds, origin, onSelect }: NearbyScreenProps) {
+  const styles = useStyles(makeStyles);
+  const { colors: c } = useTheme();
   const nearby = useMemo(() => {
     if (!origin) return [];
     return pois
@@ -51,7 +55,7 @@ export default function NearbyScreen({ pois, discoveredIds, origin, onSelect }: 
               accessibilityLabel="Показать на карте"
             >
               <View style={styles.iconBadge}>
-                <KindIcon kind={item.poi.kind} size={22} color="#3b4560" />
+                <KindIcon kind={item.poi.kind} size={22} color={c.badgeFg} />
               </View>
               <View style={styles.rowText}>
                 <Text style={styles.name}>Тайное место</Text>
@@ -67,24 +71,24 @@ export default function NearbyScreen({ pois, discoveredIds, origin, onSelect }: 
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff', paddingHorizontal: 16, paddingTop: 12 },
-  title: { fontSize: 24, fontWeight: '800', color: '#262626' },
-  subtitle: { marginTop: 2, marginBottom: 12, color: '#8e8e8e' },
-  empty: { marginTop: 32, textAlign: 'center', color: '#8e8e8e' },
+const makeStyles = (c: Colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.bg, paddingHorizontal: 16, paddingTop: 12 },
+  title: { fontSize: 24, fontWeight: '800', color: c.text },
+  subtitle: { marginTop: 2, marginBottom: 12, color: c.textMuted },
+  empty: { marginTop: 32, textAlign: 'center', color: c.textMuted },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
   iconBadge: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#eef1f6',
+    backgroundColor: c.badgeBg,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
-  icon: { fontSize: 20, color: '#3b4560' },
+  icon: { fontSize: 20, color: c.badgeFg },
   rowText: { flex: 1 },
-  name: { fontSize: 16, fontWeight: '600', color: '#262626' },
-  distance: { marginTop: 2, color: '#8e8e8e' },
+  name: { fontSize: 16, fontWeight: '600', color: c.text },
+  distance: { marginTop: 2, color: c.textMuted },
   rowPressed: { opacity: 0.5 },
 });

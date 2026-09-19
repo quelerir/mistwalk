@@ -2,6 +2,8 @@ import React from 'react';
 import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { flagUrl } from '../lib/geo/countries';
 import { formatPercent, type CountryPlaces, type CountryStat } from '../lib/geo/countryStats';
+import { useStyles } from '../theme/ThemeProvider';
+import type { Colors } from '../theme/palettes';
 
 export interface CountriesScreenProps {
   countries: CountryStat[];
@@ -20,6 +22,7 @@ export default function CountriesScreen({
   onBack,
   onOpenCountry,
 }: CountriesScreenProps) {
+  const styles = useStyles(makeStyles);
   const visited = countries.filter((c) => c.percent > 0).length;
   const status = pending
     ? 'Определяем страны…'
@@ -71,27 +74,27 @@ export default function CountriesScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff' },
+const makeStyles = (c: Colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.bg },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
-  back: { fontSize: 36, lineHeight: 36, color: '#262626', marginRight: 12, marginTop: -4 },
+  back: { fontSize: 36, lineHeight: 36, color: c.text, marginRight: 12, marginTop: -4 },
   headerText: { flex: 1 },
-  title: { fontSize: 24, fontWeight: '800', color: '#262626' },
-  subtitle: { marginTop: 2, color: '#8e8e8e' },
+  title: { fontSize: 24, fontWeight: '800', color: c.text },
+  subtitle: { marginTop: 2, color: c.textMuted },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 11,
     paddingHorizontal: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#dbdbdb',
+    borderBottomColor: c.border,
   },
-  flag: { width: 36, height: 26, borderRadius: 4, backgroundColor: '#efefef', marginRight: 14 },
+  flag: { width: 36, height: 26, borderRadius: 4, backgroundColor: c.surfaceAlt, marginRight: 14 },
   nameWrap: { flex: 1 },
-  places: { marginTop: 2, color: '#8e8e8e', fontSize: 12 },
+  places: { marginTop: 2, color: c.textMuted, fontSize: 12 },
   pressed: { opacity: 0.5 },
-  chevron: { fontSize: 24, color: '#c7c7c7', marginLeft: 8 },
-  name: { fontSize: 16, fontWeight: '600', color: '#262626' },
-  percent: { fontSize: 15, fontWeight: '700', color: '#262626', marginLeft: 12 },
-  muted: { color: '#a8a8a8', fontWeight: '500' },
+  chevron: { fontSize: 24, color: c.chevron, marginLeft: 8 },
+  name: { fontSize: 16, fontWeight: '600', color: c.text },
+  percent: { fontSize: 15, fontWeight: '700', color: c.text, marginLeft: 12 },
+  muted: { color: c.textFaint, fontWeight: '500' },
 });

@@ -2,6 +2,8 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { RouteStatus } from '../hooks/useRoute';
 import { formatWalkingTime, type WalkingRoute } from '../lib/routing/walkingRoute';
+import { useStyles } from '../theme/ThemeProvider';
+import type { Colors } from '../theme/palettes';
 
 export interface RouteCardProps {
   status: RouteStatus;
@@ -14,6 +16,7 @@ function formatDistance(meters: number): string {
 }
 
 export default function RouteCard({ status, route, onCancel }: RouteCardProps) {
+  const styles = useStyles(makeStyles);
   if (status === 'idle') return null;
 
   const subtitle =
@@ -36,7 +39,7 @@ export default function RouteCard({ status, route, onCancel }: RouteCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Colors) => StyleSheet.create({
   card: {
     position: 'absolute',
     left: 16,
@@ -44,7 +47,7 @@ const styles = StyleSheet.create({
     bottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: c.card,
     borderRadius: 14,
     padding: 12,
     shadowColor: '#000',
@@ -54,9 +57,9 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   text: { flex: 1 },
-  title: { fontWeight: '700', color: '#262626' },
-  subtitle: { marginTop: 2, color: '#8e8e8e' },
-  error: { color: '#ed4956' },
+  title: { fontWeight: '700', color: c.text },
+  subtitle: { marginTop: 2, color: c.textMuted },
+  error: { color: c.danger },
   cancel: { paddingVertical: 6, paddingHorizontal: 10 },
-  cancelText: { color: '#2f80ff', fontWeight: '700' },
+  cancelText: { color: c.accent, fontWeight: '700' },
 });

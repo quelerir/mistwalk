@@ -3,6 +3,8 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SvgIcon from './icons/SvgIcon';
 import type { IconName } from './icons/svgIcons';
+import { useStyles, useTheme } from '../theme/ThemeProvider';
+import type { Colors } from '../theme/palettes';
 
 export interface MenuItem {
   key: string;
@@ -19,11 +21,9 @@ export interface MenuSheetProps {
   onClose: () => void;
 }
 
-const SHEET_BG = '#262626';
-const TEXT_COLOR = '#f5f5f5';
-const DANGER_COLOR = '#ff5c6a';
-
 export default function MenuSheet({ visible, items, onClose }: MenuSheetProps) {
+  const styles = useStyles(makeStyles);
+  const { colors: c } = useTheme();
   const insets = useSafeAreaInsets();
 
   return (
@@ -32,7 +32,7 @@ export default function MenuSheet({ visible, items, onClose }: MenuSheetProps) {
       <View style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}>
         <View style={styles.handle} />
         {items.map((item, index) => {
-          const color = item.destructive ? DANGER_COLOR : TEXT_COLOR;
+          const color = item.destructive ? c.danger : c.text;
           return (
             <Pressable
               key={item.key}
@@ -42,7 +42,7 @@ export default function MenuSheet({ visible, items, onClose }: MenuSheetProps) {
               accessibilityLabel={item.label}
             >
               <View style={styles.icon}>
-                <SvgIcon name={item.icon} size={26} color={color} background={SHEET_BG} />
+                <SvgIcon name={item.icon} size={26} color={color} background={c.sheetBg} />
               </View>
               <View style={[styles.labelWrap, index < items.length - 1 && styles.separator]}>
                 <Text style={[styles.label, { color }]} numberOfLines={1}>
@@ -58,10 +58,10 @@ export default function MenuSheet({ visible, items, onClose }: MenuSheetProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Colors) => StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
   sheet: {
-    backgroundColor: SHEET_BG,
+    backgroundColor: c.sheetBg,
     paddingTop: 10,
   },
   handle: {
@@ -69,11 +69,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#5a5a5a',
+    backgroundColor: c.sheetHandle,
     marginBottom: 6,
   },
   row: { flexDirection: 'row', alignItems: 'center', paddingLeft: 18, minHeight: 60 },
-  rowPressed: { backgroundColor: '#333333' },
+  rowPressed: { backgroundColor: c.surfaceAlt },
   icon: { width: 30, alignItems: 'center', marginRight: 16 },
   labelWrap: {
     flex: 1,
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingRight: 18,
   },
-  separator: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#3d3d3d' },
+  separator: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
   label: { fontSize: 17, flexShrink: 1 },
-  value: { fontSize: 15, color: '#8e8e8e', marginLeft: 12 },
+  value: { fontSize: 15, color: c.textMuted, marginLeft: 12 },
 });

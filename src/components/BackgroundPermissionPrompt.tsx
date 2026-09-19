@@ -1,6 +1,8 @@
 import React from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import SvgIcon from './icons/SvgIcon';
+import { useStyles, useTheme } from '../theme/ThemeProvider';
+import type { Colors } from '../theme/palettes';
 
 export interface BackgroundPermissionPromptProps {
   visible: boolean;
@@ -19,11 +21,13 @@ export default function BackgroundPermissionPrompt({
   onAccept,
   onDecline,
 }: BackgroundPermissionPromptProps) {
+  const styles = useStyles(makeStyles);
+  const { colors: c } = useTheme();
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onDecline}>
       <View style={styles.container}>
         <View style={styles.badge}>
-          <SvgIcon name="locate" size={44} color="#262626" />
+          <SvgIcon name="locate" size={44} color={c.text} />
         </View>
         <Text style={styles.title}>Открывайте карту, даже когда телефон в кармане</Text>
         {POINTS.map((point) => (
@@ -47,25 +51,25 @@ export default function BackgroundPermissionPrompt({
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff', padding: 24, justifyContent: 'center' },
+const makeStyles = (c: Colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.bg, padding: 24, justifyContent: 'center' },
   badge: {
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: '#f2f2f2',
+    backgroundColor: c.surface,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
     marginBottom: 24,
   },
-  title: { fontSize: 24, fontWeight: '800', color: '#262626', textAlign: 'center', marginBottom: 20 },
+  title: { fontSize: 24, fontWeight: '800', color: c.text, textAlign: 'center', marginBottom: 20 },
   pointRow: { flexDirection: 'row', marginBottom: 12, paddingRight: 8 },
-  bullet: { fontSize: 18, lineHeight: 22, marginRight: 10, color: '#262626' },
-  pointText: { flex: 1, fontSize: 16, lineHeight: 22, color: '#262626' },
-  note: { marginTop: 8, marginBottom: 28, color: '#8e8e8e', fontSize: 13, lineHeight: 18 },
-  primary: { backgroundColor: '#262626', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  primaryText: { color: 'white', fontSize: 16, fontWeight: '700' },
+  bullet: { fontSize: 18, lineHeight: 22, marginRight: 10, color: c.text },
+  pointText: { flex: 1, fontSize: 16, lineHeight: 22, color: c.text },
+  note: { marginTop: 8, marginBottom: 28, color: c.textMuted, fontSize: 13, lineHeight: 18 },
+  primary: { backgroundColor: c.buttonBg, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  primaryText: { color: c.buttonText, fontSize: 16, fontWeight: '700' },
   secondary: { paddingVertical: 14, alignItems: 'center' },
-  secondaryText: { color: '#8e8e8e', fontSize: 15, fontWeight: '600' },
+  secondaryText: { color: c.textMuted, fontSize: 15, fontWeight: '600' },
 });

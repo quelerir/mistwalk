@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MenuSheet, { type MenuItem } from './MenuSheet';
+import { useTheme } from '../theme/ThemeProvider';
+import { nextThemePreference, THEME_LABELS } from '../theme/palettes';
 import { FOG_STYLE_LABELS, nextFogStyle, type FogStyle } from '../lib/settings/fogStyle';
 import {
   getAccuracyProfile,
@@ -28,6 +30,7 @@ export default function AppMenu({
   onSignOut,
 }: AppMenuProps) {
   const [accuracy, setAccuracy] = useState<AccuracyProfile>('battery-saver');
+  const { preference, setPreference } = useTheme();
   const [page, setPage] = useState<'main' | 'settings'>('main');
 
   useEffect(() => {
@@ -64,6 +67,13 @@ export default function AppMenu({
   const settingsItems: MenuItem[] = [
     { key: 'back', icon: 'back', label: 'Назад', onPress: () => setPage('main') },
     {
+      key: 'theme',
+      icon: 'moon',
+      label: 'Тема',
+      value: THEME_LABELS[preference],
+      onPress: () => setPreference(nextThemePreference(preference)),
+    },
+    {
       key: 'fog',
       icon: 'cloud',
       label: 'Стиль тумана',
@@ -79,7 +89,7 @@ export default function AppMenu({
     },
     {
       key: 'background',
-      icon: 'moon',
+      icon: 'navigate',
       label: 'Работа в фоне',
       value: backgroundEnabled ? 'Включена' : 'Включить',
       onPress: () => {

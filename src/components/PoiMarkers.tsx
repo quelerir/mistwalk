@@ -3,6 +3,8 @@ import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react
 import { projectToScreen, type MapView, type Size } from '../lib/geo/projection';
 import KindIcon from './KindIcon';
 import type { Poi } from '../lib/poi/types';
+import { useStyles, useTheme } from '../theme/ThemeProvider';
+import type { Colors } from '../theme/palettes';
 
 export interface PoiMarkersProps {
   pois: Poi[];
@@ -24,6 +26,8 @@ export default function PoiMarkers({
   onSelect,
   onOpenFound,
 }: PoiMarkersProps) {
+  const styles = useStyles(makeStyles);
+  const { colors: c } = useTheme();
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
 
   const visible = useMemo(() => {
@@ -65,7 +69,7 @@ export default function PoiMarkers({
               accessibilityRole="button"
               accessibilityLabel={poi.name}
             >
-              <KindIcon kind={poi.kind} size={18} color="#1d4ed8" />
+              <KindIcon kind={poi.kind} size={18} color={c.foundIcon} />
             </Pressable>
             {showLabel && (
               <Text style={styles.label} numberOfLines={1} pointerEvents="none">
@@ -91,7 +95,7 @@ export default function PoiMarkers({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: Colors) => StyleSheet.create({
   anchor: { position: 'absolute', width: 120, alignItems: 'center' },
   unknown: {
     width: 30,
@@ -105,25 +109,24 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     shadowOffset: { width: 0, height: 0 },
   },
-  selected: { borderWidth: 3, borderColor: '#2f80ff', transform: [{ scale: 1.25 }] },
+  selected: { borderWidth: 3, borderColor: c.accent, transform: [{ scale: 1.25 }] },
   unknownMark: { fontSize: 18, fontWeight: '800', color: '#1f2937' },
   found: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'white',
+    backgroundColor: c.foundFill,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#3b82f6',
+    borderColor: c.foundBorder,
   },
-  foundIcon: { fontSize: 18, color: '#1d4ed8' },
   label: {
     marginTop: 2,
     fontSize: 12,
     fontWeight: '700',
-    color: '#111',
-    textShadowColor: 'white',
+    color: c.text,
+    textShadowColor: c.bg,
     textShadowRadius: 4,
   },
 });
