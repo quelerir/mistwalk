@@ -9,20 +9,35 @@ export interface RouteCardProps {
   status: RouteStatus;
   route: WalkingRoute | null;
   title: string;
+  remainingMeters?: number;
+  remainingSeconds?: number;
   onCancel: () => void;
 }
+
+const ARRIVAL_METERS = 40;
 
 function formatDistance(meters: number): string {
   return meters < 1000 ? `${Math.round(meters / 10) * 10} м` : `${(meters / 1000).toFixed(1)} км`;
 }
 
-export default function RouteCard({ status, route, title, onCancel }: RouteCardProps) {
+export default function RouteCard({
+  status,
+  route,
+  title,
+  remainingMeters,
+  remainingSeconds,
+  onCancel,
+}: RouteCardProps) {
   const styles = useStyles(makeStyles);
   if (status === 'idle') return null;
 
   const subtitle =
     status === 'ready' && route
-      ? `${formatDistance(route.distanceMeters)} · ${formatWalkingTime(route.durationSeconds)} пешком`
+      ? remainingMeters !== undefined && remainingMeters < ARRIVAL_METERS
+        ? 'Вы почти на месте'
+        : `Осталось ${formatDistance(remainingMeters ?? route.distanceMeters)} · ${formatWalkingTime(
+            remainingSeconds ?? route.durationSeconds
+          )} пешком`
       : status === 'error'
         ? 'Не удалось построить маршрут'
         : 'Строим маршрут…';

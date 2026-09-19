@@ -227,6 +227,7 @@ export default function MainScreen({
               playerId={openPlayer.userId}
               fallbackName={openPlayer.displayName}
               onBack={() => setOpenPlayer(null)}
+              isMe={openPlayer.userId === userId}
             />
           ) : showLeaderboard ? (
             <LeaderboardScreen

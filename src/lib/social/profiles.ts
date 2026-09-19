@@ -220,3 +220,10 @@ export async function removeAvatar(client: SupabaseClient, userId: string, path:
   await setAvatarPath(client, userId, null);
   await client.storage.from(AVATAR_BUCKET).remove([path]).catch(() => undefined);
 }
+
+export type ReportReason = 'name' | 'photo' | 'other';
+
+export async function reportPlayer(client: SupabaseClient, playerId: string, reason: ReportReason): Promise<void> {
+  const { error } = await client.rpc('report_player', { target: playerId, why: reason });
+  if (error) throw error;
+}

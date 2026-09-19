@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View, type NativeSyntheticEvent } from 'react-native';
 import {
   Camera,
@@ -10,6 +10,8 @@ import {
 } from '@maplibre/maplibre-react-native';
 import type { FogPalette } from '../lib/settings/fogStyle';
 import FogOverlay, { type LivePosition } from '../components/FogOverlay';
+import TargetArrow from '../components/TargetArrow';
+import { routeProgress } from '../lib/routing/progress';
 import RouteOverlay from '../components/RouteOverlay';
 import PlaceCard from '../components/PlaceCard';
 import RouteCard from '../components/RouteCard';
@@ -76,6 +78,10 @@ export default function MapScreen({
   const hasCenteredRef = useRef(false);
   const [following, setFollowing] = useState(true);
   const fittedFor = useRef<string | null>(null);
+  const progress = useMemo(
+    () => (route && livePosition ? routeProgress(route, livePosition) : null),
+    [route, livePosition]
+  );
   const routeTargetId = routing && selected ? selected.id : null;
 
   // Bring a picked place into view. The native camera doesn't exist while the tab is hidden,
@@ -154,7 +160,7 @@ export default function MapScreen({
         <UserLocation />
       </Map>
       <FogOverlay points={points} livePosition={livePosition} view={view} fog={fog} />
-      <RouteOverlay route={route} view={view} />
+      <RouteOverlay coordinates={progress?.coordinates ?? route?.coordinates ?? null} view={view} />
       <PoiMarkers
         pois={pois}
         discoveredIds={discoveredIds}
@@ -163,10 +169,13 @@ export default function MapScreen({
         onSelect={onSelect}
         onOpenFound={onOpenFound}
       />
+      <TargetArrow target={selected} origin={livePosition} view={view} />
       {routing ? (
         <RouteCard
           status={routeStatus}
           route={route}
+          remainingMeters={progress?.remainingMeters}
+          remainingSeconds={progress?.remainingSeconds}
           title={selected ? `Маршрут: ${selected.name}` : 'Маршрут'}
           onCancel={onCancelRoute}
         />

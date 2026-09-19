@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import Avatar from '../components/Avatar';
 import KindIcon from '../components/KindIcon';
 import { flagUrl } from '../lib/geo/countries';
 import { formatPercent } from '../lib/geo/countryStats';
 import { formatKm2 } from '../lib/geo/cityStats';
-import { avatarUrl, fetchPlayerProfile, type PlayerProfile } from '../lib/social/profiles';
+import { avatarUrl, fetchPlayerProfile, reportPlayer, type PlayerProfile, type ReportReason } from '../lib/social/profiles';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 
@@ -15,13 +15,14 @@ export interface PlayerScreenProps {
   playerId: string;
   fallbackName: string;
   onBack: () => void;
+  isMe: boolean;
 }
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
 }
 
-export default function PlayerScreen({ client, playerId, fallbackName, onBack }: PlayerScreenProps) {
+export default function PlayerScreen({ client, playerId, fallbackName, onBack, isMe }: PlayerScreenProps) {
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   const [player, setPlayer] = useState<PlayerProfile | null>(null);
@@ -45,6 +46,19 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack }:
     };
   }, [client, playerId]);
 
+  function report() {
+    const send = (reason: ReportReason) =>
+      reportPlayer(client, playerId, reason)
+        .then(() => Alert.alert('Спасибо', 'Жалоба отправлена. Профиль скроется после нескольких жалоб.'))
+        .catch(() => Alert.alert('Не удалось отправить', 'Проверьте интернет и попробуйте ещё раз.'));
+    Alert.alert('Пожаловаться на игрока', 'На что именно?', [
+      { text: 'Имя', onPress: () => void send('name') },
+      { text: 'Фото', onPress: () => void send('photo') },
+      { text: 'Другое', onPress: () => void send('other') },
+      { text: 'Отмена', style: 'cancel' },
+    ]);
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -59,6 +73,11 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack }:
             {player?.displayName ?? fallbackName}
           </Text>
         </View>
+        {!isMe && status === 'ready' && (
+          <Pressable onPress={report} hitSlop={10} accessibilityRole="button" accessibilityLabel="Пожаловаться">
+            <Text style={styles.report}>Пожаловаться</Text>
+          </Pressable>
+        )}
       </View>
 
       {status === 'loading' && <ActivityIndicator style={styles.loader} />}
@@ -129,6 +148,7 @@ const makeStyles = (c: Colors) =>
     header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
     back: { fontSize: 36, lineHeight: 36, color: c.text, marginRight: 12, marginTop: -4 },
     avatar: { marginRight: 12 },
+    report: { color: c.danger, fontWeight: '600', marginLeft: 8 },
     headerText: { flex: 1 },
     title: { fontSize: 24, fontWeight: '800', color: c.text },
     loader: { marginTop: 32 },

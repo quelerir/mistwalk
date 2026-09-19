@@ -6,6 +6,7 @@ import {
   fetchPlayerProfile,
   NameTakenError,
   avatarUrl,
+  reportPlayer,
   saveMyProfile,
   uploadAvatar,
 } from './profiles';
@@ -128,5 +129,18 @@ describe('avatars', () => {
     const update = jest.fn();
     await expect(uploadAvatar(storageClient(upload, jest.fn(), update), 'u1', new ArrayBuffer(4), null)).rejects.toThrow('boom');
     expect(update).not.toHaveBeenCalled();
+  });
+});
+
+describe('reportPlayer', () => {
+  it('sends the reason to the report function', async () => {
+    const rpc = jest.fn().mockResolvedValue({ error: null });
+    await reportPlayer({ rpc } as unknown as SupabaseClient, 'u2', 'photo');
+    expect(rpc).toHaveBeenCalledWith('report_player', { target: 'u2', why: 'photo' });
+  });
+
+  it('throws when the call fails', async () => {
+    const rpc = jest.fn().mockResolvedValue({ error: new Error('nope') });
+    await expect(reportPlayer({ rpc } as unknown as SupabaseClient, 'u2', 'name')).rejects.toThrow('nope');
   });
 });
