@@ -16,7 +16,7 @@ import { performSignOut } from '../lib/session/signOutFlow';
 import { FOG_PALETTES, getFogAnimated, getFogStyle, resolveFogStyle, setFogAnimated, setFogStyle, type FogSetting } from '../lib/settings/fogStyle';
 import { getPlaceNotifications, setPlaceNotifications } from '../lib/settings/placeNotifications';
 import { getWeeklySummary, setWeeklySummary } from '../lib/settings/weeklySummary';
-import { weekSummary } from '../lib/stats/weekly';
+import { dailyKm, weekSummary } from '../lib/stats/weekly';
 import { ensureNotificationPermission } from '../services/notificationPermission';
 import { cancelWeeklySummary, scheduleWeeklySummary } from '../services/weeklySummaryNotification';
 import { signOut, signOutLocal } from '../lib/supabase/auth';
@@ -122,6 +122,7 @@ export default function MainScreen({
 
   const stats = useStats(points, discovered.length, true);
   const week = useMemo(() => weekSummary(points, discovered, Date.now()), [points, discovered]);
+  const daily = useMemo(() => dailyKm(points, Date.now()), [points]);
 
   const countryStats = useCountryStats(points, true);
   // Found places are stored without OpenStreetMap's wiki links; take them from the loaded POI.
@@ -332,6 +333,7 @@ export default function MainScreen({
             <CollectionScreen
               stats={stats}
               week={week}
+              daily={daily}
               countries={countryStats.countries}
               onOpenCountries={() => setShowCountries(true)}
               onOpenLeaderboard={() => setShowLeaderboard(true)}

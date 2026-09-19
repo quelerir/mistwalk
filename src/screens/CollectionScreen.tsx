@@ -10,6 +10,8 @@ import { CARD_SHADOW, FONT } from '../theme/fonts';
 export interface CollectionScreenProps {
   stats: Stats;
   week: WeekSummary;
+  // Kilometres for each of the last 7 days, oldest first.
+  daily: number[];
   countries: CountryStat[];
   onOpenCountries: () => void;
   onOpenLeaderboard: () => void;
@@ -21,14 +23,23 @@ function delta(now: number, before: number, digits = 0): string {
   return `${diff > 0 ? '+' : '−'}${Math.abs(diff).toFixed(digits)} к прошлой`;
 }
 
+const WEEKDAYS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+const BAR_MAX_HEIGHT = 56;
+
 export default function CollectionScreen({
   stats,
   week,
+  daily,
   countries,
   onOpenCountries,
   onOpenLeaderboard,
 }: CollectionScreenProps) {
   const styles = useStyles(makeStyles);
+  const dayLabels = useMemo(() => {
+    const today = new Date();
+    return daily.map((_, i) => WEEKDAYS[new Date(today.getFullYear(), today.getMonth(), today.getDate() - (daily.length - 1 - i)).getDay()]);
+  }, [daily]);
+  const maxKm = Math.max(...daily, 0.001);
   const visitedCountries = useMemo(() => countries.filter((c) => c.percent > 0).length, [countries]);
 
   const tiles = [
@@ -61,6 +72,22 @@ export default function CollectionScreen({
               <Text style={styles.weekValue}>{item.value}</Text>
               <Text style={styles.weekLabel}>{item.label}</Text>
               <Text style={styles.weekNote}>{item.note}</Text>
+            </View>
+          ))}
+        </View>
+        <View style={styles.bars}>
+          {daily.map((km, i) => (
+            <View key={i} style={styles.barCell}>
+              <View style={styles.barTrack}>
+                <View
+                  style={[
+                    styles.bar,
+                    { height: Math.max(6, (km / maxKm) * BAR_MAX_HEIGHT) },
+                    km > 0 && styles.barOn,
+                  ]}
+                />
+              </View>
+              <Text style={styles.barLabel}>{dayLabels[i]}</Text>
             </View>
           ))}
         </View>
@@ -109,6 +136,12 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   weekCell: { flex: 1 },
   weekValue: { fontSize: 26, fontFamily: FONT.display, letterSpacing: -0.5, color: c.text },
   weekLabel: { color: c.text },
+  bars: { flexDirection: 'row', gap: 8, marginTop: 16 },
+  barCell: { flex: 1, alignItems: 'center', gap: 6 },
+  barTrack: { height: BAR_MAX_HEIGHT, justifyContent: 'flex-end', alignSelf: 'stretch' },
+  bar: { borderRadius: 6, backgroundColor: c.surfaceAlt },
+  barOn: { backgroundColor: c.accent },
+  barLabel: { fontSize: 11, color: c.textMuted },
   weekNote: { marginTop: 2, fontSize: 12, color: c.textMuted },
   countriesButton: {
     flexDirection: 'row',

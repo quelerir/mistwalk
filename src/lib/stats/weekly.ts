@@ -34,3 +34,18 @@ export function weekSummary(points: TimedPoint[], places: DiscoveredPlace[], now
     prev: totals(points, places, now - 14 * DAY_MS, now - 7 * DAY_MS),
   };
 }
+
+// Kilometres for each of the last 7 calendar days, oldest first and today last.
+export function dailyKm(points: TimedPoint[], now: number): number[] {
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const result: number[] = [];
+  for (let back = 6; back >= 0; back--) {
+    const start = new Date(today);
+    start.setDate(today.getDate() - back);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 1);
+    result.push(computeDistanceKm(points.filter((p) => p.ts >= start.getTime() && p.ts < end.getTime())));
+  }
+  return result;
+}

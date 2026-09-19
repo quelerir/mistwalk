@@ -1,4 +1,4 @@
-import { weekSummary } from './weekly';
+import { weekSummary, dailyKm } from './weekly';
 import type { DiscoveredPlace } from '../poi/types';
 
 const DAY = 24 * 3600 * 1000;
@@ -53,5 +53,23 @@ describe('weekSummary', () => {
     expect(weekSummary([], [], now)).toEqual({
       km: 0, days: 0, places: 0, prev: { km: 0, days: 0, places: 0 },
     });
+  });
+});
+
+describe('dailyKm', () => {
+  it('gives km per day for the last 7 days, oldest first, today last', () => {
+    const points = [
+      at(0, 0),
+      at(0, 0.0009, 11), // today: 100 m
+      at(2, 0.002),
+      at(2, 0.0029, 11), // two days ago: 100 m
+      at(8, 0),
+      at(8, 0.0009, 11), // too old
+    ];
+    const days = dailyKm(points, now);
+    expect(days).toHaveLength(7);
+    expect(days[6]).toBeCloseTo(0.1, 1);
+    expect(days[4]).toBeCloseTo(0.1, 1);
+    expect(days.filter((d) => d > 0)).toHaveLength(2);
   });
 });
