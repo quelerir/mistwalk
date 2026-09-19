@@ -10,6 +10,10 @@ import {
 } from '@maplibre/maplibre-react-native';
 import type { FogPalette } from '../lib/settings/fogStyle';
 import FogOverlay, { type LivePosition } from '../components/FogOverlay';
+import RouteOverlay from '../components/RouteOverlay';
+import RouteCard from '../components/RouteCard';
+import type { RouteStatus } from '../hooks/useRoute';
+import type { WalkingRoute } from '../lib/routing/walkingRoute';
 import PoiMarkers from '../components/PoiMarkers';
 import SvgIcon from '../components/icons/SvgIcon';
 import type { MapView } from '../lib/geo/projection';
@@ -28,6 +32,10 @@ export interface MapScreenProps {
   fog: FogPalette;
   view: MapView | null;
   onViewChange: (view: MapView) => void;
+  route: WalkingRoute | null;
+  routeStatus: RouteStatus;
+  routeTargetId: string | null;
+  onCancelRoute: () => void;
 }
 
 export default function MapScreen({
@@ -38,11 +46,33 @@ export default function MapScreen({
   fog,
   view,
   onViewChange,
+  route,
+  routeStatus,
+  routeTargetId,
+  onCancelRoute,
 }: MapScreenProps) {
   const mapRef = useRef<MapRef>(null) as React.RefObject<MapRef>;
   const cameraRef = useRef<CameraRef>(null);
   const hasCenteredRef = useRef(false);
   const [following, setFollowing] = useState(true);
+  const fittedFor = useRef<string | null>(null);
+
+  // Frame the whole route once per destination; reroutes must not steal the camera again.
+  useEffect(() => {
+    if (!routeTargetId) {
+      fittedFor.current = null;
+      return;
+    }
+    if (!route || fittedFor.current === routeTargetId) return;
+    fittedFor.current = routeTargetId;
+    const lngs = route.coordinates.map((c) => c[0]);
+    const lats = route.coordinates.map((c) => c[1]);
+    setFollowing(false);
+    cameraRef.current?.fitBounds(
+      [Math.min(...lngs), Math.min(...lats), Math.max(...lngs), Math.max(...lats)],
+      { padding: { top: 90, right: 60, bottom: 110, left: 60 }, duration: 800 }
+    );
+  }, [route, routeTargetId]);
 
   useEffect(() => {
     if (!livePosition || !following) return;
@@ -90,7 +120,9 @@ export default function MapScreen({
         <UserLocation />
       </Map>
       <FogOverlay points={points} livePosition={livePosition} view={view} fog={fog} />
+      <RouteOverlay route={route} view={view} />
       <PoiMarkers pois={pois} discoveredIds={discoveredIds} view={view} />
+      <RouteCard status={routeStatus} route={route} onCancel={onCancelRoute} />
       {!following && (
         <Pressable
           style={styles.recenter}

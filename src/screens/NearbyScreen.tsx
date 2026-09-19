@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { Pressable } from 'react-native';
+import SvgIcon from '../components/icons/SvgIcon';
 import { haversineDistanceMeters } from '../lib/geo/distance';
 import { bearingLabel } from '../lib/poi/discovery';
 import { KIND_ICON } from '../lib/poi/greeting';
@@ -9,6 +11,9 @@ export interface NearbyScreenProps {
   pois: Poi[];
   discoveredIds: ReadonlySet<string>;
   origin: { lat: number; lng: number } | null;
+  routeTargetId: string | null;
+  onRoute: (poi: Poi) => void;
+  onCancelRoute: () => void;
 }
 
 const MAX_LISTED = 30;
@@ -18,7 +23,14 @@ function formatDistance(meters: number): string {
   return meters < 1000 ? `${Math.round(meters / 10) * 10} м` : `${(meters / 1000).toFixed(1)} км`;
 }
 
-export default function NearbyScreen({ pois, discoveredIds, origin }: NearbyScreenProps) {
+export default function NearbyScreen({
+  pois,
+  discoveredIds,
+  origin,
+  routeTargetId,
+  onRoute,
+  onCancelRoute,
+}: NearbyScreenProps) {
   const nearby = useMemo(() => {
     if (!origin) return [];
     return pois
@@ -52,6 +64,21 @@ export default function NearbyScreen({ pois, discoveredIds, origin }: NearbyScre
                   {formatDistance(item.meters)}, {bearingLabel(origin!, item.poi)}
                 </Text>
               </View>
+              {item.poi.id === routeTargetId ? (
+                <Pressable style={[styles.routeButton, styles.routeButtonActive]} onPress={onCancelRoute}>
+                  <Text style={styles.routeTextActive}>Отменить</Text>
+                </Pressable>
+              ) : (
+                <Pressable
+                  style={styles.routeButton}
+                  onPress={() => onRoute(item.poi)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Построить маршрут"
+                >
+                  <SvgIcon name="navigate" size={16} color="#ffffff" background="#262626" />
+                  <Text style={styles.routeText}>Маршрут</Text>
+                </Pressable>
+              )}
             </View>
           )}
         />
@@ -79,4 +106,16 @@ const styles = StyleSheet.create({
   rowText: { flex: 1 },
   name: { fontSize: 16, fontWeight: '600', color: '#262626' },
   distance: { marginTop: 2, color: '#8e8e8e' },
+  routeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#262626',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  routeButtonActive: { backgroundColor: '#efefef' },
+  routeText: { color: '#ffffff', fontWeight: '700' },
+  routeTextActive: { color: '#262626', fontWeight: '700' },
 });

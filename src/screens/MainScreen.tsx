@@ -18,6 +18,8 @@ import { stopForegroundTracking } from '../services/locationTracker';
 import MapScreen from './MapScreen';
 import NearbyScreen from './NearbyScreen';
 import CollectionScreen from './CollectionScreen';
+import { useRoute } from '../hooks/useRoute';
+import type { Poi } from '../lib/poi/types';
 import { useStats } from '../hooks/useStats';
 
 type TabKey = 'map' | 'nearby' | 'collection' | 'menu';
@@ -54,6 +56,7 @@ export default function MainScreen({
 }: MainScreenProps) {
   const [tab, setTab] = useState<Exclude<TabKey, 'menu'>>('map');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [routeTarget, setRouteTarget] = useState<Poi | null>(null);
   const [view, setView] = useState<MapView | null>(null);
   const [fogStyle, setFogStyleState] = useState<FogStyle>('ink');
   const { pois, discovered, discoveredIds, greeting, dismissGreeting } = usePlaces({
@@ -62,6 +65,18 @@ export default function MainScreen({
     view,
     livePosition,
   });
+
+  const { route, status: routeStatus } = useRoute(routeTarget, livePosition);
+
+  // Arriving discovers the place, which ends the route.
+  useEffect(() => {
+    if (routeTarget && discoveredIds.has(routeTarget.id)) setRouteTarget(null);
+  }, [routeTarget, discoveredIds]);
+
+  function handleBuildRoute(poi: Poi) {
+    setRouteTarget(poi);
+    setTab('map');
+  }
 
   const stats = useStats(points, discovered, tab === 'collection');
 
@@ -97,10 +112,21 @@ export default function MainScreen({
             fog={FOG_PALETTES[fogStyle]}
             view={view}
             onViewChange={setView}
+            route={route}
+            routeStatus={routeStatus}
+            routeTargetId={routeTarget?.id ?? null}
+            onCancelRoute={() => setRouteTarget(null)}
           />
         </View>
         {tab === 'nearby' && (
-          <NearbyScreen pois={pois} discoveredIds={discoveredIds} origin={livePosition} />
+          <NearbyScreen
+            pois={pois}
+            discoveredIds={discoveredIds}
+            origin={livePosition}
+            routeTargetId={routeTarget?.id ?? null}
+            onRoute={handleBuildRoute}
+            onCancelRoute={() => setRouteTarget(null)}
+          />
         )}
         {tab === 'collection' && <CollectionScreen stats={stats} discovered={discovered} />}
         <DiscoveryCard place={greeting} onDismiss={dismissGreeting} />

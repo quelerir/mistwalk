@@ -7,7 +7,8 @@ export type IconName =
   | 'menu'
   | 'cloud'
   | 'moon'
-  | 'logout';
+  | 'logout'
+  | 'navigate';
 
 export type LayerMode = 'stroke' | 'fill' | 'cutout';
 
@@ -87,5 +88,6 @@ export const ICONS: Record<IconName, { outline: IconLayer[]; active: IconLayer[]
   menu: line('M4 6h16M4 12h16M4 18h16'),
   cloud: line('M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9z'),
   moon: line('M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z'),
+  navigate: line('M3 11l19-9-9 19-2-8-8-2z'),
   logout: line('M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9'),
 };
