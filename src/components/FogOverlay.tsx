@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { BlurMask, Canvas, Circle, ColorMatrix, FractalNoise, Group, Paint, Path, Rect, Skia, useClock } from '@shopify/react-native-skia';
-import { useDerivedValue } from 'react-native-reanimated';
+import { useDerivedValue, useFrameCallback, useSharedValue, withTiming } from 'react-native-reanimated';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
 import type { FogPalette } from '../lib/settings/fogStyle';
+import { windToDrift, type CloudDrift, type Wind } from '../lib/weather/weather';
 import { haversineDistanceMeters } from '../lib/geo/distance';
 import {
   WORLD_ZOOM,
@@ -34,6 +35,8 @@ export interface FogOverlayProps {
   animated?: boolean;
   // 0 = dry; above 0 falling drops are drawn over the map, more of them the stronger it is (max 1).
   rain?: number;
+  // The wind at your position: clouds drift the way it blows. Null keeps a slow eastward drift.
+  wind?: Wind | null;
   // Draw the "you are here" dot ourselves (Android; the native MapLibre one is left out there).
   userDot?: boolean;
 }
@@ -93,49 +96,80 @@ const CLOUD_MIN_SCALE = 0.35;
 const CLOUD_MAX_SCALE = 4;
 // The cloud rect is centred on the origin and must reach the screen from wherever the view is (up to the re-anchor
 // distance), so it is simply very large; only the visible part is ever drawn.
-const CLOUD_EXTENT = 150000;
+const CLOUD_EXTENT = 600000;
 // Screen-space offset of the shadow copy: light comes from the top-left.
 const CLOUD_SHADOW_OFFSET = { x: 9, y: 12 };
 
-// Each cloud layer sways on its own slow loop (different axes and periods), so the billows slide past
-// each other and the fog seems to churn. Bounded, so no wrap-around jump and no growing offsets.
-const DRIFT_AMPLITUDE = 45;
-const TAU = Math.PI * 2;
+// The clouds travel one way, the way the wind blows, and the fine layer slides a little faster than the big billows,
+// so they move past each other. The distance grows without bound, so it wraps after many hours (one soft jump).
+const FINE_LAYER_SPEEDUP = 1.35;
+const DRIFT_WRAP = 200000;
+const DRIFT_EASE_MS = 4000;
+const MAX_FRAME_S = 0.1;
+
+interface CloudAnchor {
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+}
+
+function cloudTransform(a: CloudAnchor, driftX: number, driftY: number, speedup: number) {
+  'worklet';
+  return [
+    { translateX: a.x },
+    { translateY: a.y },
+    { rotate: a.rotation },
+    { scale: a.scale },
+    { translateX: driftX * speedup },
+    { translateY: driftY * speedup },
+  ];
+}
 
 interface FogCloudsProps {
   shared: ViewShared;
   origin: WorldOrigin;
   fog: FogPalette;
   animated: boolean;
+  drift: CloudDrift;
 }
 
 // Clouds are laid out around a fixed origin, so they pan, zoom and rotate with the map: the transform is derived from
 // the shared view on the UI thread, with no React render per frame.
-function FogClouds({ shared, origin, fog, animated }: FogCloudsProps) {
-  const clock = useClock();
+function FogClouds({ shared, origin, fog, animated, drift }: FogCloudsProps) {
   const anchor = useDerivedValue(() => {
     const v = readView(shared);
     const at = originOnScreen(v, origin);
     const scale = Math.min(CLOUD_MAX_SCALE, Math.max(CLOUD_MIN_SCALE, worldScale(v.zoom)));
     return { x: at.x, y: at.y, scale, rotation: (-v.bearing * Math.PI) / 180 };
   }, [origin]);
-  const layer = (which: 'a' | 'b') => {
-    'worklet';
-    const a = anchor.value;
-    const t = animated ? clock.value / 1000 : 0;
-    const dx = which === 'a' ? Math.sin((t / 23) * TAU) : -Math.cos((t / 17) * TAU);
-    const dy = which === 'a' ? Math.cos((t / 31) * TAU) * 0.7 : Math.sin((t / 29) * TAU);
-    return [
-      { translateX: a.x },
-      { translateY: a.y },
-      { rotate: a.rotation },
-      { scale: a.scale },
-      { translateX: dx * DRIFT_AMPLITUDE },
-      { translateY: dy * DRIFT_AMPLITUDE },
-    ];
-  };
-  const layerA = useDerivedValue(() => layer('a'), [animated]);
-  const layerB = useDerivedValue(() => layer('b'), [animated]);
+
+  // The velocity eases to a new wind, and every frame moves the clouds by velocity x time, so nothing jumps.
+  const velX = useSharedValue(drift.x);
+  const velY = useSharedValue(drift.y);
+  const driftX = useSharedValue(0);
+  const driftY = useSharedValue(0);
+  useEffect(() => {
+    velX.value = withTiming(drift.x, { duration: DRIFT_EASE_MS });
+    velY.value = withTiming(drift.y, { duration: DRIFT_EASE_MS });
+  }, [drift.x, drift.y, velX, velY]);
+  const frame = useFrameCallback((info) => {
+    const dt = Math.min(MAX_FRAME_S, (info.timeSincePreviousFrame ?? 0) / 1000);
+    let x = driftX.value + velX.value * dt;
+    let y = driftY.value + velY.value * dt;
+    if (Math.abs(x) > DRIFT_WRAP) x = -x;
+    if (Math.abs(y) > DRIFT_WRAP) y = -y;
+    driftX.value = x;
+    driftY.value = y;
+  }, animated);
+  useEffect(() => {
+    frame.setActive(animated);
+  }, [animated, frame]);
+
+  // The anchor and the drift are read right inside each derived value: Reanimated only re-runs it for shared values it
+  // can see there, and a nested helper hid them, which froze the clouds.
+  const layerA = useDerivedValue(() => cloudTransform(anchor.value, driftX.value, driftY.value, 1));
+  const layerB = useDerivedValue(() => cloudTransform(anchor.value, driftX.value, driftY.value, FINE_LAYER_SPEEDUP));
 
   return (
     <>
@@ -240,9 +274,10 @@ function distanceKm(a: WorldOrigin, b: WorldOrigin): number {
   return haversineDistanceMeters({ lat: a.lat, lng: a.lng }, { lat: b.lat, lng: b.lng }) / 1000;
 }
 
-export default function FogOverlay({ points, livePosition, shared, view, fog, animated = true, rain = 0, userDot = false }: FogOverlayProps) {
+export default function FogOverlay({ points, livePosition, shared, view, fog, animated = true, rain = 0, wind = null, userDot = false }: FogOverlayProps) {
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
   const [origin, setOrigin] = useState<WorldOrigin | null>(null);
+  const drift = useMemo(() => windToDrift(wind), [wind]);
 
   // The world origin: where the view first is, and again when it is more than a long way off (keeps numbers small).
   useEffect(() => {
@@ -319,7 +354,7 @@ export default function FogOverlay({ points, livePosition, shared, view, fog, an
       <Canvas style={StyleSheet.absoluteFill}>
         <Group layer={<Paint />}>
           <Rect x={0} y={0} width={size.width} height={size.height} color={fog.base} />
-          {origin && <FogClouds shared={shared} origin={origin} fog={fog} animated={animated} />}
+          {origin && <FogClouds shared={shared} origin={origin} fog={fog} animated={animated} drift={drift} />}
           {origin && revealPath && (
             <Group transform={sceneTransform}>
               <Path

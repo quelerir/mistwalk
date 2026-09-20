@@ -22,6 +22,7 @@ import type { MapView } from '../lib/geo/projection';
 import { MAP_STYLES } from '../lib/map/styles';
 import { useViewShared, writeView } from '../lib/map/viewShared';
 import type { Poi } from '../lib/poi/types';
+import type { Wind } from '../lib/weather/weather';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
@@ -38,6 +39,7 @@ export interface MapScreenProps {
   fog: FogPalette;
   fogAnimated: boolean;
   rain: number;
+  wind: Wind | null;
   view: MapView | null;
   onViewChange: (view: MapView) => void;
   route: WalkingRoute | null;
@@ -60,6 +62,7 @@ export default function MapScreen({
   fog,
   fogAnimated,
   rain,
+  wind,
   view,
   onViewChange,
   route,
@@ -181,7 +184,7 @@ export default function MapScreen({
         <Camera ref={cameraRef} initialViewState={{ zoom: FOLLOW_ZOOM }} />
         {Platform.OS !== 'android' && <UserLocation />}
       </Map>
-      <FogOverlay points={points} livePosition={livePosition} shared={shared} view={view} fog={fog} animated={fogAnimated} rain={rain} userDot={Platform.OS === 'android'} />
+      <FogOverlay points={points} livePosition={livePosition} shared={shared} view={view} fog={fog} animated={fogAnimated} rain={rain} wind={wind} userDot={Platform.OS === 'android'} />
       <RouteOverlay coordinates={progress?.coordinates ?? route?.coordinates ?? null} shared={shared} />
       <PoiMarkers
         pois={pois}

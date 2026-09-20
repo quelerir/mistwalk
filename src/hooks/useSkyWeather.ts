@@ -1,12 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Coordinate } from '../lib/geo/distance';
-import { fetchWeather, rainIntensity } from '../lib/weather/weather';
+import { fetchWeather, rainIntensity, type Wind } from '../lib/weather/weather';
 
 const REFRESH_MS = 30 * 60 * 1000;
 
-// Rain intensity (0..1) at your position, refreshed every half hour; 0 until known, or when off.
-export function useRain(position: Coordinate | null, enabled: boolean): number {
-  const [rain, setRain] = useState(0);
+export interface SkyWeather {
+  rain: number; // 0..1
+  wind: Wind | null;
+}
+
+const NONE: SkyWeather = { rain: 0, wind: null };
+
+// Rain intensity (0..1) and wind at your position, refreshed every half hour; nothing until known, or when off.
+export function useSkyWeather(position: Coordinate | null, enabled: boolean): SkyWeather {
+  const [sky, setSky] = useState<SkyWeather>(NONE);
   const latest = useRef<Coordinate | null>(position);
   latest.current = position;
   const hasPosition = position !== null;
@@ -15,7 +22,7 @@ export function useRain(position: Coordinate | null, enabled: boolean): number {
 
   useEffect(() => {
     if (!enabled || !hasPosition) {
-      if (!enabled) setRain(0);
+      if (!enabled) setSky(NONE);
       return;
     }
     let cancelled = false;
@@ -23,7 +30,7 @@ export function useRain(position: Coordinate | null, enabled: boolean): number {
       const at = latest.current;
       if (!at) return;
       void fetchWeather(at).then((weather) => {
-        if (!cancelled && weather) setRain(rainIntensity(weather));
+        if (!cancelled && weather) setSky({ rain: rainIntensity(weather), wind: weather.wind ?? null });
       });
     };
     load();
@@ -34,5 +41,5 @@ export function useRain(position: Coordinate | null, enabled: boolean): number {
     };
   }, [enabled, hasPosition, area]);
 
-  return enabled ? rain : 0;
+  return enabled ? sky : NONE;
 }

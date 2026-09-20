@@ -19,7 +19,7 @@ import { getPlaceNotifications, setPlaceNotifications } from '../lib/settings/pl
 import { getWeeklySummary, setWeeklySummary } from '../lib/settings/weeklySummary';
 import { getOfflineMap, setOfflineMap } from '../lib/settings/offlineMap';
 import { getWeatherFog, setWeatherFog } from '../lib/settings/weatherFog';
-import { useRain } from '../hooks/useRain';
+import { useSkyWeather } from '../hooks/useSkyWeather';
 import { MAP_STYLES } from '../lib/map/styles';
 import { clearOfflineAreas, ensureOfflineArea, offlineMapBytes } from '../services/offlineMap';
 import { dailyKm, weekSummary } from '../lib/stats/weekly';
@@ -149,7 +149,7 @@ export default function MainScreen({
       .catch(() => {});
   }, [client, userId, showFollows]);
   const insets = useSafeAreaInsets();
-  const rain = useRain(livePosition, weatherFogOn);
+  const { rain, wind } = useSkyWeather(livePosition, weatherFogOn);
   // Keep the area around you on the phone (Wi-Fi only; the service decides when a download is due).
   useEffect(() => {
     if (offlineMapOn && livePosition) void ensureOfflineArea(livePosition, MAP_STYLES[scheme]);
@@ -330,6 +330,7 @@ export default function MainScreen({
             fog={FOG_PALETTES[resolveFogStyle(fogStyle, hour)]}
             fogAnimated={fogAnimated}
             rain={rain}
+            wind={wind}
             view={view}
             onViewChange={setView}
             route={route}
