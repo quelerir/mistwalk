@@ -4,8 +4,9 @@ import type { Tile } from './tiles';
 import type { Poi } from './types';
 
 export const POIS_FUNCTION_NAME = 'pois';
-// A cache miss makes the function query Overpass, which can hang; give up early and go direct.
-export const PROXY_TIMEOUT_MS = 10000;
+// A cache miss makes the function query Overpass, which can take 20 s for a dense city tile; wait for it, and only
+// then go direct. The function keeps working after we stop waiting, so a retry finds the tile in the shared cache.
+export const PROXY_TIMEOUT_MS = 30000;
 // Tells the function this build knows the newer kinds of places (museum, park, beach, worship, nature); older builds
 // send nothing and get only the original six.
 export const KINDS_VERSION = 2;

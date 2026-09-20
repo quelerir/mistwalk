@@ -2,6 +2,8 @@ import type { Poi, PoiKind } from './types';
 import type { TileBounds } from './tiles';
 
 export const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
+// Same query, another public server: used when the first one is busy.
+export const OVERPASS_URLS = [OVERPASS_URL, 'https://overpass.private.coffee/api/interpreter'];
 
 // Named places worth a walk. Parks, temples and lesser historic buildings must also have a wikidata entry, otherwise
 // a big city would fill the map with every churchyard and lawn.

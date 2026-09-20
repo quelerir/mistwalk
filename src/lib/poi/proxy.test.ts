@@ -16,7 +16,7 @@ describe('fetchTileViaProxy', () => {
     expect(await fetchTileViaProxy(client, tile)).toEqual([poi]);
     expect(invoke).toHaveBeenCalledWith('pois', {
       body: { z: 13, x: 1310, y: 3166, kinds: 2 },
-      timeout: 10000,
+      timeout: 30000,
     });
   });
 

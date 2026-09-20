@@ -1,4 +1,4 @@
-import { buildNearbyList, kindCounts, type NearbyOptions } from './nearbyList';
+import { buildNearbyList, countInRadius, emptyMessage, kindCounts, type NearbyOptions } from './nearbyList';
 import type { Poi, PoiKind } from './types';
 
 const origin = { lat: 55.75, lng: 37.6 };
@@ -62,11 +62,44 @@ describe('buildNearbyList', () => {
   });
 });
 
+describe('countInRadius', () => {
+  it('counts places within the radius, found ones included', () => {
+    expect(countInRadius(origin, pois, 1000)).toBe(4);
+    expect(countInRadius(origin, pois, 60)).toBe(1);
+  });
+
+  it('is zero without a position or with nothing around', () => {
+    expect(countInRadius(null, pois, 1000)).toBe(0);
+    expect(countInRadius(origin, [], 1000)).toBe(0);
+  });
+});
+
 describe('kindCounts', () => {
   it('counts undiscovered places in the radius per kind, biggest group first', () => {
     expect(kindCounts(origin, pois, new Set(['done']), 1000)).toEqual([
       { kind: 'monument', count: 2 },
       { kind: 'castle', count: 1 },
     ]);
+  });
+});
+
+describe('emptyMessage', () => {
+  it('waits for the position first', () => {
+    expect(emptyMessage(false, 'idle', 0)).toBe('Ждём вашу позицию…');
+    expect(emptyMessage(false, 'loading', 5)).toBe('Ждём вашу позицию…');
+  });
+
+  it('says the places are loading, or that the server is not answering, while there are none yet', () => {
+    expect(emptyMessage(true, 'loading', 0)).toBe('Загружаем места рядом…');
+    expect(emptyMessage(true, 'retrying', 0)).toBe('Сервер мест не отвечает, пробуем снова…');
+  });
+
+  it('tells "nothing here" apart from "everything found"', () => {
+    expect(emptyMessage(true, 'idle', 0)).toContain('мест не нашлось');
+    expect(emptyMessage(true, 'idle', 7)).toContain('всё открыто');
+  });
+
+  it('does not claim the places are loading once some are known', () => {
+    expect(emptyMessage(true, 'loading', 3)).toContain('всё открыто');
   });
 });

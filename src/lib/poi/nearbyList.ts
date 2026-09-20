@@ -1,4 +1,5 @@
 import { haversineDistanceMeters, type Coordinate } from '../geo/distance';
+import type { PlacesStatus } from './placesStatus';
 import type { Poi, PoiKind } from './types';
 
 export type NearbySort = 'distance' | 'distance-desc' | 'name' | 'name-desc';
@@ -49,6 +50,21 @@ export function buildNearbyList(
   );
   items.sort(COMPARE[sort]);
   return items.slice(0, limit);
+}
+
+// How many places lie within the radius, found or not: tells "there is nothing here" apart from "you found it all".
+export function countInRadius(origin: Coordinate | null, pois: Poi[], radiusMeters: number): number {
+  if (!origin) return 0;
+  return pois.filter((p) => haversineDistanceMeters(origin, p) <= radiusMeters).length;
+}
+
+// What to say when the list is empty: waiting for the position, fetching, nothing there, or everything already found.
+export function emptyMessage(hasPosition: boolean, status: PlacesStatus, placesInRadius: number): string {
+  if (!hasPosition) return 'Ждём вашу позицию…';
+  if (placesInRadius === 0 && status === 'retrying') return 'Сервер мест не отвечает, пробуем снова…';
+  if (placesInRadius === 0 && status === 'loading') return 'Загружаем места рядом…';
+  if (placesInRadius === 0) return 'В радиусе километра мест не нашлось. Пройдитесь дальше!';
+  return 'В радиусе километра всё открыто. Пройдитесь дальше!';
 }
 
 export function kindCounts(

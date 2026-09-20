@@ -3,7 +3,11 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const TILE_ZOOM = 13;
 const Q = String.fromCharCode(34);
-const MIRROR_TIMEOUT_MS = 12000;
+// A dense city tile takes Overpass 15 s and more with the wider set of places (its own query limit is 25 s), so wait for it
+// instead of giving up at 12 s, which left the cache empty and every phone asking Overpass by itself.
+const MIRROR_TIMEOUT_MS = 28000;
+// Tiles being fetched right now: a retry that comes while the first request is still running shares it.
+const filling = new Map<string, Promise<any[]>>();
 const OVERPASS_URLS = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter"];
 // Builds that predate the wider set of places do not know the newer kinds and would crash on them, so only clients
 // that say they understand them (kinds: 2 in the request) get those; the rest are sent the six original kinds.
@@ -130,10 +134,19 @@ Deno.serve(async (req: Request) => {
   const { data: cached } = await db.from("poi_tiles").select("pois, fetched_at").eq("tile_key", key).maybeSingle();
   if (cached && Date.now() - Date.parse(cached.fetched_at) < TTL_MS) return reply(forClient(cached.pois));
 
+  let job = filling.get(key);
+  if (!job) {
+    job = (async () => {
+      const pois = parse(await fetchOverpass(buildQuery(z, x, y)));
+      await db.from("poi_tiles").upsert({ tile_key: key, pois, fetched_at: new Date().toISOString() });
+      return pois;
+    })().finally(() => filling.delete(key));
+    filling.set(key, job);
+    // Keep going after a phone has given up waiting, so a slow tile still lands in the cache for its next try.
+    (globalThis as any).EdgeRuntime?.waitUntil?.(job.catch(() => {}));
+  }
   try {
-    const pois = parse(await fetchOverpass(buildQuery(z, x, y)));
-    await db.from("poi_tiles").upsert({ tile_key: key, pois, fetched_at: new Date().toISOString() });
-    return reply(forClient(pois));
+    return reply(forClient(await job));
   } catch (err) {
     if (cached) return reply(forClient(cached.pois));
     return reply({ error: String(err) }, 502);

@@ -112,7 +112,7 @@ export default function MainScreen({
   const [offlineMapOn, setOfflineMapOn] = useState(true);
   const [offlineMb, setOfflineMb] = useState<number | null>(null);
   const { scheme } = useTheme();
-  const { pois, discovered, discoveredIds, greeting, dismissGreeting } = usePlaces({
+  const { pois, discovered, discoveredIds, greeting, dismissGreeting, status: placesStatus } = usePlaces({
     client,
     userId,
     view,
@@ -332,6 +332,7 @@ export default function MainScreen({
             fogAnimated={fogAnimated}
             rain={rain}
             wind={wind}
+            placesStatus={placesStatus}
             view={view}
             onViewChange={setView}
             route={route}
@@ -351,6 +352,7 @@ export default function MainScreen({
             pois={pois}
             discoveredIds={discoveredIds}
             origin={livePosition}
+            placesStatus={placesStatus}
             onSelect={handleSelect}
           />
         )}

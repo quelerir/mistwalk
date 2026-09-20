@@ -1,5 +1,5 @@
 import type { KeyValueStorage } from '../settings/accuracyProfile';
-import { buildOverpassQuery, OVERPASS_URL, parseOverpassResponse } from './overpass';
+import { buildOverpassQuery, OVERPASS_URLS, parseOverpassResponse } from './overpass';
 import { tileBounds, tileKey, type Tile } from './tiles';
 import type { Poi } from './types';
 
@@ -45,12 +45,36 @@ export function createPoiLoader({ storage, fetchTile, now = Date.now }: PoiCache
   };
 }
 
+// Overpass is a free public service: it answers 504 when busy or takes a minute, so ask each mirror for a limited time
+// and try the next one instead of hanging on the first.
+export const DIRECT_TIMEOUT_MS = 20000;
+
+async function fetchOverpassOnce(url: string, query: string): Promise<Poi[]> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), DIRECT_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `data=${encodeURIComponent(query)}`,
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`Overpass responded with ${response.status}`);
+    return parseOverpassResponse(await response.json());
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function fetchTileFromOverpass(tile: Tile): Promise<Poi[]> {
-  const response = await fetch(OVERPASS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `data=${encodeURIComponent(buildOverpassQuery(tileBounds(tile)))}`,
-  });
-  if (!response.ok) throw new Error(`Overpass responded with ${response.status}`);
-  return parseOverpassResponse(await response.json());
+  const query = buildOverpassQuery(tileBounds(tile));
+  const errors: string[] = [];
+  for (const url of OVERPASS_URLS) {
+    try {
+      return await fetchOverpassOnce(url, query);
+    } catch (err) {
+      errors.push(`${url}: ${String(err)}`);
+    }
+  }
+  throw new Error(`Overpass unavailable (${errors.join('; ')})`);
 }

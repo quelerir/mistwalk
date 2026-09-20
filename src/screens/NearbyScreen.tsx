@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { KIND_LABEL } from '../lib/poi/greeting';
-import { buildNearbyList, kindCounts, type NearbySort } from '../lib/poi/nearbyList';
+import { buildNearbyList, countInRadius, emptyMessage, kindCounts, type NearbySort } from '../lib/poi/nearbyList';
+import type { PlacesStatus } from '../lib/poi/placesStatus';
 import KindIcon from '../components/KindIcon';
 import SvgIcon from '../components/icons/SvgIcon';
 import type { Poi, PoiKind } from '../lib/poi/types';
@@ -15,6 +16,8 @@ export interface NearbyScreenProps {
   pois: Poi[];
   discoveredIds: ReadonlySet<string>;
   origin: { lat: number; lng: number } | null;
+  // Whether the places around are still being fetched; an empty list is only "nothing here" once they are in.
+  placesStatus: PlacesStatus;
   onSelect: (poi: Poi) => void;
 }
 
@@ -63,7 +66,7 @@ function FilterButton({ label, count, active, onPress, styles, children }: Filte
   );
 }
 
-export default function NearbyScreen({ pois, discoveredIds, origin, onSelect }: NearbyScreenProps) {
+export default function NearbyScreen({ pois, discoveredIds, origin, placesStatus, onSelect }: NearbyScreenProps) {
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   const [kind, setKind] = useState<PoiKind | 'all'>('all');
@@ -135,7 +138,7 @@ export default function NearbyScreen({ pois, discoveredIds, origin, onSelect }: 
       )}
       {nearby.length === 0 ? (
         <Text style={styles.empty}>
-          {origin ? 'В радиусе километра всё открыто. Пройдитесь дальше!' : 'Ждём вашу позицию…'}
+          {emptyMessage(origin !== null, placesStatus, countInRadius(origin, pois, NEARBY_RADIUS_METERS))}
         </Text>
       ) : (
         <FlatList

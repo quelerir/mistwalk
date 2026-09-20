@@ -22,6 +22,8 @@ import type { MapView } from '../lib/geo/projection';
 import { MAP_STYLES } from '../lib/map/styles';
 import { useViewShared, writeView } from '../lib/map/viewShared';
 import type { Poi } from '../lib/poi/types';
+import type { PlacesStatus } from '../lib/poi/placesStatus';
+import PlacesStatusPill from '../components/PlacesStatusPill';
 import type { Wind } from '../lib/weather/weather';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
@@ -40,6 +42,7 @@ export interface MapScreenProps {
   fogAnimated: boolean;
   rain: number;
   wind: Wind | null;
+  placesStatus: PlacesStatus;
   view: MapView | null;
   onViewChange: (view: MapView) => void;
   route: WalkingRoute | null;
@@ -63,6 +66,7 @@ export default function MapScreen({
   fogAnimated,
   rain,
   wind,
+  placesStatus,
   view,
   onViewChange,
   route,
@@ -215,6 +219,7 @@ export default function MapScreen({
           />
         )
       )}
+      {active && <PlacesStatusPill status={placesStatus} />}
       {!following && (
         <Pressable
           style={styles.recenter}
