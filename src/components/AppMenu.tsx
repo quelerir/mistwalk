@@ -12,6 +12,11 @@ import {
   type AccuracyProfile,
 } from '../lib/settings/accuracyProfile';
 
+// Settings are listed in these groups, in this order.
+const APPEARANCE = 'Внешний вид';
+const MAP_AND_POSITION = 'Карта и позиция';
+const NOTIFICATIONS = 'Уведомления';
+
 export interface AppMenuProps {
   visible: boolean;
   onClose: () => void;
@@ -141,6 +146,7 @@ export default function AppMenu({
     { key: 'back', icon: 'back', label: 'Назад', onPress: () => setPage('main') },
     {
       key: 'theme',
+      group: APPEARANCE,
       icon: 'moon',
       label: 'Тема',
       value: THEME_LABELS[preference],
@@ -148,6 +154,8 @@ export default function AppMenu({
     },
     {
       key: 'fog',
+      group: APPEARANCE,
+      hint: 'Авто: днём дымка, вечером чернила, ночью синий туман.',
       icon: 'cloud',
       label: 'Стиль тумана',
       value: FOG_STYLE_LABELS[fogStyle],
@@ -155,6 +163,7 @@ export default function AppMenu({
     },
     {
       key: 'fogAnimation',
+      group: APPEARANCE,
       icon: 'cloud',
       label: 'Анимация тумана',
       on: fogAnimated,
@@ -162,6 +171,8 @@ export default function AppMenu({
     },
     {
       key: 'weatherFog',
+      group: APPEARANCE,
+      hint: 'Рисует дождь, когда он идёт у вас, и пускает облака по ветру.',
       icon: 'weather',
       label: 'Дождь на карте',
       on: weatherFog,
@@ -169,6 +180,8 @@ export default function AppMenu({
     },
     {
       key: 'accuracy',
+      group: MAP_AND_POSITION,
+      hint: 'Запоминать позицию каждые 25 м или 75 м; экономия бережёт батарею.',
       icon: 'locate',
       label: 'Точность GPS',
       value: accuracy === 'precise' ? 'Точный' : 'Экономия',
@@ -176,6 +189,8 @@ export default function AppMenu({
     },
     {
       key: 'background',
+      group: MAP_AND_POSITION,
+      hint: 'Запоминает путь, пока приложение свёрнуто или экран выключен.',
       icon: 'navigate',
       label: 'Работа в фоне',
       value: backgroundEnabled ? 'Включена' : 'Включить',
@@ -184,21 +199,26 @@ export default function AppMenu({
       },
     },
     {
-      key: 'placeNotifications',
-      icon: 'bell',
-      label: 'Уведомления о местах',
-      on: placeNotifications,
-      onPress: () => void onPlaceNotificationsChange(!placeNotifications),
-    },
-    {
       key: 'offlineMap',
+      group: MAP_AND_POSITION,
+      hint: 'Сохраняет в телефоне карту района 5×5 км вокруг вас, только по Wi-Fi.',
       icon: 'download',
       label: offlineMap && offlineMapMb ? `Карта без сети · ${offlineMapMb} МБ` : 'Карта без сети',
       on: offlineMap,
       onPress: () => void onOfflineMapChange(!offlineMap),
     },
     {
+      key: 'placeNotifications',
+      group: NOTIFICATIONS,
+      icon: 'bell',
+      label: 'Уведомления о местах',
+      on: placeNotifications,
+      onPress: () => void onPlaceNotificationsChange(!placeNotifications),
+    },
+    {
       key: 'weeklySummary',
+      group: NOTIFICATIONS,
+      hint: 'Раз в неделю: сколько километров и мест вы открыли.',
       icon: 'award',
       label: 'Итоги недели',
       on: weeklySummary,

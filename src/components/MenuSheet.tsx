@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SvgIcon from './icons/SvgIcon';
 import type { IconName } from './icons/svgIcons';
@@ -11,9 +11,13 @@ export interface MenuItem {
   icon: IconName;
   label: string;
   value?: string;
+  // A short grey line under the label for settings that are not obvious.
+  hint?: string;
   // A switch instead of a value: on/off settings.
   on?: boolean;
   destructive?: boolean;
+  // Items of the same group sit together under a small title; a new group starts where the name changes.
+  group?: string;
   onPress: () => void;
 }
 
@@ -24,10 +28,14 @@ export interface MenuSheetProps {
   onClose: () => void;
 }
 
+// The handle, the sheet's paddings and a gap of backdrop on top: what the list cannot use of the screen height.
+const SHEET_CHROME = 90;
+
 export default function MenuSheet({ visible, items, header, onClose }: MenuSheetProps) {
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -35,35 +43,46 @@ export default function MenuSheet({ visible, items, header, onClose }: MenuSheet
       <View style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}>
         <View style={styles.handle} />
         {header}
-        {items.map((item, index) => {
-          const color = item.destructive ? c.danger : c.text;
-          return (
-            <Pressable
-              key={item.key}
-              style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-              onPress={item.onPress}
-              accessibilityRole={item.on !== undefined ? 'switch' : 'button'}
-              accessibilityState={item.on !== undefined ? { checked: item.on } : undefined}
-              accessibilityLabel={item.label}
-            >
-              <View style={styles.icon}>
-                <SvgIcon name={item.icon} size={20} color={item.destructive ? c.danger : c.accent} background={c.surfaceAlt} />
-              </View>
-              <View style={[styles.labelWrap, index < items.length - 1 && styles.separator]}>
-                <Text style={[styles.label, { color }]} numberOfLines={1}>
-                  {item.label}
-                </Text>
-                {item.on !== undefined ? (
-                  <View style={[styles.track, item.on && styles.trackOn]}>
-                    <View style={[styles.knob, item.on && styles.knobOn]} />
+        {/* Long lists (settings with their groups) scroll instead of running off a small screen. */}
+        <ScrollView style={{ maxHeight: windowHeight - insets.top - insets.bottom - SHEET_CHROME }} bounces={false} showsVerticalScrollIndicator={false}>
+          {items.map((item, index) => {
+            const color = item.destructive ? c.danger : c.text;
+            const next = items[index + 1];
+            const startsGroup = item.group !== undefined && item.group !== items[index - 1]?.group;
+            return (
+              <React.Fragment key={item.key}>
+                {startsGroup && <Text style={styles.group}>{item.group}</Text>}
+                <Pressable
+                  style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+                  onPress={item.onPress}
+                  accessibilityRole={item.on !== undefined ? 'switch' : 'button'}
+                  accessibilityState={item.on !== undefined ? { checked: item.on } : undefined}
+                  accessibilityLabel={item.label}
+                >
+                  <View style={styles.icon}>
+                    <SvgIcon name={item.icon} size={20} color={item.destructive ? c.danger : c.accent} background={c.surfaceAlt} />
                   </View>
-                ) : item.value ? (
-                  <Text style={styles.value}>{item.value}</Text>
-                ) : null}
-              </View>
-            </Pressable>
-          );
-        })}
+                  {/* No line under the last row of a group: the next group's title separates it. */}
+                  <View style={[styles.labelWrap, next && next.group === item.group && styles.separator]}>
+                    <View style={styles.labelText}>
+                      <Text style={[styles.label, { color }]} numberOfLines={1}>
+                        {item.label}
+                      </Text>
+                      {item.hint ? <Text style={styles.hint}>{item.hint}</Text> : null}
+                    </View>
+                    {item.on !== undefined ? (
+                      <View style={[styles.track, item.on && styles.trackOn]}>
+                        <View style={[styles.knob, item.on && styles.knobOn]} />
+                      </View>
+                    ) : item.value ? (
+                      <Text style={styles.value}>{item.value}</Text>
+                    ) : null}
+                  </View>
+                </Pressable>
+              </React.Fragment>
+            );
+          })}
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -74,8 +93,6 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   sheet: {
     backgroundColor: c.sheetBg,
     paddingTop: 10,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
   },
   handle: {
     alignSelf: 'center',
@@ -85,6 +102,7 @@ const makeStyles = (c: Colors) => StyleSheet.create({
     backgroundColor: c.sheetHandle,
     marginBottom: 6,
   },
+  group: { paddingHorizontal: 18, paddingTop: 14, paddingBottom: 2, fontSize: 12, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', color: c.textMuted },
   row: { flexDirection: 'row', alignItems: 'center', paddingLeft: 18, minHeight: 60 },
   rowPressed: { backgroundColor: c.surfaceAlt },
   icon: { width: 40, height: 40, borderRadius: 20, backgroundColor: c.surfaceAlt, alignItems: 'center', justifyContent: 'center', marginRight: 14 },
@@ -97,7 +115,9 @@ const makeStyles = (c: Colors) => StyleSheet.create({
     paddingRight: 18,
   },
   separator: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
-  label: { fontSize: 17, fontWeight: '600', flexShrink: 1 },
+  labelText: { flex: 1, paddingVertical: 10 },
+  label: { fontSize: 17, fontWeight: '600' },
+  hint: { marginTop: 2, fontSize: 13, lineHeight: 17, color: c.textMuted },
   value: { fontSize: 15, color: c.textMuted, marginLeft: 12 },
   track: { width: 48, height: 28, borderRadius: 14, backgroundColor: c.surfaceAlt, borderWidth: StyleSheet.hairlineWidth, borderColor: c.borderStrong, justifyContent: 'center', paddingHorizontal: 2 },
   trackOn: { backgroundColor: c.accent, borderColor: c.accent },
