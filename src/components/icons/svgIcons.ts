@@ -15,6 +15,9 @@ export type IconName =
   | 'book'
   | 'sort-distance'
   | 'sort-name'
+  | 'sort-distance-desc'
+  | 'sort-name-desc'
+  | 'check'
   | 'grid'
   | 'logout'
   | 'navigate'
@@ -122,6 +125,17 @@ export const ICONS: Record<IconName, { outline: IconLayer[]; active: IconLayer[]
     { d: 'M3 14h7l-7 8h7', mode: 'stroke' },
     { d: 'M20 5v14M16.5 15.5L20 19l3.5-3.5', mode: 'stroke' },
   ]),
+  // The same two, backwards: long bars first, letters Я–А, and an "up" arrow.
+  'sort-distance-desc': shapes([
+    { d: 'M3 6h13M3 12h9M3 18h5', mode: 'stroke' },
+    { d: 'M20 19V5M16.5 8.5L20 5l3.5 3.5', mode: 'stroke' },
+  ]),
+  'sort-name-desc': shapes([
+    { d: 'M3 2h7l-7 8h7', mode: 'stroke' },
+    { d: 'M3 22l3.5-8L10 22M4.6 19h3.8', mode: 'stroke' },
+    { d: 'M20 19V5M16.5 8.5L20 5l3.5 3.5', mode: 'stroke' },
+  ]),
+  check: line('M5 12.5l4.5 4.5L19 7.5'),
   // Four squares: "all kinds".
   grid: shapes([
     { d: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z', mode: 'stroke' },

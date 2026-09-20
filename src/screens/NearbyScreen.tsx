@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { KIND_LABEL } from '../lib/poi/greeting';
 import { buildNearbyList, kindCounts, type NearbySort } from '../lib/poi/nearbyList';
 import KindIcon from '../components/KindIcon';
@@ -7,6 +7,7 @@ import SvgIcon from '../components/icons/SvgIcon';
 import type { Poi, PoiKind } from '../lib/poi/types';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
+import type { IconName } from '../components/icons/svgIcons';
 import { FONT } from '../theme/fonts';
 import { KIND_COLOR, kindTint } from '../lib/poi/kindColors';
 
@@ -20,7 +21,13 @@ export interface NearbyScreenProps {
 const MAX_LISTED = 30;
 const NEARBY_RADIUS_METERS = 1000;
 
-const SORT_HINT: Record<NearbySort, string> = { distance: 'Сортировка: ближние', name: 'Сортировка: по названию' };
+const SORT_OPTIONS: Array<{ sort: NearbySort; label: string; icon: IconName }> = [
+  { sort: 'distance', label: 'Сначала ближние', icon: 'sort-distance' },
+  { sort: 'distance-desc', label: 'Сначала дальние', icon: 'sort-distance-desc' },
+  { sort: 'name', label: 'По названию А — Я', icon: 'sort-name' },
+  { sort: 'name-desc', label: 'По названию Я — А', icon: 'sort-name-desc' },
+];
+const SORT_BY_KEY = Object.fromEntries(SORT_OPTIONS.map((o) => [o.sort, o])) as Record<NearbySort, (typeof SORT_OPTIONS)[number]>;
 
 function formatDistance(meters: number): string {
   return meters < 1000 ? `${Math.round(meters / 10) * 10} м` : `${(meters / 1000).toFixed(1)} км`;
@@ -61,6 +68,9 @@ export default function NearbyScreen({ pois, discoveredIds, origin, onSelect }: 
   const { colors: c } = useTheme();
   const [kind, setKind] = useState<PoiKind | 'all'>('all');
   const [sort, setSort] = useState<NearbySort>('distance');
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
+  // Where the sort menu hangs: just under the row that holds its button.
+  const [menuTop, setMenuTop] = useState(0);
   const counts = useMemo(
     () => kindCounts(origin, pois, discoveredIds, NEARBY_RADIUS_METERS),
     [pois, discoveredIds, origin]
@@ -82,16 +92,20 @@ export default function NearbyScreen({ pois, discoveredIds, origin, onSelect }: 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Рядом</Text>
-      <View style={styles.subtitleRow}>
+      <View
+        style={styles.subtitleRow}
+        onLayout={(e: LayoutChangeEvent) => setMenuTop(e.nativeEvent.layout.y + e.nativeEvent.layout.height + 4)}
+      >
         <Text style={styles.subtitle}>Неоткрытые места до 1 км</Text>
         {total > 0 && (
           <Pressable
-            onPress={() => setSort(sort === 'distance' ? 'name' : 'distance')}
+            onPress={() => setSortMenuOpen((open) => !open)}
             accessibilityRole="button"
-            accessibilityLabel={SORT_HINT[sort]}
+            accessibilityLabel={`Сортировка: ${SORT_BY_KEY[sort].label}`}
+            accessibilityState={{ expanded: sortMenuOpen }}
             hitSlop={10}
           >
-            <SvgIcon name={sort === 'distance' ? 'sort-distance' : 'sort-name'} size={24} color={c.text} />
+            <SvgIcon name={SORT_BY_KEY[sort].icon} size={24} color={c.text} />
           </Pressable>
         )}
       </View>
@@ -149,6 +163,32 @@ export default function NearbyScreen({ pois, discoveredIds, origin, onSelect }: 
           )}
         />
       )}
+      {sortMenuOpen && (
+        <>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setSortMenuOpen(false)} accessibilityLabel="Закрыть" />
+          <View style={[styles.sortMenu, { top: menuTop }]} accessibilityRole="menu">
+            {SORT_OPTIONS.map((option) => {
+              const selected = option.sort === sort;
+              return (
+                <Pressable
+                  key={option.sort}
+                  style={({ pressed }) => [styles.sortRow, pressed && styles.rowPressed]}
+                  onPress={() => {
+                    setSort(option.sort);
+                    setSortMenuOpen(false);
+                  }}
+                  accessibilityRole="menuitem"
+                  accessibilityState={{ selected }}
+                >
+                  <SvgIcon name={option.icon} size={22} color={selected ? c.accent : c.textMuted} />
+                  <Text style={[styles.sortLabel, selected && styles.sortLabelSelected]}>{option.label}</Text>
+                  {selected && <SvgIcon name="check" size={20} color={c.accent} />}
+                </Pressable>
+              );
+            })}
+          </View>
+        </>
+      )}
     </View>
   );
 }
@@ -177,6 +217,24 @@ const makeStyles = (c: Colors) => StyleSheet.create({
     justifyContent: 'center',
   },
   countText: { fontSize: 11, fontWeight: '700', color: c.text },
+  sortMenu: {
+    position: 'absolute',
+    right: 16,
+    minWidth: 250,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  sortRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  sortLabel: { flex: 1, fontSize: 16, color: c.text },
+  sortLabelSelected: { fontWeight: '600', color: c.accent },
   empty: { marginTop: 32, textAlign: 'center', color: c.textMuted },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
   iconBadge: {

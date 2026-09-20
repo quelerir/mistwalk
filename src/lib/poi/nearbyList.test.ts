@@ -33,6 +33,21 @@ describe('buildNearbyList', () => {
     expect(list.map((i) => i.poi.name)).toEqual(['Арка', 'Башня', 'Яблоко']);
   });
 
+  it('sorts by name backwards, Я to А', () => {
+    const list = buildNearbyList(origin, pois, new Set(['done']), { ...base, sort: 'name-desc' });
+    expect(list.map((i) => i.poi.name)).toEqual(['Яблоко', 'Башня', 'Арка']);
+  });
+
+  it('sorts by distance, farthest first', () => {
+    const list = buildNearbyList(origin, pois, new Set(['done']), { ...base, sort: 'distance-desc' });
+    expect(list.map((i) => i.poi.id)).toEqual(['a', 'c', 'b']);
+  });
+
+  it('applies the limit after the sort, so farthest first keeps the farthest ones', () => {
+    const list = buildNearbyList(origin, pois, new Set(['done']), { ...base, sort: 'distance-desc', limit: 2 });
+    expect(list.map((i) => i.poi.id)).toEqual(['a', 'c']);
+  });
+
   it('applies the limit after the filter, so a rare kind is not cut off', () => {
     const many = [
       ...Array.from({ length: 5 }, (_, i) => poi(`m${i}`, `M${i}`, 'monument', 0.0001 * (i + 1))),
