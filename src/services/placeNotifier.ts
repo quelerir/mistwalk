@@ -8,7 +8,7 @@ import type { DiscoveredPlace, Poi } from '../lib/poi/types';
 import { getPlaceNotifications } from '../lib/settings/placeNotifications';
 
 const STATE_KEY = 'notifications.placeState.v1';
-const TILE_KEY_PREFIX = 'poi.tile.v2.';
+const TILE_KEY_PREFIX = 'poi.tile.v3.';
 const DISCOVERED_KEY_PREFIX = 'places.discovered.v1.';
 
 let running = false;

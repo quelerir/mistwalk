@@ -7,6 +7,11 @@ export const KIND_ICON: Record<PoiKind, string> = {
   ruins: '◆',
   attraction: '★',
   artwork: '✎',
+  museum: '▦',
+  park: '❦',
+  beach: '≈',
+  worship: '✚',
+  nature: '▲',
 };
 
 export const KIND_LABEL: Record<PoiKind, string> = {
@@ -16,6 +21,11 @@ export const KIND_LABEL: Record<PoiKind, string> = {
   ruins: 'Руины',
   attraction: 'Достопримечательность',
   artwork: 'Арт-объект',
+  museum: 'Музей',
+  park: 'Парк',
+  beach: 'Пляж',
+  worship: 'Храм',
+  nature: 'Природа',
 };
 
 const GREETINGS: Record<PoiKind, string> = {
@@ -25,6 +35,11 @@ const GREETINGS: Record<PoiKind, string> = {
   ruins: 'Древние руины хранят много историй. Вы их нашли.',
   attraction: 'Достопримечательность найдена. Хорошая прогулка!',
   artwork: 'Вы нашли произведение искусства прямо на улице.',
+  museum: 'Здесь хранится много интересного. Загляните внутрь, если есть время.',
+  park: 'Тенистое место для прогулки. Можно немного отдохнуть.',
+  beach: 'Море совсем рядом. Самое время разуться.',
+  worship: 'Тихое место с длинной историей. Вы его нашли.',
+  nature: 'Красота, которую никто не строил. Хорошее место.',
 };
 
 export function greetingFor(kind: PoiKind): string {

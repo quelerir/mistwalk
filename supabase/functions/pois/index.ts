@@ -5,6 +5,10 @@ const TILE_ZOOM = 13;
 const Q = String.fromCharCode(34);
 const MIRROR_TIMEOUT_MS = 12000;
 const OVERPASS_URLS = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter"];
+// Builds that predate the wider set of places do not know the newer kinds and would crash on them, so only clients
+// that say they understand them (kinds: 2 in the request) get those; the rest are sent the six original kinds.
+const LEGACY_KINDS = new Set(["viewpoint", "monument", "castle", "ruins", "attraction", "artwork"]);
+const CLIENT_KINDS_VERSION = 2;
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 
 function reply(body: any, status = 200) {
@@ -22,18 +26,43 @@ function tileLat(y: number, z: number) {
 
 function buildQuery(z: number, x: number, y: number) {
   const bbox = [tileLat(y + 1, z), tileLng(x, z), tileLat(y, z), tileLng(x + 1, z)].join(",");
-  const tourism = "nwr[" + Q + "tourism" + Q + "~" + Q + "^(viewpoint|attraction|artwork)$" + Q + "][" + Q + "name" + Q + "](" + bbox + ");";
-  const historic = "nwr[" + Q + "historic" + Q + "~" + Q + "^(monument|memorial|castle|ruins|archaeological_site)$" + Q + "][" + Q + "name" + Q + "](" + bbox + ");";
-  return "[out:json][timeout:25];(" + tourism + historic + ");out center;";
+  const clause = (filter: string) => "nwr" + filter + "(" + bbox + ");";
+  const tag = (key: string, values: string) => "[" + Q + key + Q + "~" + Q + "^(" + values + ")$" + Q + "]";
+  const name = "[" + Q + "name" + Q + "]";
+  const wikidata = "[" + Q + "wikidata" + Q + "]";
+  // Parks, temples and lesser historic buildings must also have a wikidata entry, otherwise a big city would fill the
+  // map with every churchyard and lawn.
+  return (
+    "[out:json][timeout:25];(" +
+    clause(tag("tourism", "viewpoint|attraction|artwork|museum|gallery|zoo|theme_park|aquarium") + name) +
+    clause(tag("historic", "monument|memorial|castle|fort|ruins|archaeological_site") + name) +
+    clause(tag("historic", "manor|city_gate|tower|tomb|building") + name + wikidata) +
+    clause(tag("natural", "waterfall|peak|cave_entrance|beach") + name) +
+    clause("[" + Q + "man_made" + Q + "=" + Q + "lighthouse" + Q + "]" + name) +
+    clause("[" + Q + "leisure" + Q + "=" + Q + "park" + Q + "]" + name + wikidata) +
+    clause("[" + Q + "amenity" + Q + "=" + Q + "place_of_worship" + Q + "]" + name + wikidata) +
+    ");out center;"
+  );
 }
 
 function kindOf(tags: any) {
-  if (tags.tourism === "viewpoint") return "viewpoint";
-  if (tags.tourism === "attraction") return "attraction";
-  if (tags.tourism === "artwork") return "artwork";
-  if (tags.historic === "castle") return "castle";
-  if (tags.historic === "ruins" || tags.historic === "archaeological_site") return "ruins";
-  if (tags.historic === "monument" || tags.historic === "memorial") return "monument";
+  switch (tags.tourism) {
+    case "viewpoint": return "viewpoint";
+    case "attraction": case "zoo": case "theme_park": case "aquarium": return "attraction";
+    case "artwork": return "artwork";
+    case "museum": case "gallery": return "museum";
+  }
+  switch (tags.historic) {
+    case "castle": case "fort": return "castle";
+    case "ruins": case "archaeological_site": return "ruins";
+    case "monument": case "memorial": return "monument";
+    case "manor": case "city_gate": case "tower": case "tomb": case "building": return "attraction";
+  }
+  if (tags.natural === "beach") return "beach";
+  if (tags.natural === "waterfall" || tags.natural === "peak" || tags.natural === "cave_entrance") return "nature";
+  if (tags.man_made === "lighthouse") return "attraction";
+  if (tags.leisure === "park") return "park";
+  if (tags.amenity === "place_of_worship") return "worship";
   return null;
 }
 
@@ -86,11 +115,12 @@ Deno.serve(async (req: Request) => {
   }
 
   const { z, x, y } = input ?? {};
+  const forClient = (pois: any[]) => (input?.kinds === CLIENT_KINDS_VERSION ? pois : pois.filter((p) => LEGACY_KINDS.has(p.kind)));
   if (z !== TILE_ZOOM || !Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0 || x >= 2 ** z || y >= 2 ** z) {
     return reply({ error: "invalid tile" }, 400);
   }
 
-  const key = "v2/" + z + "/" + x + "/" + y;
+  const key = "v3/" + z + "/" + x + "/" + y;
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
   const token = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");
@@ -98,14 +128,14 @@ Deno.serve(async (req: Request) => {
   if (authError || !auth.user) return reply({ error: "unauthorized" }, 401);
 
   const { data: cached } = await db.from("poi_tiles").select("pois, fetched_at").eq("tile_key", key).maybeSingle();
-  if (cached && Date.now() - Date.parse(cached.fetched_at) < TTL_MS) return reply(cached.pois);
+  if (cached && Date.now() - Date.parse(cached.fetched_at) < TTL_MS) return reply(forClient(cached.pois));
 
   try {
     const pois = parse(await fetchOverpass(buildQuery(z, x, y)));
     await db.from("poi_tiles").upsert({ tile_key: key, pois, fetched_at: new Date().toISOString() });
-    return reply(pois);
+    return reply(forClient(pois));
   } catch (err) {
-    if (cached) return reply(cached.pois);
+    if (cached) return reply(forClient(cached.pois));
     return reply({ error: String(err) }, 502);
   }
 });

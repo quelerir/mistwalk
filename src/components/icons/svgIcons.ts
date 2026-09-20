@@ -25,7 +25,12 @@ export type IconName =
   | 'poi-castle'
   | 'poi-ruins'
   | 'poi-attraction'
-  | 'poi-artwork';
+  | 'poi-artwork'
+  | 'poi-museum'
+  | 'poi-park'
+  | 'poi-beach'
+  | 'poi-worship'
+  | 'poi-nature';
 
 export type LayerMode = 'stroke' | 'fill' | 'cutout';
 
@@ -152,6 +157,26 @@ export const ICONS: Record<IconName, { outline: IconLayer[]; active: IconLayer[]
     { d: circle(8, 11, 1), mode: 'fill' },
     { d: circle(12, 7.5, 1), mode: 'fill' },
     { d: circle(16, 10, 1), mode: 'fill' },
+  ]),
+  'poi-museum': shapes([
+    { d: 'M3 10l9-6 9 6z', mode: 'stroke' },
+    { d: 'M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 21h18', mode: 'stroke' },
+  ]),
+  'poi-park': shapes([
+    { d: circle(12, 9, 6), mode: 'stroke' },
+    { d: 'M12 15v7M9 22h6', mode: 'stroke' },
+  ]),
+  'poi-beach': shapes([
+    { d: circle(12, 8, 3), mode: 'stroke' },
+    { d: 'M2 15c2-2 4-2 6 0s4 2 6 0 4-2 8 0M2 20c2-2 4-2 6 0s4 2 6 0 4-2 8 0', mode: 'stroke' },
+  ]),
+  'poi-worship': shapes([
+    { d: 'M12 2v5M9.5 4.5h5', mode: 'stroke' },
+    { d: 'M6 22V13l6-5 6 5v9z', mode: 'stroke' },
+    { d: 'M10 22v-4a2 2 0 0 1 4 0v4', mode: 'stroke' },
+  ]),
+  'poi-nature': shapes([
+    { d: 'M2 20l6.5-12 4.5 7 3-4 6 9z', mode: 'stroke' },
   ]),
   settings: shapes([
     { d: 'M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1', mode: 'stroke' },

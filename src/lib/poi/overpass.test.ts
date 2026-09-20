@@ -1,4 +1,4 @@
-import { buildOverpassQuery, parseOverpassResponse } from './overpass';
+import { buildOverpassQuery, kindFromTags, parseOverpassResponse } from './overpass';
 
 describe('buildOverpassQuery', () => {
   it('queries named tourism and historic objects inside the bounds', () => {
@@ -6,8 +6,55 @@ describe('buildOverpassQuery', () => {
     expect(q).toContain('[out:json]');
     expect(q).toContain('(1,2,3,4)');
     expect(q).toContain('viewpoint|attraction|artwork');
-    expect(q).toContain('monument|memorial|castle|ruins|archaeological_site');
+    expect(q).toContain('monument|memorial|castle|fort|ruins|archaeological_site');
     expect(q).toContain('out center');
+  });
+});
+
+describe('buildOverpassQuery: wider set of places', () => {
+  const q = buildOverpassQuery({ south: 1, west: 2, north: 3, east: 4 });
+
+  it('asks for museums, natural sights, beaches, lighthouses, parks and temples', () => {
+    expect(q).toContain('museum|gallery|zoo|theme_park|aquarium');
+    expect(q).toContain('waterfall|peak|cave_entrance|beach');
+    expect(q).toContain('"man_made"="lighthouse"');
+    expect(q).toContain('"leisure"="park"');
+    expect(q).toContain('"amenity"="place_of_worship"');
+  });
+
+  it('keeps parks, temples and lesser historic buildings to those with a wikidata entry', () => {
+    const clause = (needle: string) => q.split(';').find((c) => c.includes(needle)) ?? '';
+    expect(clause('"leisure"="park"')).toContain('["wikidata"]');
+    expect(clause('"amenity"="place_of_worship"')).toContain('["wikidata"]');
+    expect(clause('manor|city_gate')).toContain('["wikidata"]');
+    expect(clause('viewpoint|attraction')).not.toContain('["wikidata"]');
+  });
+});
+
+describe('kindFromTags', () => {
+  it('maps the new tags to kinds', () => {
+    expect(kindFromTags({ tourism: 'museum' })).toBe('museum');
+    expect(kindFromTags({ tourism: 'gallery' })).toBe('museum');
+    expect(kindFromTags({ tourism: 'zoo' })).toBe('attraction');
+    expect(kindFromTags({ historic: 'fort' })).toBe('castle');
+    expect(kindFromTags({ historic: 'manor' })).toBe('attraction');
+    expect(kindFromTags({ natural: 'beach' })).toBe('beach');
+    expect(kindFromTags({ natural: 'waterfall' })).toBe('nature');
+    expect(kindFromTags({ natural: 'peak' })).toBe('nature');
+    expect(kindFromTags({ man_made: 'lighthouse' })).toBe('attraction');
+    expect(kindFromTags({ leisure: 'park' })).toBe('park');
+    expect(kindFromTags({ amenity: 'place_of_worship' })).toBe('worship');
+  });
+
+  it('keeps the old kinds and still ignores other tags', () => {
+    expect(kindFromTags({ tourism: 'viewpoint' })).toBe('viewpoint');
+    expect(kindFromTags({ historic: 'memorial' })).toBe('monument');
+    expect(kindFromTags({ tourism: 'hotel' })).toBeNull();
+    expect(kindFromTags({ shop: 'bakery' })).toBeNull();
+  });
+
+  it('prefers the tourism tag when a temple is also an attraction', () => {
+    expect(kindFromTags({ tourism: 'attraction', amenity: 'place_of_worship' })).toBe('attraction');
   });
 });
 

@@ -10,6 +10,11 @@ const KIND_SVG: Record<PoiKind, IconName> = {
   ruins: 'poi-ruins',
   attraction: 'poi-attraction',
   artwork: 'poi-artwork',
+  museum: 'poi-museum',
+  park: 'poi-park',
+  beach: 'poi-beach',
+  worship: 'poi-worship',
+  nature: 'poi-nature',
 };
 
 export interface KindIconProps {

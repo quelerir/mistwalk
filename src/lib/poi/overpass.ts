@@ -3,12 +3,19 @@ import type { TileBounds } from './tiles';
 
 export const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 
+// Named places worth a walk. Parks, temples and lesser historic buildings must also have a wikidata entry, otherwise
+// a big city would fill the map with every churchyard and lawn.
 export function buildOverpassQuery(b: TileBounds): string {
   const bbox = `${b.south},${b.west},${b.north},${b.east}`;
   return (
     '[out:json][timeout:25];(' +
-    `nwr["tourism"~"^(viewpoint|attraction|artwork)$"]["name"](${bbox});` +
-    `nwr["historic"~"^(monument|memorial|castle|ruins|archaeological_site)$"]["name"](${bbox});` +
+    `nwr["tourism"~"^(viewpoint|attraction|artwork|museum|gallery|zoo|theme_park|aquarium)$"]["name"](${bbox});` +
+    `nwr["historic"~"^(monument|memorial|castle|fort|ruins|archaeological_site)$"]["name"](${bbox});` +
+    `nwr["historic"~"^(manor|city_gate|tower|tomb|building)$"]["name"]["wikidata"](${bbox});` +
+    `nwr["natural"~"^(waterfall|peak|cave_entrance|beach)$"]["name"](${bbox});` +
+    `nwr["man_made"="lighthouse"]["name"](${bbox});` +
+    `nwr["leisure"="park"]["name"]["wikidata"](${bbox});` +
+    `nwr["amenity"="place_of_worship"]["name"]["wikidata"](${bbox});` +
     ');out center;'
   );
 }
@@ -22,13 +29,43 @@ interface OverpassElement {
   tags?: Record<string, string>;
 }
 
-function kindFromTags(tags: Record<string, string>): PoiKind | null {
-  if (tags.tourism === 'viewpoint') return 'viewpoint';
-  if (tags.tourism === 'attraction') return 'attraction';
-  if (tags.tourism === 'artwork') return 'artwork';
-  if (tags.historic === 'castle') return 'castle';
-  if (tags.historic === 'ruins' || tags.historic === 'archaeological_site') return 'ruins';
-  if (tags.historic === 'monument' || tags.historic === 'memorial') return 'monument';
+export function kindFromTags(tags: Record<string, string>): PoiKind | null {
+  switch (tags.tourism) {
+    case 'viewpoint':
+      return 'viewpoint';
+    case 'attraction':
+    case 'zoo':
+    case 'theme_park':
+    case 'aquarium':
+      return 'attraction';
+    case 'artwork':
+      return 'artwork';
+    case 'museum':
+    case 'gallery':
+      return 'museum';
+  }
+  switch (tags.historic) {
+    case 'castle':
+    case 'fort':
+      return 'castle';
+    case 'ruins':
+    case 'archaeological_site':
+      return 'ruins';
+    case 'monument':
+    case 'memorial':
+      return 'monument';
+    case 'manor':
+    case 'city_gate':
+    case 'tower':
+    case 'tomb':
+    case 'building':
+      return 'attraction';
+  }
+  if (tags.natural === 'beach') return 'beach';
+  if (tags.natural === 'waterfall' || tags.natural === 'peak' || tags.natural === 'cave_entrance') return 'nature';
+  if (tags.man_made === 'lighthouse') return 'attraction';
+  if (tags.leisure === 'park') return 'park';
+  if (tags.amenity === 'place_of_worship') return 'worship';
   return null;
 }
 

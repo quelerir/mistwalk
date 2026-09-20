@@ -11,11 +11,11 @@ function clientReturning(result: { data: unknown; error: unknown }) {
 }
 
 describe('fetchTileViaProxy', () => {
-  it('calls the pois function with the tile coordinates and returns the places', async () => {
+  it('calls the pois function with the tile coordinates, says it knows the newer kinds, and returns the places', async () => {
     const { client, invoke } = clientReturning({ data: [poi], error: null });
     expect(await fetchTileViaProxy(client, tile)).toEqual([poi]);
     expect(invoke).toHaveBeenCalledWith('pois', {
-      body: { z: 13, x: 1310, y: 3166 },
+      body: { z: 13, x: 1310, y: 3166, kinds: 2 },
       timeout: 10000,
     });
   });

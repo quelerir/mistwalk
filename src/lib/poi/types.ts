@@ -1,4 +1,15 @@
-export type PoiKind = 'viewpoint' | 'monument' | 'castle' | 'ruins' | 'attraction' | 'artwork';
+export type PoiKind =
+  | 'viewpoint'
+  | 'monument'
+  | 'castle'
+  | 'ruins'
+  | 'attraction'
+  | 'artwork'
+  | 'museum'
+  | 'park'
+  | 'beach'
+  | 'worship'
+  | 'nature';
 
 export interface Poi {
   id: string;
