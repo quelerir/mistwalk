@@ -184,7 +184,8 @@ export default function MapScreen({
         <Camera ref={cameraRef} initialViewState={{ zoom: FOLLOW_ZOOM }} />
         {Platform.OS !== 'android' && <UserLocation />}
       </Map>
-      <FogOverlay points={points} livePosition={livePosition} shared={shared} view={view} fog={fog} animated={fogAnimated} rain={rain} wind={wind} userDot={Platform.OS === 'android'} />
+      {/* The map stays mounted under the other tabs; its fog and rain must not keep drawing frames nobody sees. */}
+      <FogOverlay points={points} livePosition={livePosition} shared={shared} view={view} fog={fog} animated={fogAnimated && active} rain={active ? rain : 0} wind={wind} userDot={Platform.OS === 'android'} />
       <RouteOverlay coordinates={progress?.coordinates ?? route?.coordinates ?? null} shared={shared} />
       <PoiMarkers
         pois={pois}

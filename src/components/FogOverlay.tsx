@@ -106,6 +106,9 @@ const FINE_LAYER_SPEEDUP = 1.35;
 const DRIFT_WRAP = 200000;
 const DRIFT_EASE_MS = 4000;
 const MAX_FRAME_S = 0.1;
+// The clouds crawl (a few pixels a second), so moving them 15 times a second looks the same as 60 and costs a quarter
+// of the noise shading, which is what heats the phone.
+const DRIFT_STEP_S = 1 / 15;
 
 interface CloudAnchor {
   x: number;
@@ -149,12 +152,16 @@ function FogClouds({ shared, origin, fog, animated, drift }: FogCloudsProps) {
   const velY = useSharedValue(drift.y);
   const driftX = useSharedValue(0);
   const driftY = useSharedValue(0);
+  const sinceStep = useSharedValue(0);
   useEffect(() => {
     velX.value = withTiming(drift.x, { duration: DRIFT_EASE_MS });
     velY.value = withTiming(drift.y, { duration: DRIFT_EASE_MS });
   }, [drift.x, drift.y, velX, velY]);
   const frame = useFrameCallback((info) => {
-    const dt = Math.min(MAX_FRAME_S, (info.timeSincePreviousFrame ?? 0) / 1000);
+    sinceStep.value += Math.min(MAX_FRAME_S, (info.timeSincePreviousFrame ?? 0) / 1000);
+    if (sinceStep.value < DRIFT_STEP_S) return;
+    const dt = sinceStep.value;
+    sinceStep.value = 0;
     let x = driftX.value + velX.value * dt;
     let y = driftY.value + velY.value * dt;
     if (Math.abs(x) > DRIFT_WRAP) x = -x;
