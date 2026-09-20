@@ -3,7 +3,7 @@ import { Image, Pressable, SectionList, StyleSheet, Text, View } from 'react-nat
 import CityBadge from '../components/CityBadge';
 import { useCrests } from '../hooks/useCrests';
 import KindIcon from '../components/KindIcon';
-import { COUNTRY_BY_CODE, flagUrl } from '../lib/geo/countries';
+import { countryName, flagUrl } from '../lib/geo/countries';
 import { formatKm2 } from '../lib/geo/cityStats';
 import { formatPercent } from '../lib/geo/countryStats';
 import type { PlayerProfile } from '../lib/social/profiles';
@@ -11,6 +11,8 @@ import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import { FONT } from '../theme/fonts';
 import { KIND_COLOR, kindTint } from '../lib/poi/kindColors';
+import { useI18n } from '../i18n/I18nProvider';
+import { formatDate } from '../i18n/format';
 
 export interface PlayerCountryScreenProps {
   player: PlayerProfile;
@@ -18,19 +20,16 @@ export interface PlayerCountryScreenProps {
   onBack: () => void;
 }
 
-function formatDate(ts: number): string {
-  return new Date(ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-}
-
 type Row =
   | { kind: 'city'; city: PlayerProfile['cities'][number] }
   | { kind: 'place'; place: PlayerProfile['places'][number] };
 
 export default function PlayerCountryScreen({ player, countryCode, onBack }: PlayerCountryScreenProps) {
+  const { t, lang } = useI18n();
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   const country = player.countries.find((x) => x.code === countryCode);
-  const name = country?.name ?? COUNTRY_BY_CODE[countryCode]?.name ?? countryCode;
+  const name = countryName(countryCode, lang);
 
   const crests = useCrests(player.cities.filter((city) => city.country === countryCode).map((city) => city.wikidata));
 
@@ -42,15 +41,15 @@ export default function PlayerCountryScreen({ player, countryCode, onBack }: Pla
       .filter((place) => place.country === countryCode)
       .map((place) => ({ kind: 'place', place }));
     return [
-      { title: `Города · ${cities.length}`, data: cities },
-      { title: `Найдено · ${places.length}`, data: places },
+      { title: t('country.cities', { n: cities.length }), data: cities },
+      { title: t('country.foundPlaces', { n: places.length }), data: places },
     ].filter((section) => section.data.length > 0);
-  }, [player, countryCode]);
+  }, [player, countryCode, t]);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel="Назад">
+        <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel={t('common.back')}>
           <Text style={styles.back}>‹</Text>
         </Pressable>
         <Image source={{ uri: flagUrl(countryCode), cache: 'force-cache' }} style={styles.flag} resizeMode="contain" />
@@ -60,12 +59,12 @@ export default function PlayerCountryScreen({ player, countryCode, onBack }: Pla
           </Text>
           <Text style={styles.subtitle}>
             {player.displayName}
-            {country ? ` · открыто ${formatPercent(country.percent)}` : ''}
+            {country ? t('player.countryOpened', { percent: formatPercent(lang, country.percent) }) : ''}
           </Text>
         </View>
       </View>
       {sections.length === 0 ? (
-        <Text style={styles.empty}>Для этой страны пока нет городов и мест.</Text>
+        <Text style={styles.empty}>{t('player.countryEmpty')}</Text>
       ) : (
         <SectionList
           sections={sections}
@@ -82,7 +81,7 @@ export default function PlayerCountryScreen({ player, countryCode, onBack }: Pla
                   {item.city.name}
                 </Text>
                 <Text style={styles.value}>
-                  {item.city.percent !== null ? formatPercent(item.city.percent) : formatKm2(item.city.exploredKm2)}
+                  {item.city.percent !== null ? formatPercent(lang, item.city.percent) : formatKm2(t, lang, item.city.exploredKm2)}
                 </Text>
               </View>
             ) : (
@@ -96,7 +95,7 @@ export default function PlayerCountryScreen({ player, countryCode, onBack }: Pla
                   </Text>
                   {item.place.city && <Text style={styles.sub}>{item.place.city}</Text>}
                 </View>
-                <Text style={styles.date}>{formatDate(item.place.discoveredAt)}</Text>
+                <Text style={styles.date}>{formatDate(lang, item.place.discoveredAt)}</Text>
               </View>
             )
           }

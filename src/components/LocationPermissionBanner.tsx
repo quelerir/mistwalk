@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Button, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { PermissionStage } from '../hooks/useLocationPermissions';
+import { useT } from '../i18n/I18nProvider';
 
 export interface LocationPermissionBannerProps {
   stage: PermissionStage;
@@ -9,6 +10,7 @@ export interface LocationPermissionBannerProps {
 }
 
 export default function LocationPermissionBanner({ stage, onRequestForeground }: LocationPermissionBannerProps) {
+  const t = useT();
   const insets = useSafeAreaInsets();
   if (stage === 'foreground-granted' || stage === 'background-granted') return null;
 
@@ -16,10 +18,10 @@ export default function LocationPermissionBanner({ stage, onRequestForeground }:
     <View style={[styles.banner, { paddingTop: insets.top + 8 }]}>
       <Text style={styles.text}>
         {stage === 'denied'
-          ? 'Доступ к геолокации отклонён — включите его в настройках, чтобы открывать карту'
-          : 'Включите геолокацию, чтобы открывать карту'}
+          ? t('banner.locationDenied')
+          : t('banner.locationOff')}
       </Text>
-      {stage !== 'denied' && <Button title="Разрешить" onPress={onRequestForeground} />}
+      {stage !== 'denied' && <Button title={t('banner.allow')} onPress={onRequestForeground} />}
     </View>
   );
 }

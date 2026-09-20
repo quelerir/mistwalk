@@ -4,6 +4,8 @@ import type { RouteStatus } from '../hooks/useRoute';
 import { formatWalkingTime, type WalkingRoute } from '../lib/routing/walkingRoute';
 import { useStyles } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
+import { useT } from '../i18n/I18nProvider';
+import { formatDistance } from '../i18n/format';
 
 export interface RouteCardProps {
   status: RouteStatus;
@@ -16,10 +18,6 @@ export interface RouteCardProps {
 
 const ARRIVAL_METERS = 40;
 
-function formatDistance(meters: number): string {
-  return meters < 1000 ? `${Math.round(meters / 10) * 10} м` : `${(meters / 1000).toFixed(1)} км`;
-}
-
 export default function RouteCard({
   status,
   route,
@@ -28,19 +26,21 @@ export default function RouteCard({
   remainingSeconds,
   onCancel,
 }: RouteCardProps) {
+  const t = useT();
   const styles = useStyles(makeStyles);
   if (status === 'idle') return null;
 
   const subtitle =
     status === 'ready' && route
       ? remainingMeters !== undefined && remainingMeters < ARRIVAL_METERS
-        ? 'Вы почти на месте'
-        : `Осталось ${formatDistance(remainingMeters ?? route.distanceMeters)} · ${formatWalkingTime(
-            remainingSeconds ?? route.durationSeconds
-          )} пешком`
+        ? t('route.almost')
+        : t('route.left', {
+            distance: formatDistance(t, remainingMeters ?? route.distanceMeters),
+            time: formatWalkingTime(t, remainingSeconds ?? route.durationSeconds),
+          })
       : status === 'error'
-        ? 'Не удалось построить маршрут'
-        : 'Строим маршрут…';
+        ? t('route.failed')
+        : t('route.building');
 
   return (
     <View style={styles.card}>
@@ -48,8 +48,8 @@ export default function RouteCard({
         <Text style={styles.title}>{title}</Text>
         <Text style={[styles.subtitle, status === 'error' && styles.error]}>{subtitle}</Text>
       </View>
-      <Pressable style={styles.cancel} onPress={onCancel} accessibilityRole="button" accessibilityLabel="Отменить маршрут">
-        <Text style={styles.cancelText}>Отмена</Text>
+      <Pressable style={styles.cancel} onPress={onCancel} accessibilityRole="button" accessibilityLabel={t('route.cancel')}>
+        <Text style={styles.cancelText}>{t('common.cancel')}</Text>
       </Pressable>
     </View>
   );

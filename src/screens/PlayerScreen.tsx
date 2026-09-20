@@ -3,7 +3,7 @@ import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Tex
 import type { SupabaseClient } from '@supabase/supabase-js';
 import Avatar from '../components/Avatar';
 import KindIcon from '../components/KindIcon';
-import { flagUrl } from '../lib/geo/countries';
+import { countryName, flagUrl } from '../lib/geo/countries';
 import { formatPercent } from '../lib/geo/countryStats';
 import { formatKm2 } from '../lib/geo/cityStats';
 import SvgIcon from '../components/icons/SvgIcon';
@@ -15,6 +15,8 @@ import PlayerCountryScreen from './PlayerCountryScreen';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import { CARD_SHADOW, FONT } from '../theme/fonts';
+import { useI18n } from '../i18n/I18nProvider';
+import { formatDate } from '../i18n/format';
 
 export interface PlayerScreenProps {
   client: SupabaseClient;
@@ -24,11 +26,8 @@ export interface PlayerScreenProps {
   isMe: boolean;
 }
 
-function formatDate(ts: number): string {
-  return new Date(ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-}
-
 export default function PlayerScreen({ client, playerId, fallbackName, onBack, isMe }: PlayerScreenProps) {
+  const { t, lang } = useI18n();
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   const [player, setPlayer] = useState<PlayerProfile | null>(null);
@@ -81,7 +80,7 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
       });
     } catch (err) {
       console.warn('[player] follow failed', err);
-      Alert.alert('Не удалось', 'Проверьте интернет и попробуйте ещё раз.');
+      Alert.alert(t('common.failed'), t('common.checkInternet'));
     } finally {
       setFollowBusy(false);
     }
@@ -90,13 +89,13 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
   function report() {
     const send = (reason: ReportReason) =>
       reportPlayer(client, playerId, reason)
-        .then(() => Alert.alert('Спасибо', 'Жалоба отправлена. Профиль скроется после нескольких жалоб.'))
-        .catch(() => Alert.alert('Не удалось отправить', 'Проверьте интернет и попробуйте ещё раз.'));
-    Alert.alert('Пожаловаться на игрока', 'На что именно?', [
-      { text: 'Имя', onPress: () => void send('name') },
-      { text: 'Фото', onPress: () => void send('photo') },
-      { text: 'Другое', onPress: () => void send('other') },
-      { text: 'Отмена', style: 'cancel' },
+        .then(() => Alert.alert(t('player.reportThanksTitle'), t('player.reportThanks')))
+        .catch(() => Alert.alert(t('player.reportFailed'), t('common.checkInternet')));
+    Alert.alert(t('player.reportTitle'), t('player.reportAsk'), [
+      { text: t('player.reportName'), onPress: () => void send('name') },
+      { text: t('player.reportPhoto'), onPress: () => void send('photo') },
+      { text: t('player.reportOther'), onPress: () => void send('other') },
+      { text: t('common.cancel'), style: 'cancel' },
     ]);
   }
 
@@ -107,11 +106,11 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={onBack} hitSlop={8} style={styles.roundButton} accessibilityRole="button" accessibilityLabel="Назад">
+        <Pressable onPress={onBack} hitSlop={8} style={styles.roundButton} accessibilityRole="button" accessibilityLabel={t('common.back')}>
           <SvgIcon name="back" size={22} color={c.text} />
         </Pressable>
         {!isMe && status === 'ready' && (
-          <Pressable onPress={report} hitSlop={8} style={styles.roundButton} accessibilityRole="button" accessibilityLabel="Пожаловаться">
+          <Pressable onPress={report} hitSlop={8} style={styles.roundButton} accessibilityRole="button" accessibilityLabel={t('player.report')}>
             <SvgIcon name="flag" size={20} color={c.textMuted} />
           </Pressable>
         )}
@@ -124,9 +123,7 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
           {player?.displayName ?? fallbackName}
         </Text>
         {follow && (
-          <Text style={styles.counts}>
-            Подписчики {follow.followers} · Подписки {follow.followingCount}
-          </Text>
+          <Text style={styles.counts}>{t('player.followsLine', { followers: follow.followers, following: follow.followingCount })}</Text>
         )}
         {!isMe && status === 'ready' && follow && (
           <View style={styles.followWrap}>
@@ -136,28 +133,28 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
       </View>
 
       {status === 'loading' && <ActivityIndicator style={styles.loader} />}
-      {status === 'hidden' && <Text style={styles.empty}>Игрок скрыл свой профиль.</Text>}
-      {status === 'error' && <Text style={styles.empty}>Не удалось загрузить профиль. Проверьте интернет.</Text>}
+      {status === 'hidden' && <Text style={styles.empty}>{t('player.hidden')}</Text>}
+      {status === 'error' && <Text style={styles.empty}>{t('player.loadFailed')}</Text>}
 
       {status === 'ready' && player && (
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.tiles}>
             <View style={styles.tile}>
               <Text style={styles.tileValue}>{player.distanceKm.toFixed(1)}</Text>
-              <Text style={styles.tileLabel}>км</Text>
+              <Text style={styles.tileLabel}>{t('player.km')}</Text>
             </View>
             <View style={styles.tile}>
               <Text style={styles.tileValue}>{player.foundCount}</Text>
-              <Text style={styles.tileLabel}>мест</Text>
+              <Text style={styles.tileLabel}>{t('player.places')}</Text>
             </View>
             <View style={styles.tile}>
               <Text style={styles.tileValue}>{player.countries.length}</Text>
-              <Text style={styles.tileLabel}>стран</Text>
+              <Text style={styles.tileLabel}>{t('player.countries')}</Text>
             </View>
           </View>
 
-          <Text style={styles.sectionTitle}>СТРАНЫ</Text>
-          {player.countries.length === 0 && <Text style={styles.muted}>Пока нет данных.</Text>}
+          <Text style={styles.sectionTitle}>{t('player.sectionCountries')}</Text>
+          {player.countries.length === 0 && <Text style={styles.muted}>{t('player.noData')}</Text>}
           {player.countries.map((country) => (
             <Pressable
               key={country.code}
@@ -169,9 +166,9 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
               <View style={styles.rowBody}>
                 <View style={styles.rowTop}>
                   <Text style={styles.name} numberOfLines={1}>
-                    {country.name}
+                    {countryName(country.code, lang)}
                   </Text>
-                  <Text style={styles.value}>{formatPercent(country.percent)}</Text>
+                  <Text style={styles.value}>{formatPercent(lang, country.percent)}</Text>
                 </View>
                 <View style={styles.barTrack}>
                   <View style={[styles.barFill, { width: `${Math.min(100, Math.max(4, country.percent))}%` }]} />
@@ -181,7 +178,7 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
             </Pressable>
           ))}
 
-          {player.cities.length > 0 && <Text style={styles.sectionTitle}>ГОРОДА</Text>}
+          {player.cities.length > 0 && <Text style={styles.sectionTitle}>{t('player.sectionCities')}</Text>}
           {player.cities.map((city) => (
             <View key={city.name} style={styles.row}>
               <View style={styles.cityBadge}>
@@ -193,7 +190,7 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
                     {city.name}
                   </Text>
                   <Text style={styles.value}>
-                    {city.percent !== null ? formatPercent(city.percent) : formatKm2(city.exploredKm2)}
+                    {city.percent !== null ? formatPercent(lang, city.percent) : formatKm2(t, lang, city.exploredKm2)}
                   </Text>
                 </View>
                 {city.percent !== null && (
@@ -205,7 +202,7 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
             </View>
           ))}
 
-          <Text style={styles.sectionTitle}>НАЙДЕННЫЕ МЕСТА</Text>
+          <Text style={styles.sectionTitle}>{t('player.sectionFound')}</Text>
           {player.places.map((place, index) => (
             <View key={`${place.name}-${index}`} style={styles.row}>
               <View style={[styles.badge, { backgroundColor: kindTint(place.kind) }]}>
@@ -214,7 +211,7 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
               <Text style={styles.name} numberOfLines={1}>
                 {place.name}
               </Text>
-              <Text style={styles.date}>{formatDate(place.discoveredAt)}</Text>
+              <Text style={styles.date}>{formatDate(lang, place.discoveredAt)}</Text>
             </View>
           ))}
         </ScrollView>

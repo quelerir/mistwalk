@@ -4,16 +4,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { PlacesStatus } from '../lib/poi/placesStatus';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
+import { useT } from '../i18n/I18nProvider';
 
 // Quick loads from the cache are over before anyone could read this, so it only shows when things take a while.
 const SHOW_AFTER_MS = 1500;
 
-const TEXT: Record<Exclude<PlacesStatus, 'idle'>, string> = {
-  loading: 'Загружаю места рядом…',
-  retrying: 'Сервер мест не отвечает, пробую снова…',
-};
+const TEXT_KEY = { loading: 'map.places.loading', retrying: 'map.places.retrying' } as const;
 
 export default function PlacesStatusPill({ status }: { status: PlacesStatus }) {
+  const t = useT();
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   const insets = useSafeAreaInsets();
@@ -34,7 +33,7 @@ export default function PlacesStatusPill({ status }: { status: PlacesStatus }) {
     <View style={[styles.wrap, { top: insets.top + 8 }]} pointerEvents="none">
       <View style={styles.pill} accessibilityRole="alert">
         <ActivityIndicator size="small" color={status === 'retrying' ? c.marigold : c.accent} />
-        <Text style={styles.text}>{TEXT[status]}</Text>
+        <Text style={styles.text}>{t(TEXT_KEY[status])}</Text>
       </View>
     </View>
   );

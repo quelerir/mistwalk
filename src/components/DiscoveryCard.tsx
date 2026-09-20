@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { greetingFor } from '../lib/poi/greeting';
 import KindIcon from './KindIcon';
 import type { Poi } from '../lib/poi/types';
+import { useT } from '../i18n/I18nProvider';
 
 export interface DiscoveryCardProps {
   place: Poi | null;
@@ -11,6 +12,7 @@ export interface DiscoveryCardProps {
 }
 
 export default function DiscoveryCard({ place, onDismiss, onOpen }: DiscoveryCardProps) {
+  const t = useT();
   if (!place) return null;
   return (
     <Pressable
@@ -23,10 +25,10 @@ export default function DiscoveryCard({ place, onDismiss, onOpen }: DiscoveryCar
       <View style={styles.card}>
         <View style={styles.titleRow}>
           <KindIcon kind={place.kind} size={22} color="#ffffff" />
-          <Text style={styles.title}>Вы нашли: {place.name}</Text>
+          <Text style={styles.title}>{t('place.found', { name: place.name })}</Text>
         </View>
-        <Text style={styles.text}>{greetingFor(place.kind)}</Text>
-        <Text style={styles.more}>Подробнее ›</Text>
+        <Text style={styles.text}>{greetingFor(t, place.kind)}</Text>
+        <Text style={styles.more}>{t('place.more')}</Text>
       </View>
     </Pressable>
   );

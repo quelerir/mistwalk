@@ -12,7 +12,7 @@ export default function Avatar({ uri, name, size = 40 }: AvatarProps) {
   const { colors: c } = useTheme();
   const box = { width: size, height: size, borderRadius: size / 2 };
   if (uri) return <Image source={{ uri }} style={[box, { backgroundColor: c.surfaceAlt }]} />;
-  const letter = (name.replace(/^Игрок\s*/, '').trim()[0] ?? name[0] ?? '?').toUpperCase();
+  const letter = (name.replace(/^(Игрок|Player)\s*/, '').trim()[0] ?? name[0] ?? '?').toUpperCase();
   return (
     <View style={[box, styles.center, { backgroundColor: c.cityBadgeBg }]}>
       <Text style={{ color: c.link, fontWeight: '800', fontSize: size * 0.42 }}>{letter}</Text>

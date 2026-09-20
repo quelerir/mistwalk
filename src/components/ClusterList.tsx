@@ -1,12 +1,13 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { KIND_LABEL } from '../lib/poi/greeting';
 import { KIND_COLOR, kindTint } from '../lib/poi/kindColors';
 import type { Poi } from '../lib/poi/types';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import KindIcon from './KindIcon';
 import SvgIcon from './icons/SvgIcon';
+import { useT } from '../i18n/I18nProvider';
+import { kindLabel } from '../lib/poi/greeting';
 
 export interface ClusterListProps {
   pois: Poi[];
@@ -17,13 +18,14 @@ export interface ClusterListProps {
 
 // Places that lie on the same spot cannot be told apart by zooming in, so tapping their count lists them.
 export default function ClusterList({ pois, foundIds, onPick, onClose }: ClusterListProps) {
+  const t = useT();
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.title}>В этой точке: {pois.length}</Text>
-        <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Закрыть">
+        <Text style={styles.title}>{t('map.cluster', { n: pois.length })}</Text>
+        <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('common.close')}>
           <Text style={styles.close}>✕</Text>
         </Pressable>
       </View>
@@ -43,7 +45,7 @@ export default function ClusterList({ pois, foundIds, onPick, onClose }: Cluster
               <Text style={styles.name} numberOfLines={1}>
                 {poi.name}
               </Text>
-              <Text style={styles.kind}>{KIND_LABEL[poi.kind]}</Text>
+              <Text style={styles.kind}>{kindLabel(t, poi.kind)}</Text>
             </View>
             {foundIds.has(poi.id) && <SvgIcon name="check" size={20} color={c.accent} />}
           </Pressable>

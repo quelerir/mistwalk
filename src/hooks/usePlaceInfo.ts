@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchPlaceInfo, type PlaceInfo } from '../lib/poi/placeInfo';
 import type { Poi } from '../lib/poi/types';
+import { useI18n } from '../i18n/I18nProvider';
 
-const KEY_PREFIX = 'placeInfo.v3:';
+// The language is part of the key: the same place has its description kept once for each language it was read in.
+const KEY_PREFIX = 'placeInfo.v4:';
 const FOUND_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const MISSING_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -14,9 +16,9 @@ interface Cached {
 
 export type PlaceInfoStatus = 'idle' | 'loading' | 'ready' | 'failed';
 
-async function readCache(id: string): Promise<Cached | null> {
+async function readCache(lang: string, id: string): Promise<Cached | null> {
   try {
-    const raw = await AsyncStorage.getItem(KEY_PREFIX + id);
+    const raw = await AsyncStorage.getItem(`${KEY_PREFIX}${lang}:${id}`);
     if (!raw) return null;
     const cached = JSON.parse(raw) as Cached;
     const ttl = cached.info ? FOUND_TTL_MS : MISSING_TTL_MS;
@@ -27,6 +29,7 @@ async function readCache(id: string): Promise<Cached | null> {
 }
 
 export function usePlaceInfo(place: Poi | null) {
+  const { lang } = useI18n();
   const [info, setInfo] = useState<PlaceInfo | null>(null);
   const [status, setStatus] = useState<PlaceInfoStatus>('idle');
   const placeId = place?.id ?? null;
@@ -40,7 +43,7 @@ export function usePlaceInfo(place: Poi | null) {
     let cancelled = false;
     setStatus('loading');
     (async () => {
-      const cached = await readCache(place.id);
+      const cached = await readCache(lang, place.id);
       if (cached) {
         if (!cancelled) {
           setInfo(cached.info);
@@ -49,8 +52,8 @@ export function usePlaceInfo(place: Poi | null) {
         return;
       }
       try {
-        const fresh = await fetchPlaceInfo(place);
-        await AsyncStorage.setItem(KEY_PREFIX + place.id, JSON.stringify({ at: Date.now(), info: fresh }));
+        const fresh = await fetchPlaceInfo(place, fetch, lang);
+        await AsyncStorage.setItem(`${KEY_PREFIX}${lang}:${place.id}`, JSON.stringify({ at: Date.now(), info: fresh }));
         if (!cancelled) {
           setInfo(fresh);
           setStatus('ready');
@@ -65,7 +68,8 @@ export function usePlaceInfo(place: Poi | null) {
     };
     // Keyed by id: a new object for the same place must not refetch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [placeId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [placeId, lang]);
 
   return { info, status };
 }

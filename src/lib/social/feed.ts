@@ -1,5 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { PoiKind } from '../poi/types';
+import type { TFunc } from '../../i18n';
+import { formatDate } from '../../i18n/format';
+import type { Lang } from '../../i18n/language';
 
 export interface FeedItem {
   userId: string;
@@ -38,15 +41,16 @@ export function countNewer(items: Array<{ discoveredAt: number }>, lastSeen: num
   return items.filter((item) => item.discoveredAt > lastSeen).length;
 }
 
-export function timeAgo(ts: number, now: number = Date.now()): string {
+// How long ago, in words; a date once it is more than a week.
+export function timeAgo(t: TFunc, lang: Lang, ts: number, now: number = Date.now()): string {
   const seconds = Math.max(0, Math.round((now - ts) / 1000));
-  if (seconds < 60) return 'только что';
+  if (seconds < 60) return t('ago.now');
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes} мин назад`;
+  if (minutes < 60) return t('ago.min', { n: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} ч назад`;
+  if (hours < 24) return t('ago.hour', { n: hours });
   const days = Math.floor(hours / 24);
-  if (days === 1) return 'вчера';
-  if (days < 7) return `${days} дн. назад`;
-  return new Date(ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+  if (days === 1) return t('ago.yesterday');
+  if (days < 7) return t('ago.days', { n: days });
+  return formatDate(lang, ts);
 }

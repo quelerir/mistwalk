@@ -3,13 +3,14 @@ import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { projectToScreen, type MapView, type Size } from '../lib/geo/projection';
 import { readView, type ViewShared } from '../lib/map/viewShared';
-import { KIND_LABEL } from '../lib/poi/greeting';
+import { kindLabel } from '../lib/poi/greeting';
 import { DETAIL_ZOOM, layoutMarkers, type LocatedCandidate } from '../lib/poi/markerPicker';
 import KindIcon from './KindIcon';
 import type { Poi } from '../lib/poi/types';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import { KIND_COLOR } from '../lib/poi/kindColors';
+import { useT } from '../i18n/I18nProvider';
 
 export interface PoiMarkersProps {
   pois: Poi[];
@@ -70,6 +71,7 @@ export default function PoiMarkers({
   onOpenFound,
   onClusterPress,
 }: PoiMarkersProps) {
+  const t = useT();
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
@@ -133,7 +135,7 @@ export default function PoiMarkers({
                 hitSlop={6}
                 style={styles.cluster}
                 accessibilityRole="button"
-                accessibilityLabel={`${entry.pois.length} мест, приблизить`}
+                accessibilityLabel={t('map.clusterZoom', { n: entry.pois.length })}
               >
                 <Text style={styles.clusterText}>{entry.pois.length > 99 ? '99+' : entry.pois.length}</Text>
               </Pressable>
@@ -165,7 +167,7 @@ export default function PoiMarkers({
               hitSlop={8}
               style={[styles.unknown, poi.id === selectedId && styles.selected]}
               accessibilityRole="button"
-              accessibilityLabel={KIND_LABEL[poi.kind]}
+              accessibilityLabel={kindLabel(t, poi.kind)}
             >
               <KindIcon kind={poi.kind} size={18} color={KIND_COLOR[poi.kind]} />
             </Pressable>

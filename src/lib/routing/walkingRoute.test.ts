@@ -1,3 +1,4 @@
+import { makeT } from '../../i18n';
 import {
   distanceFromRoute,
   fetchWalkingRoute,
@@ -66,8 +67,10 @@ describe('distanceFromRoute', () => {
 
 describe('formatWalkingTime', () => {
   it('formats minutes and hours', () => {
-    expect(formatWalkingTime(20)).toBe('1 мин');
-    expect(formatWalkingTime(431)).toBe('7 мин');
-    expect(formatWalkingTime(4500)).toBe('1 ч 15 мин');
+    expect(formatWalkingTime(makeT('ru'), 20)).toBe('1 мин');
+    expect(formatWalkingTime(makeT('ru'), 431)).toBe('7 мин');
+    expect(formatWalkingTime(makeT('ru'), 4500)).toBe('1 ч 15 мин')
+    expect(formatWalkingTime(makeT('en'), 4500)).toBe('1 h 15 min')
+    expect(formatWalkingTime(makeT('en'), 431)).toBe('7 min');
   });
 });

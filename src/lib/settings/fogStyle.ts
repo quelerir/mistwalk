@@ -25,13 +25,6 @@ export const FOG_COLORS: Record<FogStyle, string> = {
   night: FOG_PALETTES.night.base,
 };
 
-export const FOG_STYLE_LABELS: Record<FogSetting, string> = {
-  ink: 'Чернила',
-  mist: 'Дымка',
-  night: 'Ночь',
-  auto: 'Авто',
-};
-
 const STORAGE_KEY = 'settings.fogStyle.v1';
 
 // Day is light mist, evening ink, night deep blue.

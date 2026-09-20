@@ -52,17 +52,19 @@ import PlayerScreen from './PlayerScreen';
 import { useProfileSync } from '../hooks/useProfileSync';
 import { pickAvatar } from '../lib/social/pickAvatar';
 import { avatarUrl, buildSnapshot, type LeaderboardEntry, type PlaceRegion } from '../lib/social/profiles';
+import { useI18n } from '../i18n/I18nProvider';
+import type { Key } from '../i18n';
 
 const NO_PLACES: DiscoveredPlace[] = [];
 
 type TabKey = 'map' | 'nearby' | 'feed' | 'collection' | 'menu';
 
-const TABS: Array<TabItem<TabKey>> = [
-  { key: 'map', label: 'Карта', icon: 'map' },
-  { key: 'nearby', label: 'Рядом', icon: 'compass' },
-  { key: 'feed', label: 'Лента', icon: 'feed' },
-  { key: 'collection', label: 'Коллекция', icon: 'award' },
-  { key: 'menu', label: 'Меню', icon: 'user' },
+const TABS: Array<{ key: TabKey; labelKey: Key; icon: TabItem<TabKey>['icon'] }> = [
+  { key: 'map', labelKey: 'tab.map', icon: 'map' },
+  { key: 'nearby', labelKey: 'tab.nearby', icon: 'compass' },
+  { key: 'feed', labelKey: 'tab.feed', icon: 'feed' },
+  { key: 'collection', labelKey: 'tab.collection', icon: 'award' },
+  { key: 'menu', labelKey: 'tab.menu', icon: 'user' },
 ];
 
 export interface MainScreenProps {
@@ -88,6 +90,7 @@ export default function MainScreen({
   backgroundEnabled,
   onEnableBackground,
 }: MainScreenProps) {
+  const { t } = useI18n();
   const styles = useStyles(makeStyles);
   const [tab, setTab] = useState<Exclude<TabKey, 'menu'>>('map');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -219,8 +222,12 @@ export default function MainScreen({
   const profileSync = useProfileSync(client, userId, snapshot);
   const avatarUri = avatarUrl(client, profileSync.profile?.avatarPath ?? null);
   const tabs = useMemo(
-    () => TABS.map((t) => (t.key === 'menu' ? { ...t, photoUri: avatarUri } : t.key === 'feed' ? { ...t, badge: feedNew } : t)),
-    [avatarUri]
+    () =>
+      TABS.map(({ key, labelKey, icon }): TabItem<TabKey> => {
+        const tab = { key, label: t(labelKey), icon };
+        return key === 'menu' ? { ...tab, photoUri: avatarUri } : key === 'feed' ? { ...tab, badge: feedNew } : tab;
+      }),
+    [avatarUri, feedNew, t]
   );
 
   async function handleChangeAvatar(): Promise<string | null> {
@@ -229,13 +236,13 @@ export default function MainScreen({
     await new Promise((resolve) => setTimeout(resolve, 450));
     try {
       const picked = await pickAvatar();
-      if (picked.kind === 'denied') return 'Нет доступа к фото. Разрешите его в настройках iPhone.';
+      if (picked.kind === 'denied') return t('photo.noAccess');
       if (picked.kind === 'cancelled') return null;
       await profileSync.setAvatar(picked.body);
-      return 'Фото обновлено';
+      return t('photo.updated');
     } catch (err) {
       console.warn('[avatar] upload failed', err);
-      return 'Не удалось загрузить фото. Проверьте интернет.';
+      return t('photo.failed');
     } finally {
       setMenuOpen(true);
     }
@@ -258,6 +265,12 @@ export default function MainScreen({
     void getHiddenKinds(AsyncStorage).then(setHiddenKindsState);
     return () => clearInterval(tick);
   }, []);
+
+  // The weekly notification carries its words with it, so it is scheduled again when the language changes.
+  useEffect(() => {
+    if (weeklySummaryOn) void scheduleWeeklySummary(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t]);
 
   function handleFogStyleChange(style: FogSetting) {
     setFogStyleState(style);
@@ -291,7 +304,7 @@ export default function MainScreen({
     }
     setWeeklySummaryOn(next);
     await setWeeklySummary(AsyncStorage, next);
-    if (next) await scheduleWeeklySummary();
+    if (next) await scheduleWeeklySummary(t);
     else await cancelWeeklySummary();
   }
 

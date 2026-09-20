@@ -6,6 +6,8 @@ import type { WeekSummary } from '../lib/stats/weekly';
 import { useStyles } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import { CARD_SHADOW, FONT } from '../theme/fonts';
+import { useT } from '../i18n/I18nProvider';
+import type { TFunc } from '../i18n';
 
 export interface CollectionScreenProps {
   stats: Stats;
@@ -19,13 +21,14 @@ export interface CollectionScreenProps {
   followCounts: { followers: number; following: number } | null;
 }
 
-function delta(now: number, before: number, digits = 0): string {
+function delta(t: TFunc, now: number, before: number, digits = 0): string {
   const diff = Math.round((now - before) * 10 ** digits) / 10 ** digits;
-  if (diff === 0) return 'как раньше';
-  return `${diff > 0 ? '+' : '−'}${Math.abs(diff).toFixed(digits)} к прошлой`;
+  if (diff === 0) return t('collection.same');
+  return t('collection.vsLast', { delta: `${diff > 0 ? '+' : '−'}${Math.abs(diff).toFixed(digits)}` });
 }
 
-const WEEKDAYS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+// Sunday first, like Date.getDay().
+const WEEKDAY_KEYS = ['weekday.0', 'weekday.1', 'weekday.2', 'weekday.3', 'weekday.4', 'weekday.5', 'weekday.6'] as const;
 const BAR_MAX_HEIGHT = 56;
 
 export default function CollectionScreen({
@@ -38,31 +41,32 @@ export default function CollectionScreen({
   onOpenFollows,
   followCounts,
 }: CollectionScreenProps) {
+  const t = useT();
   const styles = useStyles(makeStyles);
   const dayLabels = useMemo(() => {
     const today = new Date();
-    return daily.map((_, i) => WEEKDAYS[new Date(today.getFullYear(), today.getMonth(), today.getDate() - (daily.length - 1 - i)).getDay()]);
-  }, [daily]);
+    return daily.map((_, i) => t(WEEKDAY_KEYS[new Date(today.getFullYear(), today.getMonth(), today.getDate() - (daily.length - 1 - i)).getDay()]));
+  }, [daily, t]);
   const maxKm = Math.max(...daily, 0.001);
   const visitedCountries = useMemo(() => countries.filter((c) => c.percent > 0).length, [countries]);
 
   const tiles = [
-    { label: 'Пройдено', value: `${stats.distanceKm.toFixed(1)} км` },
-    { label: 'Мест найдено', value: String(stats.discoveredCount) },
+    { label: t('collection.distance'), value: t('unit.km', { n: stats.distanceKm.toFixed(1) }) },
+    { label: t('collection.placesFound'), value: String(stats.discoveredCount) },
   ];
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Коллекция</Text>
+      <Text style={styles.title}>{t('collection.title')}</Text>
 
       <View style={styles.followRow}>
-        <Pressable onPress={() => onOpenFollows('followers')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Подписчики">
+        <Pressable onPress={() => onOpenFollows('followers')} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('collection.followersLabel')}>
           <Text style={styles.followValue}>{followCounts ? followCounts.followers : '–'}</Text>
-          <Text style={styles.followLabel}>подписчиков</Text>
+          <Text style={styles.followLabel}>{t('collection.followers')}</Text>
         </Pressable>
-        <Pressable onPress={() => onOpenFollows('following')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Подписки">
+        <Pressable onPress={() => onOpenFollows('following')} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('collection.followingLabel')}>
           <Text style={styles.followValue}>{followCounts ? followCounts.following : '–'}</Text>
-          <Text style={styles.followLabel}>подписок</Text>
+          <Text style={styles.followLabel}>{t('collection.following')}</Text>
         </Pressable>
       </View>
 
@@ -76,12 +80,12 @@ export default function CollectionScreen({
       </View>
 
       <View style={styles.week}>
-        <Text style={styles.weekTitle}>Неделя</Text>
+        <Text style={styles.weekTitle}>{t('collection.week')}</Text>
         <View style={styles.weekRow}>
           {[
-            { label: 'км', value: week.km.toFixed(1), note: delta(week.km, week.prev.km, 1) },
-            { label: 'новых мест', value: String(week.places), note: delta(week.places, week.prev.places) },
-            { label: 'дней из 7', value: String(week.days), note: delta(week.days, week.prev.days) },
+            { label: t('collection.weekKm'), value: week.km.toFixed(1), note: delta(t, week.km, week.prev.km, 1) },
+            { label: t('collection.weekPlaces'), value: String(week.places), note: delta(t, week.places, week.prev.places) },
+            { label: t('collection.weekDays'), value: String(week.days), note: delta(t, week.days, week.prev.days) },
           ].map((item) => (
             <View key={item.label} style={styles.weekCell}>
               <Text style={styles.weekValue}>{item.value}</Text>
@@ -114,10 +118,8 @@ export default function CollectionScreen({
         accessibilityRole="button"
       >
         <View style={styles.countriesText}>
-          <Text style={styles.countriesTitle}>Страны</Text>
-          <Text style={styles.countriesSub}>
-            Открыто {visitedCountries} из {countries.length}
-          </Text>
+          <Text style={styles.countriesTitle}>{t('collection.countries')}</Text>
+          <Text style={styles.countriesSub}>{t('collection.countriesSub', { visited: visitedCountries, total: countries.length })}</Text>
         </View>
         <Text style={styles.chevron}>›</Text>
       </Pressable>
@@ -128,8 +130,8 @@ export default function CollectionScreen({
         accessibilityRole="button"
       >
         <View style={styles.countriesText}>
-          <Text style={styles.countriesTitle}>Рейтинг игроков</Text>
-          <Text style={styles.countriesSub}>Сравните себя с другими</Text>
+          <Text style={styles.countriesTitle}>{t('collection.rating')}</Text>
+          <Text style={styles.countriesSub}>{t('collection.ratingSub')}</Text>
         </View>
         <Text style={styles.chevron}>›</Text>
       </Pressable>

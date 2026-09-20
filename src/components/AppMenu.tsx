@@ -4,18 +4,15 @@ import { Text, View } from 'react-native';
 import Avatar from './Avatar';
 import MenuSheet, { type MenuItem } from './MenuSheet';
 import { useTheme } from '../theme/ThemeProvider';
-import { nextThemePreference, THEME_LABELS } from '../theme/palettes';
-import { FOG_STYLE_LABELS, nextFogStyle, type FogSetting } from '../lib/settings/fogStyle';
+import { nextThemePreference } from '../theme/palettes';
+import { nextFogStyle, type FogSetting } from '../lib/settings/fogStyle';
+import { useI18n } from '../i18n/I18nProvider';
+import { LANGUAGES } from '../i18n';
 import {
   getAccuracyProfile,
   setAccuracyProfile,
   type AccuracyProfile,
 } from '../lib/settings/accuracyProfile';
-
-// Settings are listed in these groups, in this order.
-const APPEARANCE = 'Внешний вид';
-const MAP_AND_POSITION = 'Карта и позиция';
-const NOTIFICATIONS = 'Уведомления';
 
 export interface AppMenuProps {
   visible: boolean;
@@ -75,7 +72,12 @@ export default function AppMenu({
   const [accuracy, setAccuracy] = useState<AccuracyProfile>('battery-saver');
   const { preference, setPreference, colors: c } = useTheme();
   const [note, setNote] = useState<string | null>(null);
-  const [page, setPage] = useState<'main' | 'settings' | 'account'>('main');
+  const [page, setPage] = useState<'main' | 'settings' | 'account' | 'language'>('main');
+  const { t, setting, setSetting } = useI18n();
+  // Settings are listed in these groups, in this order.
+  const APPEARANCE = t('menu.group.appearance');
+  const MAP_AND_POSITION = t('menu.group.mapPosition');
+  const NOTIFICATIONS = t('menu.group.notifications');
 
   useEffect(() => {
     void getAccuracyProfile(AsyncStorage).then(setAccuracy);
@@ -95,17 +97,17 @@ export default function AppMenu({
   }
 
   const mainItems: MenuItem[] = [
-    { key: 'settings', icon: 'settings', label: 'Настройки', onPress: () => setPage('settings') },
-    { key: 'account', icon: 'user', label: 'Аккаунт', onPress: () => setPage('account') },
+    { key: 'settings', icon: 'settings', label: t('menu.settings'), onPress: () => setPage('settings') },
+    { key: 'account', icon: 'user', label: t('menu.account'), onPress: () => setPage('account') },
   ];
 
   const accountItems: MenuItem[] = [
-    { key: 'back', icon: 'back', label: 'Назад', onPress: () => setPage('main') },
-    { key: 'email', icon: 'user', label: email || 'Без почты', onPress: () => {} },
+    { key: 'back', icon: 'back', label: t('common.back'), onPress: () => setPage('main') },
+    { key: 'email', icon: 'user', label: email || t('menu.noEmail'), onPress: () => {} },
     {
       key: 'photo',
       icon: 'user',
-      label: avatarUri ? 'Изменить фото' : 'Добавить фото',
+      label: avatarUri ? t('menu.changePhoto') : t('menu.addPhoto'),
       onPress: () => {
         setNote(null);
         void onChangeAvatar().then((message) => setNote(message));
@@ -116,10 +118,10 @@ export default function AppMenu({
           {
             key: 'photo-remove',
             icon: 'logout' as const,
-            label: 'Удалить фото',
+            label: t('menu.removePhoto'),
             onPress: () => {
               setNote(null);
-              void onRemoveAvatar().catch(() => setNote('Не удалось удалить фото'));
+              void onRemoveAvatar().catch(() => setNote(t('menu.removePhotoFailed')));
             },
           },
         ]
@@ -127,8 +129,8 @@ export default function AppMenu({
     {
       key: 'visibility',
       icon: 'award',
-      label: 'Виден в рейтинге',
-      value: leaderboardVisible === null ? '…' : leaderboardVisible ? 'Да' : 'Нет',
+      label: t('menu.inRating'),
+      value: leaderboardVisible === null ? '…' : leaderboardVisible ? t('common.yes') : t('common.no'),
       onPress: () => {
         if (leaderboardVisible !== null) void onLeaderboardVisibleChange(!leaderboardVisible);
       },
@@ -136,64 +138,72 @@ export default function AppMenu({
     {
       key: 'signout',
       icon: 'logout',
-      label: 'Выйти',
+      label: t('menu.signOut'),
       destructive: true,
       onPress: closeThen(() => void onSignOut()),
     },
   ];
 
   const settingsItems: MenuItem[] = [
-    { key: 'back', icon: 'back', label: 'Назад', onPress: () => setPage('main') },
+    { key: 'back', icon: 'back', label: t('common.back'), onPress: () => setPage('main') },
+    {
+      key: 'language',
+      group: APPEARANCE,
+      icon: 'globe',
+      label: t('menu.language'),
+      value: setting === 'auto' ? t('menu.languageAuto') : LANGUAGES.find((l) => l.code === setting)?.name,
+      onPress: () => setPage('language'),
+    },
     {
       key: 'theme',
       group: APPEARANCE,
       icon: 'moon',
-      label: 'Тема',
-      value: THEME_LABELS[preference],
+      label: t('menu.theme'),
+      value: t(`theme.${preference}`),
       onPress: () => setPreference(nextThemePreference(preference)),
     },
     {
       key: 'fog',
       group: APPEARANCE,
-      hint: 'Авто: днём дымка, вечером чернила, ночью синий туман.',
+      hint: t('menu.fogStyleHint'),
       icon: 'cloud',
-      label: 'Стиль тумана',
-      value: FOG_STYLE_LABELS[fogStyle],
+      label: t('menu.fogStyle'),
+      value: t(`fog.${fogStyle}`),
       onPress: () => onFogStyleChange(nextFogStyle(fogStyle)),
     },
     {
       key: 'fogAnimation',
       group: APPEARANCE,
       icon: 'cloud',
-      label: 'Анимация тумана',
+      label: t('menu.fogAnimation'),
       on: fogAnimated,
       onPress: () => onFogAnimatedChange(!fogAnimated),
     },
     {
       key: 'weatherFog',
       group: APPEARANCE,
-      hint: 'Рисует дождь, когда он идёт у вас, и пускает облака по ветру.',
+      hint: t('menu.rainHint'),
       icon: 'weather',
-      label: 'Дождь на карте',
+      label: t('menu.rain'),
       on: weatherFog,
       onPress: () => onWeatherFogChange(!weatherFog),
     },
     {
       key: 'accuracy',
       group: MAP_AND_POSITION,
-      hint: 'Запоминать позицию каждые 25 м или 75 м; экономия бережёт батарею.',
+      hint: t('menu.gpsHint'),
       icon: 'locate',
-      label: 'Точность GPS',
-      value: accuracy === 'precise' ? 'Точный' : 'Экономия',
+      label: t('menu.gps'),
+      value: accuracy === 'precise' ? t('menu.gpsPrecise') : t('menu.gpsSaver'),
       onPress: () => chooseAccuracy(accuracy === 'precise' ? 'battery-saver' : 'precise'),
     },
     {
       key: 'background',
       group: MAP_AND_POSITION,
-      hint: 'Запоминает путь, пока приложение свёрнуто или экран выключен.',
+      hint: t('menu.backgroundHint'),
       icon: 'navigate',
-      label: 'Работа в фоне',
-      value: backgroundEnabled ? 'Включена' : 'Включить',
+      label: t('menu.background'),
+      value: backgroundEnabled ? t('menu.backgroundOn') : t('menu.backgroundEnable'),
       onPress: () => {
         if (!backgroundEnabled) void onEnableBackground();
       },
@@ -201,9 +211,9 @@ export default function AppMenu({
     {
       key: 'offlineMap',
       group: MAP_AND_POSITION,
-      hint: 'Сохраняет в телефоне карту района 5×5 км вокруг вас, только по Wi-Fi.',
+      hint: t('menu.offlineMapHint'),
       icon: 'download',
-      label: offlineMap && offlineMapMb ? `Карта без сети · ${offlineMapMb} МБ` : 'Карта без сети',
+      label: offlineMap && offlineMapMb ? t('menu.offlineMapSize', { mb: offlineMapMb }) : t('menu.offlineMap'),
       on: offlineMap,
       onPress: () => void onOfflineMapChange(!offlineMap),
     },
@@ -211,22 +221,49 @@ export default function AppMenu({
       key: 'placeNotifications',
       group: NOTIFICATIONS,
       icon: 'bell',
-      label: 'Уведомления о местах',
+      label: t('menu.placeNotifications'),
       on: placeNotifications,
       onPress: () => void onPlaceNotificationsChange(!placeNotifications),
     },
     {
       key: 'weeklySummary',
       group: NOTIFICATIONS,
-      hint: 'Раз в неделю: сколько километров и мест вы открыли.',
+      hint: t('menu.weeklySummaryHint'),
       icon: 'award',
-      label: 'Итоги недели',
+      label: t('menu.weeklySummary'),
       on: weeklySummary,
       onPress: () => void onWeeklySummaryChange(!weeklySummary),
     },
   ];
 
-  const items = page === 'main' ? mainItems : page === 'settings' ? settingsItems : accountItems;
+  const languageItems: MenuItem[] = [
+    { key: 'back', icon: 'back', label: t('common.back'), onPress: () => setPage('settings') },
+    {
+      key: 'auto',
+      icon: 'globe',
+      label: t('menu.languageAuto'),
+      value: setting === 'auto' ? '✓' : undefined,
+      onPress: () => {
+        setSetting('auto');
+        setPage('settings');
+      },
+    },
+    ...LANGUAGES.map(
+      (l): MenuItem => ({
+        key: l.code,
+        icon: 'globe',
+        label: l.name,
+        value: setting === l.code ? '✓' : undefined,
+        onPress: () => {
+          setSetting(l.code);
+          setPage('settings');
+        },
+      })
+    ),
+  ];
+
+  const items =
+    page === 'main' ? mainItems : page === 'settings' ? settingsItems : page === 'language' ? languageItems : accountItems;
 
   const header =
     page === 'account' ? (

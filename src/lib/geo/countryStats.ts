@@ -1,6 +1,8 @@
 import { computeAreaKm2, type TimedPoint } from '../stats/coverage';
 import type { DiscoveredPlace, Poi } from '../poi/types';
-import { COUNTRIES, COUNTRY_BY_CODE } from './countries';
+import { COUNTRIES, COUNTRY_BY_CODE, countryName } from './countries';
+import { decimal } from '../../i18n/format';
+import type { Lang } from '../../i18n/language';
 
 export interface CountryRef {
   code: string;
@@ -83,10 +85,11 @@ export function groupPlacesByCountry(
   return result;
 }
 
-// Every country in the table with its explored share; visited ones first, then alphabetical.
+// Every country in the table with its explored share; visited ones first, then alphabetical in the language given.
 export function buildCountryList(
   points: TimedPoint[],
-  cellCountries: Readonly<Record<string, CountryRef | null>>
+  cellCountries: Readonly<Record<string, CountryRef | null>>,
+  lang: Lang = 'ru'
 ): CountryStat[] {
   const groups = groupPointsByCountry(points, cellCountries);
   const list = COUNTRIES.map((country) => {
@@ -94,13 +97,13 @@ export function buildCountryList(
     const exploredKm2 = group ? computeAreaKm2(group.points) : 0;
     return {
       code: country.code,
-      name: country.name,
+      name: countryName(country.code, lang),
       exploredKm2,
       totalKm2: country.areaKm2,
       percent: (exploredKm2 / country.areaKm2) * 100,
     };
   });
-  return list.sort((a, b) => b.percent - a.percent || a.name.localeCompare(b.name, 'ru'));
+  return list.sort((a, b) => b.percent - a.percent || a.name.localeCompare(b.name, lang));
 }
 
 // Names come from our table so they are Russian and consistent with the list.
@@ -109,11 +112,11 @@ export function toCountryRef(code: string, fallbackName: string): CountryRef {
   return { code, name: known?.name ?? fallbackName };
 }
 
-export function formatPercent(percent: number): string {
+export function formatPercent(lang: Lang, percent: number): string {
   if (percent <= 0) return '0 %';
-  if (percent < 0.000001) return '< 0,000001 %';
+  if (percent < 0.000001) return `< ${decimal(lang, '0.000001')} %`;
   // Two significant digits below 1 %, so tiny shares of a big country still read as a number.
   const digits =
     percent >= 10 ? 0 : percent >= 1 ? 1 : Math.min(7, Math.ceil(-Math.log10(percent)) + 1);
-  return `${percent.toFixed(digits).replace('.', ',')} %`;
+  return `${decimal(lang, percent.toFixed(digits))} %`;
 }

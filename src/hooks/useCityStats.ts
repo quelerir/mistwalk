@@ -3,8 +3,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { buildCityList, cityCellKey, fetchCityAt, type CityRef, type CityStat } from '../lib/geo/cityStats';
 import type { DiscoveredPlace } from '../lib/poi/types';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
+import { useI18n } from '../i18n/I18nProvider';
 
+// The cities are named by the geocoder in one language, so each language has its own kept lookups (Russian keeps the
+// key it always had).
 const CELLS_KEY = 'geo.cityCells.v3';
+const cellsKeyFor = (lang: string) => (lang === 'ru' ? CELLS_KEY : `${CELLS_KEY}.${lang}`);
 const GEOCODE_GAP_MS = 1100;
 
 type CityCells = Record<string, CityRef | null>;
@@ -18,21 +22,30 @@ export function useCityStats(
   enabled: boolean,
   countryAt?: (lat: number, lng: number) => string | null
 ) {
+  const { lang } = useI18n();
+  const cellsKey = cellsKeyFor(lang);
   const [cells, setCells] = useState<CityCells>({});
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const running = useRef(false);
 
+  // Another language: forget the lookups of the last one and read the ones kept for this one.
+  useEffect(() => {
+    setReady(false);
+    setCells({});
+    setFailed(false);
+  }, [cellsKey]);
+
   useEffect(() => {
     if (!enabled || ready) return;
-    void AsyncStorage.getItem(CELLS_KEY)
+    void AsyncStorage.getItem(cellsKey)
       .then((raw) => (raw ? (JSON.parse(raw) as CityCells) : {}))
       .catch(() => ({}))
       .then((stored) => {
         setCells(stored);
         setReady(true);
       });
-  }, [enabled, ready]);
+  }, [enabled, ready, cellsKey]);
 
   const unresolved = useMemo(() => {
     if (!ready) return [];
@@ -56,9 +69,9 @@ export function useCityStats(
       try {
         for (const [key, at] of unresolved) {
           if (cancelled) return;
-          next[key] = await fetchCityAt(at.lat, at.lng);
+          next[key] = await fetchCityAt(at.lat, at.lng, fetch, lang);
           setCells({ ...next });
-          await AsyncStorage.setItem(CELLS_KEY, JSON.stringify(next));
+          await AsyncStorage.setItem(cellsKey, JSON.stringify(next));
           await sleep(GEOCODE_GAP_MS);
         }
         setFailed(false);

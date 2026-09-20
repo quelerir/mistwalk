@@ -93,12 +93,6 @@ export const DARK: Colors = {
 
 export const PALETTES: Record<ColorScheme, Colors> = { light: LIGHT, dark: DARK };
 
-export const THEME_LABELS: Record<ThemePreference, string> = {
-  system: 'Как в системе',
-  light: 'Светлая',
-  dark: 'Тёмная',
-};
-
 const ORDER: ThemePreference[] = ['system', 'light', 'dark'];
 
 export function nextThemePreference(current: ThemePreference): ThemePreference {

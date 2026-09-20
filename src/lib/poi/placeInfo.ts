@@ -6,10 +6,16 @@ export interface PlaceInfo {
   description: string | null;
   imageUrl: string | null;
   pageUrl: string | null;
+  // Where it came from: 'wikipedia:<language>', 'commons' or 'wikidata'; the screen words it in its own language.
   source: string;
 }
 
 const LANGUAGES = ['ru', 'en', 'de'];
+
+// The languages to look in: the one asked for first, then the others.
+export function languagesFor(preferred: string): string[] {
+  return [preferred, ...LANGUAGES.filter((l) => l !== preferred)];
+}
 const ARTICLE_RADIUS_METERS = 300;
 const PHOTO_RADIUS_METERS = 50;
 const WIKIDATA_RADIUS_METERS = 250;
@@ -80,13 +86,15 @@ const ARTICLE_PROPS =
 // Wikimedia Commons photo, else null.
 export async function fetchPlaceInfo(
   poi: Pick<Poi, 'name' | 'lat' | 'lng'> & Partial<Pick<Poi, 'wikipedia' | 'wikidata'>>,
-  fetchImpl: typeof fetch = fetch
+  fetchImpl: typeof fetch = fetch,
+  preferred = 'ru'
 ): Promise<PlaceInfo | null> {
+  const langs = languagesFor(preferred);
   // OpenStreetMap's own link to the encyclopedia entry is exact; use it before guessing by location.
-  const tagged = await fetchFromOsmTags(poi, fetchImpl);
+  const tagged = await fetchFromOsmTags(poi, fetchImpl, preferred);
   if (tagged) return tagged;
 
-  for (const lang of LANGUAGES) {
+  for (const lang of langs) {
     const pages = await geosearch(`${lang}.wikipedia.org`, poi, ARTICLE_RADIUS_METERS, ARTICLE_PROPS, fetchImpl);
     const page = pickPage(pages, poi.name);
     if (page) {
@@ -95,12 +103,12 @@ export async function fetchPlaceInfo(
         description: page.extract?.trim() || null,
         imageUrl: page.thumbnail?.source ?? null,
         pageUrl: page.fullurl ?? null,
-        source: `Википедия (${lang})`,
+        source: `wikipedia:${lang}`,
       };
     }
   }
 
-  const entity = await fetchWikidataInfo(poi, fetchImpl);
+  const entity = await fetchWikidataInfo(poi, fetchImpl, preferred);
   if (entity) return entity;
 
   // A nearby photo is only trustworthy if the file is named after the place.
@@ -121,7 +129,7 @@ export async function fetchPlaceInfo(
     description: null,
     imageUrl: info?.thumburl ?? info?.url ?? null,
     pageUrl: info?.descriptionurl ?? null,
-    source: 'Wikimedia Commons',
+    source: 'commons',
   };
 }
 
@@ -145,17 +153,19 @@ async function wikidata(params: string, fetchImpl: typeof fetch): Promise<unknow
 // Wikidata item for the place (checked by coordinates): a short "what is this" line and a photo.
 export async function fetchWikidataInfo(
   poi: Pick<Poi, 'name' | 'lat' | 'lng'>,
-  fetchImpl: typeof fetch = fetch
+  fetchImpl: typeof fetch = fetch,
+  preferred = 'ru'
 ): Promise<PlaceInfo | null> {
+  const langs = languagesFor(preferred);
   const search = (await wikidata(
-    `action=wbsearchentities&search=${encodeURIComponent(poi.name)}&language=en&uselang=ru&limit=6`,
+    `action=wbsearchentities&search=${encodeURIComponent(poi.name)}&language=en&uselang=${preferred}&limit=6`,
     fetchImpl
   )) as { search?: Array<{ id: string }> };
   const ids = (search.search ?? []).map((r) => r.id);
   if (ids.length === 0) return null;
 
   const data = (await wikidata(
-    `action=wbgetentities&ids=${ids.join('%7C')}&props=claims%7Cdescriptions%7Clabels&languages=ru%7Cen%7Cde`,
+    `action=wbgetentities&ids=${ids.join('%7C')}&props=claims%7Cdescriptions%7Clabels&languages=${langs.join('%7C')}`,
     fetchImpl
   )) as { entities?: Record<string, WikidataEntity> };
 
@@ -168,12 +178,12 @@ export async function fetchWikidataInfo(
   }
   if (!best) return null;
 
-  return infoFromEntity(best.entity, poi.name);
+  return infoFromEntity(best.entity, poi.name, langs);
 }
 
-function infoFromEntity(entity: WikidataEntity, fallbackName: string): PlaceInfo | null {
+function infoFromEntity(entity: WikidataEntity, fallbackName: string, langs: string[]): PlaceInfo | null {
   const pick = (field: 'descriptions' | 'labels') =>
-    LANGUAGES.map((l) => entity[field]?.[l]?.value).find(Boolean) ?? null;
+    langs.map((l) => entity[field]?.[l]?.value).find(Boolean) ?? null;
   const file = entity.claims?.P18?.[0]?.mainsnak?.datavalue?.value;
   const description = pick('descriptions');
   const imageUrl = file
@@ -185,7 +195,7 @@ function infoFromEntity(entity: WikidataEntity, fallbackName: string): PlaceInfo
     description: description ? description.charAt(0).toUpperCase() + description.slice(1) : null,
     imageUrl,
     pageUrl: `https://www.wikidata.org/wiki/${entity.id}`,
-    source: 'Wikidata',
+    source: 'wikidata',
   };
 }
 
@@ -208,15 +218,15 @@ async function summaryFor(lang: string, title: string, fetchImpl: typeof fetch):
     description: json.extract.trim(),
     imageUrl: json.thumbnail?.source ?? null,
     pageUrl: json.content_urls?.desktop?.page ?? null,
-    source: `Википедия (${lang})`,
+    source: `wikipedia:${lang}`,
   };
 }
 
-// The same article in Russian, when it exists.
-async function russianTitle(lang: string, title: string, fetchImpl: typeof fetch): Promise<string | null> {
+// The same article in the language asked for, when there is one.
+async function titleIn(target: string, lang: string, title: string, fetchImpl: typeof fetch): Promise<string | null> {
   const url =
     `https://${lang}.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}` +
-    '&prop=langlinks&lllang=ru&redirects=1&format=json&formatversion=2&origin=*';
+    `&prop=langlinks&lllang=${target}&redirects=1&format=json&formatversion=2&origin=*`;
   const response = await fetchImpl(url);
   if (!response.ok) return null;
   const json = (await response.json()) as { query?: { pages?: Array<{ langlinks?: Array<{ title: string }> }> } };
@@ -228,12 +238,12 @@ export function parseWikipediaTag(tag: string): { lang: string; title: string } 
   return match ? { lang: match[1].toLowerCase(), title: match[2].trim() } : null;
 }
 
-async function fromArticle(lang: string, title: string, fetchImpl: typeof fetch): Promise<PlaceInfo | null> {
-  if (lang !== 'ru') {
-    const ru = await russianTitle(lang, title, fetchImpl).catch(() => null);
-    if (ru) {
-      const russian = await summaryFor('ru', ru, fetchImpl);
-      if (russian) return russian;
+async function fromArticle(lang: string, title: string, fetchImpl: typeof fetch, preferred: string): Promise<PlaceInfo | null> {
+  if (lang !== preferred) {
+    const local = await titleIn(preferred, lang, title, fetchImpl).catch(() => null);
+    if (local) {
+      const inPreferred = await summaryFor(preferred, local, fetchImpl);
+      if (inPreferred) return inPreferred;
     }
   }
   return summaryFor(lang, title, fetchImpl);
@@ -241,30 +251,32 @@ async function fromArticle(lang: string, title: string, fetchImpl: typeof fetch)
 
 async function fetchFromOsmTags(
   poi: Pick<Poi, 'name'> & Partial<Pick<Poi, 'wikipedia' | 'wikidata'>>,
-  fetchImpl: typeof fetch
+  fetchImpl: typeof fetch,
+  preferred: string
 ): Promise<PlaceInfo | null> {
+  const langs = languagesFor(preferred);
   const article = poi.wikipedia ? parseWikipediaTag(poi.wikipedia) : null;
   if (article) {
-    const info = await fromArticle(article.lang, article.title, fetchImpl);
+    const info = await fromArticle(article.lang, article.title, fetchImpl, preferred);
     if (info) return info;
   }
 
   if (poi.wikidata && /^Q\d+$/.test(poi.wikidata)) {
     const data = (await wikidata(
       `action=wbgetentities&ids=${poi.wikidata}&props=sitelinks%7Cdescriptions%7Clabels%7Cclaims` +
-        '&sitefilter=ruwiki%7Cenwiki%7Cdewiki&languages=ru%7Cen%7Cde',
+        '&sitefilter=ruwiki%7Cenwiki%7Cdewiki&languages=' + langs.join('%7C'),
       fetchImpl
     )) as { entities?: Record<string, WikidataEntity> };
     const entity = data.entities?.[poi.wikidata];
     if (!entity) return null;
-    for (const lang of LANGUAGES) {
+    for (const lang of langs) {
       const title = entity.sitelinks?.[`${lang}wiki`]?.title;
       if (title) {
         const info = await summaryFor(lang, title, fetchImpl);
         if (info) return info;
       }
     }
-    return infoFromEntity(entity, poi.name);
+    return infoFromEntity(entity, poi.name, langs);
   }
   return null;
 }

@@ -1,4 +1,4 @@
-import { bearingLabel, findNewlyDiscovered } from './discovery';
+import { findNewlyDiscovered } from './discovery';
 import type { Poi } from './types';
 
 const poi = (id: string, lat: number, lng: number): Poi => ({ id, name: id, kind: 'monument', lat, lng });
@@ -18,15 +18,5 @@ describe('findNewlyDiscovered', () => {
 
   it('respects a custom radius', () => {
     expect(findNewlyDiscovered(position, [near], new Set(), 1)).toEqual([]);
-  });
-});
-
-describe('bearingLabel', () => {
-  it('names the compass direction from one point to another', () => {
-    const o = { lat: 0, lng: 0 };
-    expect(bearingLabel(o, { lat: 1, lng: 0 })).toBe('севернее');
-    expect(bearingLabel(o, { lat: 0, lng: 1 })).toBe('восточнее');
-    expect(bearingLabel(o, { lat: -1, lng: 0 })).toBe('южнее');
-    expect(bearingLabel(o, { lat: 0, lng: -1 })).toBe('западнее');
   });
 });

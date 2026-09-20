@@ -7,6 +7,7 @@ import { dedupePois, withAliases } from '../lib/poi/dedupe';
 import { tileForLngLat, tileKey } from '../lib/poi/tiles';
 import type { DiscoveredPlace, Poi } from '../lib/poi/types';
 import { getPlaceNotifications } from '../lib/settings/placeNotifications';
+import { loadTranslator } from '../i18n';
 
 const STATE_KEY = 'notifications.placeState.v1';
 const TILE_KEY_PREFIX = 'poi.tile.v3.';
@@ -63,10 +64,11 @@ export async function notifyIfNearby(position: Coordinate, now: number = Date.no
     );
     if (!place) return;
 
+    const { t } = await loadTranslator();
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: 'Рядом тайное место',
-        body: 'Совсем близко есть неоткрытое место. Загляните на карту!',
+        title: t('notify.placeTitle'),
+        body: t('notify.placeBody'),
       },
       trigger: null,
     });

@@ -1,4 +1,5 @@
 import { haversineDistanceMeters, type Coordinate } from '../geo/distance';
+import type { TFunc } from '../../i18n';
 
 // Public OSM-hosted OSRM instance with a foot profile (no API key).
 const ROUTING_URL = 'https://routing.openstreetmap.de/routed-foot/route/v1/foot';
@@ -51,7 +52,8 @@ export function distanceFromRoute(route: WalkingRoute, point: Coordinate): numbe
   return best;
 }
 
-export function formatWalkingTime(seconds: number): string {
+// A walk of 5 min, or 1 h 20 min.
+export function formatWalkingTime(t: TFunc, seconds: number): string {
   const minutes = Math.max(1, Math.round(seconds / 60));
-  return minutes < 60 ? `${minutes} мин` : `${Math.floor(minutes / 60)} ч ${minutes % 60} мин`;
+  return minutes < 60 ? t('unit.min', { n: minutes }) : t('unit.hourMin', { h: Math.floor(minutes / 60), m: minutes % 60 });
 }

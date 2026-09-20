@@ -32,6 +32,7 @@ import type { Wind } from '../lib/weather/weather';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
+import { useT } from '../i18n/I18nProvider';
 
 const FOLLOW_ZOOM = 16;
 const FOLLOW_EASE_MS = 900;
@@ -91,6 +92,7 @@ export default function MapScreen({
   onBuildRoute,
   onCancelRoute,
 }: MapScreenProps) {
+  const t = useT();
   const styles = useStyles(makeStyles);
   const { colors: c, scheme } = useTheme();
   const mapStyle = useMapStyle(scheme);
@@ -258,7 +260,7 @@ export default function MapScreen({
           route={route}
           remainingMeters={progress?.remainingMeters}
           remainingSeconds={progress?.remainingSeconds}
-          title={selected ? `Маршрут: ${selected.name}` : 'Маршрут'}
+          title={selected ? t('map.routeTo', { name: selected.name }) : t('map.route')}
           onCancel={onCancelRoute}
         />
       ) : (
@@ -278,7 +280,7 @@ export default function MapScreen({
           style={styles.recenter}
           onPress={handleRecenter}
           accessibilityRole="button"
-          accessibilityLabel="К моей позиции"
+          accessibilityLabel={t('map.recenter')}
         >
           <SvgIcon name="locate" size={24} color={c.text} />
         </Pressable>

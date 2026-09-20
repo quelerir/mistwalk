@@ -3,11 +3,12 @@ import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } fr
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import KindIcon from './KindIcon';
 import SvgIcon from './icons/SvgIcon';
-import { KIND_LABEL } from '../lib/poi/greeting';
+import { kindLabel } from '../lib/poi/greeting';
 import { KIND_COLOR } from '../lib/poi/kindColors';
 import type { PoiKind } from '../lib/poi/types';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
+import { useT } from '../i18n/I18nProvider';
 
 export interface MapKindFilterProps {
   // Every kind that has places loaded, with how many (whether shown or not).
@@ -23,6 +24,7 @@ const TOP_OFFSET = 60;
 // A round button on the map that opens a small menu: which kinds of places to show. The button is filled while some
 // kind is switched off, so a map that looks emptier than expected explains itself.
 export default function MapKindFilter({ counts, hidden, onChange }: MapKindFilterProps) {
+  const t = useT();
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   const insets = useSafeAreaInsets();
@@ -42,12 +44,12 @@ export default function MapKindFilter({ counts, hidden, onChange }: MapKindFilte
 
   return (
     <>
-      {open && <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} accessibilityLabel="Закрыть" />}
+      {open && <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} accessibilityLabel={t('common.close')} />}
       <Pressable
         style={[styles.button, filtering && styles.buttonActive, { top }]}
         onPress={() => setOpen((v) => !v)}
         accessibilityRole="button"
-        accessibilityLabel={filtering ? 'Фильтр мест, включён' : 'Фильтр мест'}
+        accessibilityLabel={filtering ? t('map.filterOn') : t('map.filter')}
         accessibilityState={{ expanded: open }}
       >
         <SvgIcon name="filter" size={22} color={filtering ? c.bg : c.text} />
@@ -55,10 +57,10 @@ export default function MapKindFilter({ counts, hidden, onChange }: MapKindFilte
       {open && (
         <View style={[styles.menu, { top: top + BUTTON_SIZE + 8, maxHeight: windowHeight * 0.55 }]} accessibilityRole="menu">
           <View style={styles.menuHeader}>
-            <Text style={styles.menuTitle}>Показывать на карте</Text>
+            <Text style={styles.menuTitle}>{t('map.filterTitle')}</Text>
             {filtering && (
               <Pressable onPress={() => onChange(new Set())} hitSlop={8} accessibilityRole="button">
-                <Text style={styles.reset}>Все</Text>
+                <Text style={styles.reset}>{t('common.all')}</Text>
               </Pressable>
             )}
           </View>
@@ -72,10 +74,10 @@ export default function MapKindFilter({ counts, hidden, onChange }: MapKindFilte
                   onPress={() => toggle(kind)}
                   accessibilityRole="menuitem"
                   accessibilityState={{ checked: shown }}
-                  accessibilityLabel={`${KIND_LABEL[kind]}, ${count}`}
+                  accessibilityLabel={`${kindLabel(t, kind)}, ${count}`}
                 >
                   <KindIcon kind={kind} size={22} color={shown ? KIND_COLOR[kind] : c.textFaint} />
-                  <Text style={[styles.label, !shown && styles.labelOff]} numberOfLines={1}>{KIND_LABEL[kind]}</Text>
+                  <Text style={[styles.label, !shown && styles.labelOff]} numberOfLines={1}>{kindLabel(t, kind)}</Text>
                   <Text style={styles.count}>{count}</Text>
                   <View style={[styles.box, shown && styles.boxOn]}>
                     {shown && <SvgIcon name="check" size={16} color={c.bg} />}

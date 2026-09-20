@@ -8,6 +8,8 @@ import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import NetInfo from '@react-native-community/netinfo';
 import { FONT_ASSETS } from './src/theme/fonts';
 import { ThemeProvider, useTheme } from './src/theme/ThemeProvider';
+import { I18nProvider } from './src/i18n/I18nProvider';
+import { tNow } from './src/i18n';
 import { getEnvSupabaseClient } from './src/lib/supabase/client';
 import { getSession } from './src/lib/supabase/auth';
 import { getAccuracyProfile, onAccuracyProfileChange, DISTANCE_INTERVAL_METERS } from './src/lib/settings/accuracyProfile';
@@ -47,7 +49,7 @@ export default function App() {
       <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Ошибка конфигурации: проверьте .env файл (Supabase)</Text>
+          <Text style={styles.errorText}>{tNow('error.config')}</Text>
         </View>
       </SafeAreaView>
       </SafeAreaProvider>
@@ -58,9 +60,11 @@ export default function App() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <ThemeProvider>
-      <AuthenticatedApp client={client} />
-    </ThemeProvider>
+    <I18nProvider>
+      <ThemeProvider>
+        <AuthenticatedApp client={client} />
+      </ThemeProvider>
+    </I18nProvider>
   );
 }
 

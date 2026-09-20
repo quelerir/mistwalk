@@ -1,12 +1,14 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { haversineDistanceMeters, type Coordinate } from '../lib/geo/distance';
-import { KIND_LABEL } from '../lib/poi/greeting';
+import { kindLabel } from '../lib/poi/greeting';
 import KindIcon from './KindIcon';
 import type { Poi } from '../lib/poi/types';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import { KIND_COLOR, kindTint } from '../lib/poi/kindColors';
+import { useT } from '../i18n/I18nProvider';
+import { formatDistance } from '../i18n/format';
 
 export interface PlaceCardProps {
   poi: Poi;
@@ -15,16 +17,13 @@ export interface PlaceCardProps {
   onClose: () => void;
 }
 
-function formatDistance(meters: number): string {
-  return meters < 1000 ? `${Math.round(meters / 10) * 10} м` : `${(meters / 1000).toFixed(1)} км`;
-}
-
 export default function PlaceCard({ poi, origin, onBuildRoute, onClose }: PlaceCardProps) {
+  const t = useT();
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   const where = origin
-    ? `${formatDistance(haversineDistanceMeters(origin, poi))}, ${KIND_LABEL[poi.kind].toLowerCase()}`
-    : 'Ждём вашу позицию…';
+    ? `${formatDistance(t, haversineDistanceMeters(origin, poi))}, ${kindLabel(t, poi.kind).toLowerCase()}`
+    : t('common.waitingPosition');
 
   return (
     <View style={styles.card}>
@@ -38,7 +37,7 @@ export default function PlaceCard({ poi, origin, onBuildRoute, onClose }: PlaceC
           </Text>
           <Text style={styles.subtitle}>{where}</Text>
         </View>
-        <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Закрыть">
+        <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('common.close')}>
           <Text style={styles.close}>✕</Text>
         </Pressable>
       </View>
@@ -47,7 +46,7 @@ export default function PlaceCard({ poi, origin, onBuildRoute, onClose }: PlaceC
         onPress={onBuildRoute}
         accessibilityRole="button"
       >
-        <Text style={styles.buttonText}>Построить маршрут</Text>
+        <Text style={styles.buttonText}>{t('place.buildRoute')}</Text>
       </Pressable>
     </View>
   );

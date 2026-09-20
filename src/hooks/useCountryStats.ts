@@ -9,6 +9,7 @@ import {
   type CountryStat,
 } from '../lib/geo/countryStats';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
+import { useI18n } from '../i18n/I18nProvider';
 
 const CELLS_KEY = 'geo.countryCells.v1';
 const GEOCODE_GAP_MS = 1100;
@@ -27,6 +28,7 @@ async function readJson<T>(key: string, fallback: T): Promise<T> {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function useCountryStats(points: VisitedPoint[], enabled: boolean) {
+  const { lang } = useI18n();
   const [cells, setCells] = useState<CellCountries>({});
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -88,8 +90,8 @@ export function useCountryStats(points: VisitedPoint[], enabled: boolean) {
   }, [enabled, ready, work]);
 
   const countries: CountryStat[] = useMemo(
-    () => (ready ? buildCountryList(points, cells) : []),
-    [points, cells, ready]
+    () => (ready ? buildCountryList(points, cells, lang) : []),
+    [points, cells, ready, lang]
   );
 
   const pending = enabled && (!ready || unresolved.length > 0) && !failed;

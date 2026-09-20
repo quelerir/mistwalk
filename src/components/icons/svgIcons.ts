@@ -20,6 +20,7 @@ export type IconName =
   | 'check'
   | 'feed'
   | 'filter'
+  | 'globe'
   | 'grid'
   | 'logout'
   | 'navigate'
@@ -138,6 +139,12 @@ export const ICONS: Record<IconName, { outline: IconLayer[]; active: IconLayer[]
     { d: 'M20 19V5M16.5 8.5L20 5l3.5 3.5', mode: 'stroke' },
   ]),
   check: line('M5 12.5l4.5 4.5L19 7.5'),
+  // A globe: the language.
+  globe: shapes([
+    { d: circle(12, 12, 9), mode: 'stroke' },
+    { d: 'M3 12h18', mode: 'stroke' },
+    { d: 'M12 3c-3.2 3.2-3.2 14.8 0 18M12 3c3.2 3.2 3.2 14.8 0 18', mode: 'stroke' },
+  ]),
   // A funnel: which kinds of places to show.
   filter: line('M3 5h18l-7 8.5V20l-4-2v-4.5z'),
   // A post card: a round avatar and lines of text, like an entry of a friend's feed.

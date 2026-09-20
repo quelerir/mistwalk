@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { signIn, signUp } from '../lib/supabase/auth';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
+import { useT } from '../i18n/I18nProvider';
 
 export interface SignInScreenProps {
   client: SupabaseClient;
@@ -11,6 +12,7 @@ export interface SignInScreenProps {
 }
 
 export default function SignInScreen({ client, onSignedIn }: SignInScreenProps) {
+  const t = useT();
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   const [email, setEmail] = useState('');
@@ -29,7 +31,7 @@ export default function SignInScreen({ client, onSignedIn }: SignInScreenProps) 
       }
       onSignedIn();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось войти');
+      setError(err instanceof Error ? err.message : t('signin.failed'));
     } finally {
       setBusy(false);
     }
@@ -48,15 +50,15 @@ export default function SignInScreen({ client, onSignedIn }: SignInScreenProps) 
       />
       <TextInput
         style={styles.input}
-        placeholder="Пароль"
+        placeholder={t('signin.password')}
         placeholderTextColor={c.textFaint}
         secureTextEntry
         value={password}
         onChangeText={setPassword}
       />
       {error && <Text style={styles.error}>{error}</Text>}
-      <Button title="Войти" onPress={() => handle('signIn')} disabled={busy} />
-      <Button title="Зарегистрироваться" onPress={() => handle('signUp')} disabled={busy} />
+      <Button title={t('signin.signIn')} onPress={() => handle('signIn')} disabled={busy} />
+      <Button title={t('signin.signUp')} onPress={() => handle('signUp')} disabled={busy} />
     </View>
   );
 }

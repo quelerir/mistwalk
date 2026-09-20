@@ -1,4 +1,5 @@
 import { haversineDistanceMeters, type Coordinate } from '../geo/distance';
+import type { TFunc } from '../../i18n';
 import type { PlacesStatus } from './placesStatus';
 import type { Poi, PoiKind } from './types';
 
@@ -28,7 +29,8 @@ function inRadius(
     .filter((item) => item.meters <= radiusMeters);
 }
 
-const byName = (a: NearbyItem, b: NearbyItem) => a.poi.name.localeCompare(b.poi.name, 'ru');
+// Names are compared the way the language sorts its letters (a place named in another alphabet goes by its own order).
+const byName = (a: NearbyItem, b: NearbyItem) => a.poi.name.localeCompare(b.poi.name);
 const byDistance = (a: NearbyItem, b: NearbyItem) => a.meters - b.meters;
 const COMPARE: Record<NearbySort, (a: NearbyItem, b: NearbyItem) => number> = {
   distance: byDistance,
@@ -59,12 +61,12 @@ export function countInRadius(origin: Coordinate | null, pois: Poi[], radiusMete
 }
 
 // What to say when the list is empty: waiting for the position, fetching, nothing there, or everything already found.
-export function emptyMessage(hasPosition: boolean, status: PlacesStatus, placesInRadius: number): string {
-  if (!hasPosition) return 'Ждём вашу позицию…';
-  if (placesInRadius === 0 && status === 'retrying') return 'Сервер мест не отвечает, пробуем снова…';
-  if (placesInRadius === 0 && status === 'loading') return 'Загружаем места рядом…';
-  if (placesInRadius === 0) return 'В радиусе километра мест не нашлось. Пройдитесь дальше!';
-  return 'В радиусе километра всё открыто. Пройдитесь дальше!';
+export function emptyMessage(t: TFunc, hasPosition: boolean, status: PlacesStatus, placesInRadius: number): string {
+  if (!hasPosition) return t('common.waitingPosition');
+  if (placesInRadius === 0 && status === 'retrying') return t('nearby.empty.retrying');
+  if (placesInRadius === 0 && status === 'loading') return t('nearby.empty.loading');
+  if (placesInRadius === 0) return t('nearby.empty.none');
+  return t('nearby.empty.allFound');
 }
 
 export function kindCounts(

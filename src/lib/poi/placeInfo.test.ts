@@ -1,4 +1,4 @@
-import { fetchPlaceInfo, pageMatchesName, parseWikipediaTag, pickPage } from './placeInfo';
+import { fetchPlaceInfo, languagesFor, pageMatchesName, parseWikipediaTag, pickPage } from './placeInfo';
 
 const page = (title: string, extra = {}, index = 0) => ({ title, index, ...extra });
 
@@ -43,7 +43,7 @@ describe('fetchPlaceInfo', () => {
         reply([page('Palais Seilern', { extract: 'A palace.', fullurl: 'https://en.wikipedia.org/wiki/X', thumbnail: { source: 'https://img/x.jpg' } })])
       );
     const info = await fetchPlaceInfo(poi, fetchImpl as unknown as typeof fetch);
-    expect(info).toMatchObject({ description: 'A palace.', imageUrl: 'https://img/x.jpg', source: 'Википедия (en)' });
+    expect(info).toMatchObject({ description: 'A palace.', imageUrl: 'https://img/x.jpg', source: 'wikipedia:en' });
     expect(fetchImpl.mock.calls[1][0]).toContain('en.wikipedia.org');
   });
 
@@ -77,7 +77,7 @@ describe('fetchPlaceInfo', () => {
         }),
       });
     const info = await fetchPlaceInfo(poi, fetchImpl as unknown as typeof fetch);
-    expect(info).toMatchObject({ description: 'Дворец в Вене', source: 'Wikidata' });
+    expect(info).toMatchObject({ description: 'Дворец в Вене', source: 'wikidata' });
     expect(info?.imageUrl).toContain('Special:FilePath/Palais%20Seilern.jpg');
   });
 
@@ -94,7 +94,7 @@ describe('fetchPlaceInfo', () => {
         .mockResolvedValueOnce(files(title));
       return fetchPlaceInfo(poi, fetchImpl as unknown as typeof fetch);
     };
-    expect(await run('File:Palais Seilern Vienna.jpg')).toMatchObject({ imageUrl: 'https://img/p.jpg', source: 'Wikimedia Commons' });
+    expect(await run('File:Palais Seilern Vienna.jpg')).toMatchObject({ imageUrl: 'https://img/p.jpg', source: 'commons' });
     expect(await run('File:Morawa Bookshop Wien.jpg')).toBeNull();
   });
 
@@ -131,9 +131,20 @@ describe('fetchPlaceInfo with OpenStreetMap tags', () => {
       .mockResolvedValueOnce({ ok: true, json: async () => ({ query: { pages: [{ langlinks: [{ title: 'Дворец Зайлерн' }] }] } }) })
       .mockResolvedValueOnce(summary('Дворец Зайлерн', 'Дворец в Вене.'));
     const info = await fetchPlaceInfo(poi, fetchImpl as unknown as typeof fetch);
-    expect(info).toMatchObject({ title: 'Дворец Зайлерн', description: 'Дворец в Вене.', source: 'Википедия (ru)' });
+    expect(info).toMatchObject({ title: 'Дворец Зайлерн', description: 'Дворец в Вене.', source: 'wikipedia:ru' });
     expect(fetchImpl).toHaveBeenCalledTimes(2);
     expect(fetchImpl.mock.calls[1][0]).toContain('ru.wikipedia.org/api/rest_v1/page/summary/');
+  });
+
+  it('prefers the English version of the tagged article when English is asked for', async () => {
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ query: { pages: [{ langlinks: [{ title: 'Palais Seilern (Vienna)' }] }] } }) })
+      .mockResolvedValueOnce(summary('Palais Seilern (Vienna)', 'A palace in Vienna.'));
+    const info = await fetchPlaceInfo(poi, fetchImpl as unknown as typeof fetch, 'en');
+    expect(info).toMatchObject({ description: 'A palace in Vienna.', source: 'wikipedia:en' });
+    expect(fetchImpl.mock.calls[0][0]).toContain('lllang=en');
+    expect(fetchImpl.mock.calls[1][0]).toContain('en.wikipedia.org/api/rest_v1/page/summary/');
   });
 
   it('uses the tagged language when there is no Russian article', async () => {
@@ -142,7 +153,7 @@ describe('fetchPlaceInfo with OpenStreetMap tags', () => {
       .mockResolvedValueOnce({ ok: true, json: async () => ({ query: { pages: [{}] } }) })
       .mockResolvedValueOnce(summary('Palais Seilern', 'Ein Palais.'));
     const info = await fetchPlaceInfo(poi, fetchImpl as unknown as typeof fetch);
-    expect(info).toMatchObject({ description: 'Ein Palais.', source: 'Википедия (de)' });
+    expect(info).toMatchObject({ description: 'Ein Palais.', source: 'wikipedia:de' });
   });
 
   it('resolves a wikidata tag through its wikipedia sitelinks', async () => {
@@ -154,6 +165,13 @@ describe('fetchPlaceInfo with OpenStreetMap tags', () => {
       })
       .mockResolvedValueOnce(summary('Some Palace', 'A palace.'));
     const info = await fetchPlaceInfo({ name: 'X', lat: 1, lng: 1, wikidata: 'Q9' }, fetchImpl as unknown as typeof fetch);
-    expect(info).toMatchObject({ description: 'A palace.', source: 'Википедия (en)' });
+    expect(info).toMatchObject({ description: 'A palace.', source: 'wikipedia:en' });
+  });
+});
+
+describe('languagesFor', () => {
+  it('puts the language asked for first and keeps the others as a fallback', () => {
+    expect(languagesFor('en')).toEqual(['en', 'ru', 'de']);
+    expect(languagesFor('ru')).toEqual(['ru', 'en', 'de']);
   });
 });

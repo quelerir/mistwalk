@@ -11,6 +11,7 @@ import { KIND_COLOR, kindTint } from '../lib/poi/kindColors';
 import { useStyles } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import { FONT } from '../theme/fonts';
+import { useI18n } from '../i18n/I18nProvider';
 
 export interface FeedScreenProps {
   client: SupabaseClient;
@@ -20,6 +21,7 @@ export interface FeedScreenProps {
 }
 
 export default function FeedScreen({ client, onBack, onOpenPlayer }: FeedScreenProps) {
+  const { t, lang } = useI18n();
   const styles = useStyles(makeStyles);
   const [items, setItems] = useState<FeedItem[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -46,17 +48,17 @@ export default function FeedScreen({ client, onBack, onOpenPlayer }: FeedScreenP
     <View style={styles.container}>
       <View style={styles.header}>
         {onBack && (
-          <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel="Назад">
+          <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel={t('common.back')}>
             <Text style={styles.back}>‹</Text>
           </Pressable>
         )}
-        <Text style={[styles.title, !onBack && styles.titleTab]}>Лента друзей</Text>
+        <Text style={[styles.title, !onBack && styles.titleTab]}>{t('feed.title')}</Text>
       </View>
 
       {status === 'loading' ? (
         <ActivityIndicator style={styles.loader} />
       ) : status === 'error' ? (
-        <Text style={styles.empty}>Не удалось загрузить ленту. Проверьте интернет и попробуйте позже.</Text>
+        <Text style={styles.empty}>{t('feed.loadFailed')}</Text>
       ) : (
         <FlatList
           data={items}
@@ -67,7 +69,7 @@ export default function FeedScreen({ client, onBack, onOpenPlayer }: FeedScreenP
             void load().finally(() => setRefreshing(false));
           }}
           ListEmptyComponent={
-            <Text style={styles.empty}>Здесь появятся находки тех, на кого вы подписаны. Подпишитесь на игроков в рейтинге.</Text>
+            <Text style={styles.empty}>{t('feed.empty')}</Text>
           }
           renderItem={({ item }) => (
             <Pressable
@@ -81,14 +83,14 @@ export default function FeedScreen({ client, onBack, onOpenPlayer }: FeedScreenP
                   <Text style={styles.name} numberOfLines={1}>
                     {item.displayName}
                   </Text>
-                  <Text style={styles.time}>{timeAgo(item.discoveredAt)}</Text>
+                  <Text style={styles.time}>{timeAgo(t, lang, item.discoveredAt)}</Text>
                 </View>
                 <View style={styles.placeLine}>
                   <View style={[styles.kindBadge, { backgroundColor: kindTint(item.kind) }]}>
                     <KindIcon kind={item.kind} size={14} color={KIND_COLOR[item.kind]} />
                   </View>
                   <Text style={styles.place} numberOfLines={2}>
-                    Новая находка: {item.placeName}
+                    {t('place.newFind', { name: item.placeName })}
                   </Text>
                 </View>
               </View>

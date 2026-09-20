@@ -5,6 +5,7 @@ import SvgIcon from './icons/SvgIcon';
 import type { IconName } from './icons/svgIcons';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
+import { useT } from '../i18n/I18nProvider';
 
 export interface MenuItem {
   key: string;
@@ -32,6 +33,7 @@ export interface MenuSheetProps {
 const SHEET_CHROME = 90;
 
 export default function MenuSheet({ visible, items, header, onClose }: MenuSheetProps) {
+  const t = useT();
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   const insets = useSafeAreaInsets();
@@ -39,7 +41,7 @@ export default function MenuSheet({ visible, items, header, onClose }: MenuSheet
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Закрыть меню" />
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={t('map.closeMenu')} />
       <View style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}>
         <View style={styles.handle} />
         {header}
@@ -115,7 +117,7 @@ const makeStyles = (c: Colors) => StyleSheet.create({
     paddingRight: 18,
   },
   separator: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
-  labelText: { flex: 1, paddingVertical: 10 },
+  labelText: { flex: 1, paddingVertical: 10, paddingRight: 12 },
   label: { fontSize: 17, fontWeight: '600' },
   hint: { marginTop: 2, fontSize: 13, lineHeight: 17, color: c.textMuted },
   value: { fontSize: 15, color: c.textMuted, marginLeft: 12 },

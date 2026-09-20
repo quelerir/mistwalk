@@ -5,6 +5,7 @@ import { formatPercent, type CountryPlaces, type CountryStat } from '../lib/geo/
 import { useStyles } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import { FONT } from '../theme/fonts';
+import { useI18n } from '../i18n/I18nProvider';
 
 export interface CountriesScreenProps {
   countries: CountryStat[];
@@ -23,22 +24,23 @@ export default function CountriesScreen({
   onBack,
   onOpenCountry,
 }: CountriesScreenProps) {
+  const { t, lang } = useI18n();
   const styles = useStyles(makeStyles);
   const visited = countries.filter((c) => c.percent > 0).length;
   const status = pending
-    ? 'Определяем страны…'
+    ? t('countries.detecting')
     : failed
-      ? 'Не удалось определить страну. Проверьте интернет.'
-      : `Открыто стран: ${visited} из ${countries.length}`;
+      ? t('countries.failed')
+      : t('countries.opened', { visited, total: countries.length });
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel="Назад">
+        <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel={t('common.back')}>
           <Text style={styles.back}>‹</Text>
         </Pressable>
         <View style={styles.headerText}>
-          <Text style={styles.title}>Страны</Text>
+          <Text style={styles.title}>{t('countries.title')}</Text>
           <Text style={styles.subtitle}>{status}</Text>
         </View>
       </View>
@@ -61,10 +63,10 @@ export default function CountriesScreen({
                 <Text style={[styles.name, item.percent === 0 && styles.muted]} numberOfLines={1}>
                   {item.name}
                 </Text>
-                {total > 0 && <Text style={styles.places}>Найдено мест: {found} из {total}</Text>}
+                {total > 0 && <Text style={styles.places}>{t('countries.found', { found, total })}</Text>}
               </View>
               <Text style={[styles.percent, item.percent === 0 && styles.muted]}>
-                {formatPercent(item.percent)}
+                {formatPercent(lang, item.percent)}
               </Text>
               <Text style={styles.chevron}>›</Text>
             </Pressable>

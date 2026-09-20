@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
-import { KIND_LABEL } from '../lib/poi/greeting';
+import { kindLabel } from '../lib/poi/greeting';
 import { buildNearbyList, countInRadius, emptyMessage, kindCounts, type NearbySort } from '../lib/poi/nearbyList';
 import type { PlacesStatus } from '../lib/poi/placesStatus';
 import KindIcon from '../components/KindIcon';
@@ -11,6 +11,9 @@ import type { Colors } from '../theme/palettes';
 import type { IconName } from '../components/icons/svgIcons';
 import { FONT } from '../theme/fonts';
 import { KIND_COLOR, kindTint } from '../lib/poi/kindColors';
+import { useT } from '../i18n/I18nProvider';
+import type { Key } from '../i18n';
+import { formatDistance } from '../i18n/format';
 
 export interface NearbyScreenProps {
   pois: Poi[];
@@ -24,17 +27,13 @@ export interface NearbyScreenProps {
 const MAX_LISTED = 30;
 const NEARBY_RADIUS_METERS = 1000;
 
-const SORT_OPTIONS: Array<{ sort: NearbySort; label: string; icon: IconName }> = [
-  { sort: 'distance', label: 'Сначала ближние', icon: 'sort-distance' },
-  { sort: 'distance-desc', label: 'Сначала дальние', icon: 'sort-distance-desc' },
-  { sort: 'name', label: 'По названию А — Я', icon: 'sort-name' },
-  { sort: 'name-desc', label: 'По названию Я — А', icon: 'sort-name-desc' },
+const SORT_OPTIONS: Array<{ sort: NearbySort; labelKey: Key; icon: IconName }> = [
+  { sort: 'distance', labelKey: 'nearby.sort.distance', icon: 'sort-distance' },
+  { sort: 'distance-desc', labelKey: 'nearby.sort.distanceDesc', icon: 'sort-distance-desc' },
+  { sort: 'name', labelKey: 'nearby.sort.name', icon: 'sort-name' },
+  { sort: 'name-desc', labelKey: 'nearby.sort.nameDesc', icon: 'sort-name-desc' },
 ];
 const SORT_BY_KEY = Object.fromEntries(SORT_OPTIONS.map((o) => [o.sort, o])) as Record<NearbySort, (typeof SORT_OPTIONS)[number]>;
-
-function formatDistance(meters: number): string {
-  return meters < 1000 ? `${Math.round(meters / 10) * 10} м` : `${(meters / 1000).toFixed(1)} км`;
-}
 
 type ScreenStyles = ReturnType<typeof makeStyles>;
 
@@ -67,6 +66,7 @@ function FilterButton({ label, count, active, onPress, styles, children }: Filte
 }
 
 export default function NearbyScreen({ pois, discoveredIds, origin, placesStatus, onSelect }: NearbyScreenProps) {
+  const t = useT();
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   const [kind, setKind] = useState<PoiKind | 'all'>('all');
@@ -94,17 +94,17 @@ export default function NearbyScreen({ pois, discoveredIds, origin, placesStatus
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Рядом</Text>
+      <Text style={styles.title}>{t('nearby.title')}</Text>
       <View
         style={styles.subtitleRow}
         onLayout={(e: LayoutChangeEvent) => setMenuTop(e.nativeEvent.layout.y + e.nativeEvent.layout.height + 4)}
       >
-        <Text style={styles.subtitle}>Неоткрытые места до 1 км</Text>
+        <Text style={styles.subtitle}>{t('nearby.subtitle')}</Text>
         {total > 0 && (
           <Pressable
             onPress={() => setSortMenuOpen((open) => !open)}
             accessibilityRole="button"
-            accessibilityLabel={`Сортировка: ${SORT_BY_KEY[sort].label}`}
+            accessibilityLabel={t('nearby.sortLabel', { label: t(SORT_BY_KEY[sort].labelKey) })}
             accessibilityState={{ expanded: sortMenuOpen }}
             hitSlop={10}
           >
@@ -119,13 +119,13 @@ export default function NearbyScreen({ pois, discoveredIds, origin, placesStatus
           style={styles.filtersScroll}
           contentContainerStyle={styles.filters}
         >
-          <FilterButton label="Все" count={total} active={activeKind === 'all'} onPress={() => setKind('all')} styles={styles}>
+          <FilterButton label={t('common.all')} count={total} active={activeKind === 'all'} onPress={() => setKind('all')} styles={styles}>
             {(color) => <SvgIcon name="grid" size={22} color={color} />}
           </FilterButton>
           {counts.map((k) => (
             <FilterButton
               key={k.kind}
-              label={KIND_LABEL[k.kind]}
+              label={kindLabel(t, k.kind)}
               count={k.count}
               active={activeKind === k.kind}
               onPress={() => setKind(k.kind)}
@@ -138,7 +138,7 @@ export default function NearbyScreen({ pois, discoveredIds, origin, placesStatus
       )}
       {nearby.length === 0 ? (
         <Text style={styles.empty}>
-          {emptyMessage(origin !== null, placesStatus, countInRadius(origin, pois, NEARBY_RADIUS_METERS))}
+          {emptyMessage(t, origin !== null, placesStatus, countInRadius(origin, pois, NEARBY_RADIUS_METERS))}
         </Text>
       ) : (
         <FlatList
@@ -149,7 +149,7 @@ export default function NearbyScreen({ pois, discoveredIds, origin, placesStatus
               style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
               onPress={() => onSelect(item.poi)}
               accessibilityRole="button"
-              accessibilityLabel="Показать на карте"
+              accessibilityLabel={t('common.showOnMap')}
             >
               <View style={[styles.iconBadge, { backgroundColor: kindTint(item.poi.kind) }]}>
                 <KindIcon kind={item.poi.kind} size={22} color={KIND_COLOR[item.poi.kind]} />
@@ -159,7 +159,7 @@ export default function NearbyScreen({ pois, discoveredIds, origin, placesStatus
                   {item.poi.name}
                 </Text>
                 <Text style={styles.distance}>
-                  {formatDistance(item.meters)}, {KIND_LABEL[item.poi.kind].toLowerCase()}
+                  {formatDistance(t, item.meters)}, {kindLabel(t, item.poi.kind).toLowerCase()}
                 </Text>
               </View>
             </Pressable>
@@ -168,7 +168,7 @@ export default function NearbyScreen({ pois, discoveredIds, origin, placesStatus
       )}
       {sortMenuOpen && (
         <>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setSortMenuOpen(false)} accessibilityLabel="Закрыть" />
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setSortMenuOpen(false)} accessibilityLabel={t('common.close')} />
           <View style={[styles.sortMenu, { top: menuTop }]} accessibilityRole="menu">
             {SORT_OPTIONS.map((option) => {
               const selected = option.sort === sort;
@@ -184,7 +184,7 @@ export default function NearbyScreen({ pois, discoveredIds, origin, placesStatus
                   accessibilityState={{ selected }}
                 >
                   <SvgIcon name={option.icon} size={22} color={selected ? c.accent : c.textMuted} />
-                  <Text style={[styles.sortLabel, selected && styles.sortLabelSelected]}>{option.label}</Text>
+                  <Text style={[styles.sortLabel, selected && styles.sortLabelSelected]}>{t(option.labelKey)}</Text>
                   {selected && <SvgIcon name="check" size={20} color={c.accent} />}
                 </Pressable>
               );

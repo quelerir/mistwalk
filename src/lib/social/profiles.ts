@@ -1,3 +1,4 @@
+import { tNow } from '../../i18n';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CityStat } from '../geo/cityStats';
 import type { CountryStat } from '../geo/countryStats';
@@ -202,7 +203,7 @@ export async function createDefaultProfile(
   const compact = userId.replace(/-/g, '');
   for (const length of [6, 10, 16]) {
     const profile: MyProfile = {
-      displayName: `Игрок ${compact.slice(0, length)}`,
+      displayName: tNow('player.default', { id: compact.slice(0, length) }),
       isPublic: true,
       avatarPath: null,
     };

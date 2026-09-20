@@ -1,5 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { makeT } from '../../i18n';
 import { countNewer, fetchFeed, timeAgo } from './feed';
+
+const ru = makeT('ru');
 
 describe('fetchFeed', () => {
   it('maps the rows', async () => {
@@ -32,14 +35,22 @@ describe('countNewer', () => {
 describe('timeAgo', () => {
   const now = new Date(2026, 8, 19, 12, 0, 0).getTime();
   it('speaks in minutes, hours and days', () => {
-    expect(timeAgo(now - 20 * 1000, now)).toBe('только что');
-    expect(timeAgo(now - 5 * 60 * 1000, now)).toBe('5 мин назад');
-    expect(timeAgo(now - 3 * 3600 * 1000, now)).toBe('3 ч назад');
-    expect(timeAgo(now - 26 * 3600 * 1000, now)).toBe('вчера');
-    expect(timeAgo(now - 3 * 24 * 3600 * 1000, now)).toBe('3 дн. назад');
+    expect(timeAgo(ru, 'ru', now - 20 * 1000, now)).toBe('только что');
+    expect(timeAgo(ru, 'ru', now - 5 * 60 * 1000, now)).toBe('5 мин назад');
+    expect(timeAgo(ru, 'ru', now - 3 * 3600 * 1000, now)).toBe('3 ч назад');
+    expect(timeAgo(ru, 'ru', now - 26 * 3600 * 1000, now)).toBe('вчера');
+    expect(timeAgo(ru, 'ru', now - 3 * 24 * 3600 * 1000, now)).toBe('3 дн. назад');
   });
 
   it('falls back to a date after a week', () => {
-    expect(timeAgo(now - 20 * 24 * 3600 * 1000, now)).toMatch(/авг|сент/);
+    expect(timeAgo(ru, 'ru', now - 20 * 24 * 3600 * 1000, now)).toMatch(/авг|сент/);
+  });
+
+  it('speaks English', () => {
+    const en = makeT('en');
+    expect(timeAgo(en, 'en', now - 20 * 1000, now)).toBe('just now');
+    expect(timeAgo(en, 'en', now - 5 * 60 * 1000, now)).toBe('5 min ago');
+    expect(timeAgo(en, 'en', now - 26 * 3600 * 1000, now)).toBe('yesterday');
+    expect(timeAgo(en, 'en', now - 3 * 24 * 3600 * 1000, now)).toBe('3 d ago');
   });
 });

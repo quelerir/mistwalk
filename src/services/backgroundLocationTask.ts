@@ -3,6 +3,7 @@ import * as TaskManager from 'expo-task-manager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { routeBackgroundLocations } from '../lib/location/routeBackgroundLocations';
 import { notifyIfNearby } from './placeNotifier';
+import { loadTranslator } from '../i18n';
 
 export const BACKGROUND_LOCATION_TASK = 'background-location-task';
 
@@ -88,13 +89,15 @@ export async function startBackgroundTracking(distanceIntervalMeters: number): P
   const alreadyStarted = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
   if (alreadyStarted) return;
 
+  // The text of the standing notification is fixed when tracking starts, in the language chosen then.
+  const { t } = await loadTranslator();
   await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
     accuracy: Location.Accuracy.Balanced,
     distanceInterval: distanceIntervalMeters,
     pausesUpdatesAutomatically: false,
     foregroundService: {
-      notificationTitle: 'Открытие карты активно',
-      notificationBody: 'Приложение отслеживает перемещение, чтобы открывать карту',
+      notificationTitle: t('notify.bgTitle'),
+      notificationBody: t('notify.bgBody'),
     },
   });
 }

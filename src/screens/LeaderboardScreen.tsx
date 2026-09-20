@@ -6,6 +6,7 @@ import { avatarUrl, fetchLeaderboard, type LeaderboardEntry } from '../lib/socia
 import { useStyles } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import { FONT } from '../theme/fonts';
+import { useT } from '../i18n/I18nProvider';
 
 export interface LeaderboardScreenProps {
   client: SupabaseClient;
@@ -15,6 +16,7 @@ export interface LeaderboardScreenProps {
 }
 
 export default function LeaderboardScreen({ client, userId, onBack, onOpenPlayer }: LeaderboardScreenProps) {
+  const t = useT();
   const styles = useStyles(makeStyles);
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -39,23 +41,23 @@ export default function LeaderboardScreen({ client, userId, onBack, onOpenPlayer
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel="Назад">
+        <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel={t('common.back')}>
           <Text style={styles.back}>‹</Text>
         </Pressable>
         <View style={styles.headerText}>
-          <Text style={styles.title}>Рейтинг</Text>
-          <Text style={styles.subtitle}>По найденным местам</Text>
+          <Text style={styles.title}>{t('rating.title')}</Text>
+          <Text style={styles.subtitle}>{t('rating.subtitle')}</Text>
         </View>
       </View>
       {status === 'loading' ? (
         <ActivityIndicator style={styles.loader} />
       ) : status === 'error' ? (
-        <Text style={styles.empty}>Рейтинг пока недоступен. Проверьте интернет и попробуйте позже.</Text>
+        <Text style={styles.empty}>{t('rating.unavailable')}</Text>
       ) : (
         <FlatList
           data={entries}
           keyExtractor={(item) => item.userId}
-          ListEmptyComponent={<Text style={styles.empty}>Пока никого. Станьте первым!</Text>}
+          ListEmptyComponent={<Text style={styles.empty}>{t('rating.empty')}</Text>}
           renderItem={({ item }) => (
             <Pressable
               style={({ pressed }) => [styles.row, pressed && styles.pressed]}
@@ -68,7 +70,7 @@ export default function LeaderboardScreen({ client, userId, onBack, onOpenPlayer
               </View>
               <Text style={[styles.name, item.userId === userId && styles.mine]} numberOfLines={1}>
                 {item.displayName}
-                {item.userId === userId ? ' (вы)' : ''}
+                {item.userId === userId ? t('rating.you') : ''}
               </Text>
               <Text style={styles.count}>{item.foundCount}</Text>
               <Text style={styles.chevron}>›</Text>

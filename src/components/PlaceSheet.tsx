@@ -2,7 +2,7 @@ import React from 'react';
 import { ActivityIndicator, Image, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePlaceInfo } from '../hooks/usePlaceInfo';
-import { KIND_LABEL } from '../lib/poi/greeting';
+import { kindLabel } from '../lib/poi/greeting';
 import KindIcon from './KindIcon';
 import type { Poi } from '../lib/poi/types';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
@@ -10,6 +10,14 @@ import type { Colors } from '../theme/palettes';
 import { KIND_COLOR } from '../lib/poi/kindColors';
 import SvgIcon from './icons/SvgIcon';
 import { FONT } from '../theme/fonts';
+import { useT } from '../i18n/I18nProvider';
+import type { TFunc } from '../i18n';
+
+// "wikipedia:en" → "Wikipedia (en)" in the language in use; Wikidata and Commons are names and stay as they are.
+function sourceLabel(t: TFunc, source: string): string {
+  if (source.startsWith('wikipedia:')) return t('place.source', { lang: source.slice('wikipedia:'.length) });
+  return source === 'commons' ? 'Wikimedia Commons' : 'Wikidata';
+}
 
 export interface PlaceSheetProps {
   place: Poi | null;
@@ -17,6 +25,7 @@ export interface PlaceSheetProps {
 }
 
 export default function PlaceSheet({ place, onClose }: PlaceSheetProps) {
+  const t = useT();
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   const insets = useSafeAreaInsets();
@@ -24,7 +33,7 @@ export default function PlaceSheet({ place, onClose }: PlaceSheetProps) {
 
   return (
     <Modal visible={place !== null} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Закрыть" />
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={t('common.close')} />
       {place && (
         <View style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}>
           {!info?.imageUrl && <View style={styles.handle} />}
@@ -32,7 +41,7 @@ export default function PlaceSheet({ place, onClose }: PlaceSheetProps) {
             {info?.imageUrl ? (
               <Image source={{ uri: info.imageUrl }} style={styles.photo} resizeMode="cover" />
             ) : null}
-            <Pressable onPress={onClose} hitSlop={8} style={styles.close} accessibilityRole="button" accessibilityLabel="Закрыть">
+            <Pressable onPress={onClose} hitSlop={8} style={styles.close} accessibilityRole="button" accessibilityLabel={t('common.close')}>
               <SvgIcon name="close" size={18} color="#FFFFFF" />
             </Pressable>
           </View>
@@ -40,24 +49,24 @@ export default function PlaceSheet({ place, onClose }: PlaceSheetProps) {
             <View style={styles.body}>
               <View style={styles.kindRow}>
                 <KindIcon kind={place.kind} size={18} color={KIND_COLOR[place.kind]} />
-                <Text style={[styles.kind, { color: KIND_COLOR[place.kind] }]}>{KIND_LABEL[place.kind].toUpperCase()}</Text>
+                <Text style={[styles.kind, { color: KIND_COLOR[place.kind] }]}>{kindLabel(t, place.kind).toUpperCase()}</Text>
               </View>
               <Text style={styles.title}>{place.name}</Text>
 
               {status === 'loading' && <ActivityIndicator style={styles.loader} />}
               {status === 'failed' && (
-                <Text style={styles.muted}>Не удалось загрузить описание. Проверьте интернет.</Text>
+                <Text style={styles.muted}>{t('place.loadFailed')}</Text>
               )}
               {status === 'ready' && (
                 <>
                   <Text style={info?.description ? styles.text : styles.muted}>
-                    {info?.description ?? 'Описания этого места пока нет.'}
+                    {info?.description ?? t('place.noDescription')}
                   </Text>
                   {info?.pageUrl && (
                     <Pressable onPress={() => void Linking.openURL(info.pageUrl!)} accessibilityRole="link">
                       <View style={styles.sourceRow}>
                         <SvgIcon name="book" size={16} color={c.textMuted} />
-                        <Text style={styles.source}>{info.source}</Text>
+                        <Text style={styles.source}>{sourceLabel(t, info.source)}</Text>
                       </View>
                     </Pressable>
                   )}

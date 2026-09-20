@@ -1,8 +1,21 @@
 import type { KeyValueStorage } from '../settings/accuracyProfile';
-import { KIND_LABEL } from './greeting';
 import type { Poi, PoiKind } from './types';
 
-export const ALL_KINDS = Object.keys(KIND_LABEL) as PoiKind[];
+// Every kind; the record makes the compiler say so when a kind is added and forgotten here.
+const KINDS: Record<PoiKind, true> = {
+  viewpoint: true,
+  monument: true,
+  castle: true,
+  ruins: true,
+  attraction: true,
+  artwork: true,
+  museum: true,
+  park: true,
+  beach: true,
+  worship: true,
+  nature: true,
+};
+export const ALL_KINDS = Object.keys(KINDS) as PoiKind[];
 
 const STORAGE_KEY = 'settings.mapHiddenKinds.v1';
 

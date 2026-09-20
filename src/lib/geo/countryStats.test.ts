@@ -61,13 +61,16 @@ describe('groupPointsByCountry / buildCountryList', () => {
 
 describe('formatPercent', () => {
   it('adapts precision to the magnitude', () => {
-    expect(formatPercent(0)).toBe('0 %');
-    expect(formatPercent(12.4)).toBe('12 %');
-    expect(formatPercent(3.26)).toBe('3,3 %');
-    expect(formatPercent(0.0431)).toBe('0,043 %');
-    expect(formatPercent(0.00123)).toBe('0,0012 %');
-    expect(formatPercent(0.0000431)).toBe('0,000043 %');
-    expect(formatPercent(0.0000001)).toBe('< 0,000001 %');
+    expect(formatPercent('ru', 0)).toBe('0 %');
+    expect(formatPercent('ru', 12.4)).toBe('12 %');
+    expect(formatPercent('ru', 3.26)).toBe('3,3 %');
+    expect(formatPercent('ru', 0.0431)).toBe('0,043 %');
+    expect(formatPercent('ru', 0.00123)).toBe('0,0012 %');
+    expect(formatPercent('ru', 0.0000431)).toBe('0,000043 %');
+    expect(formatPercent('ru', 0.0000001)).toBe('< 0,000001 %');
+    expect(formatPercent('en', 3.26)).toBe('3.3 %');
+    expect(formatPercent('en', 0.0431)).toBe('0.043 %');
+    expect(formatPercent('en', 0.0000001)).toBe('< 0.000001 %');
   });
 });
 

@@ -1,3 +1,4 @@
+import { makeT } from '../../i18n';
 import { buildCityList, cityCellKey, fetchCityAt, formatKm2, geometryAreaKm2 } from './cityStats';
 
 const vienna = { lat: 48.2082, lng: 16.3738 };
@@ -12,6 +13,15 @@ describe('fetchCityAt', () => {
     expect((await fetchCityAt(1, 1, respond({ address: { city: 'Вена', town: 'X' } })))?.name).toBe('Вена');
     expect((await fetchCityAt(1, 1, respond({ address: { village: 'Kleinarl' } })))?.name).toBe('Kleinarl');
     expect((await fetchCityAt(1, 1, respond({ name: 'Где-то' })))?.name).toBe('Где-то');
+  });
+
+  it('asks the geocoder for names in the language given (Russian by default)', async () => {
+    const fetcher = respond({ address: { city: 'Vienna' } });
+    await fetchCityAt(1, 1, fetcher, 'en');
+    expect((fetcher as unknown as jest.Mock).mock.calls[0][1].headers['Accept-Language']).toBe('en');
+    const fallback = respond({ address: { city: 'Вена' } });
+    await fetchCityAt(1, 1, fallback);
+    expect((fallback as unknown as jest.Mock).mock.calls[0][1].headers['Accept-Language']).toBe('ru');
   });
 
   it('reads the boundary area, or null when only a point is known', async () => {
@@ -69,12 +79,21 @@ describe('buildCityList', () => {
   });
 });
 
+const ru = makeT('ru');
+
 describe('formatKm2', () => {
   it('adapts precision', () => {
-    expect(formatKm2(0.001)).toBe('< 0,01 км²');
-    expect(formatKm2(0.234)).toBe('0,23 км²');
-    expect(formatKm2(3.14)).toBe('3,1 км²');
-    expect(formatKm2(250.4)).toBe('250 км²');
+    expect(formatKm2(ru, 'ru', 0.001)).toBe('< 0,01 км²');
+    expect(formatKm2(ru, 'ru', 0.234)).toBe('0,23 км²');
+    expect(formatKm2(ru, 'ru', 3.14)).toBe('3,1 км²');
+    expect(formatKm2(ru, 'ru', 250.4)).toBe('250 км²');
+  });
+
+  it('writes English with a decimal point and English units', () => {
+    const en = makeT('en');
+    expect(formatKm2(en, 'en', 0.001)).toBe('< 0.01 km²');
+    expect(formatKm2(en, 'en', 3.14)).toBe('3.1 km²');
+    expect(formatKm2(en, 'en', 250.4)).toBe('250 km²');
   });
 });
 

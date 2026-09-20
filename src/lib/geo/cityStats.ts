@@ -1,5 +1,8 @@
 import { computeAreaKm2, type TimedPoint } from '../stats/coverage';
 import type { DiscoveredPlace } from '../poi/types';
+import type { TFunc } from '../../i18n';
+import { decimal } from '../../i18n/format';
+import type { Lang } from '../../i18n/language';
 
 export interface CityRef {
   name: string;
@@ -82,10 +85,11 @@ interface NominatimCity {
 export async function fetchCityAt(
   lat: number,
   lng: number,
-  fetchImpl: typeof fetch = fetch
+  fetchImpl: typeof fetch = fetch,
+  lang: Lang = 'ru'
 ): Promise<CityRef | null> {
   const url = `${NOMINATIM_URL}?format=jsonv2&zoom=10&addressdetails=1&extratags=1&polygon_geojson=1&polygon_threshold=0.0005&lat=${lat}&lon=${lng}`;
-  const response = await fetchImpl(url, { headers: { 'Accept-Language': 'ru' } });
+  const response = await fetchImpl(url, { headers: { 'Accept-Language': lang } });
   if (!response.ok) throw new Error(`reverse geocoding responded with ${response.status}`);
   const json = (await response.json()) as NominatimCity;
   const a = json.address;
@@ -140,12 +144,13 @@ export function buildCityList(
       (a, b) =>
         (b.percent ?? -1) - (a.percent ?? -1) ||
         b.exploredKm2 - a.exploredKm2 ||
-        a.name.localeCompare(b.name, 'ru')
+        a.name.localeCompare(b.name)
     );
 }
 
-export function formatKm2(km2: number): string {
-  if (km2 < 0.01) return '< 0,01 км²';
+// The area, with fewer decimals the larger it is.
+export function formatKm2(t: TFunc, lang: Lang, km2: number): string {
+  if (km2 < 0.01) return t('unit.km2Tiny');
   const text = km2 < 1 ? km2.toFixed(2) : km2 < 100 ? km2.toFixed(1) : km2.toFixed(0);
-  return `${text.replace('.', ',')} км²`;
+  return t('unit.km2', { n: decimal(lang, text) });
 }

@@ -14,6 +14,7 @@ import { avatarUrl } from '../lib/social/profiles';
 import { useStyles } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import { FONT } from '../theme/fonts';
+import { useT } from '../i18n/I18nProvider';
 
 type Tab = 'followers' | 'following';
 
@@ -25,6 +26,7 @@ export interface FollowsScreenProps {
 }
 
 export default function FollowsScreen({ client, initialTab = 'followers', onBack, onOpenPlayer }: FollowsScreenProps) {
+  const t = useT();
   const styles = useStyles(makeStyles);
   const [tab, setTab] = useState<Tab>(initialTab);
   const [entries, setEntries] = useState<FollowEntry[]>([]);
@@ -63,24 +65,23 @@ export default function FollowsScreen({ client, initialTab = 'followers', onBack
         );
       } catch (err) {
         console.warn('[follows] toggle failed', err);
-        Alert.alert('Не удалось', 'Проверьте интернет и попробуйте ещё раз.');
+        Alert.alert(t('common.failed'), t('common.checkInternet'));
       } finally {
         setBusyId(null);
       }
     },
-    [client, tab]
+    [client, tab, t]
   );
 
-  const emptyText =
-    tab === 'followers' ? 'Пока никто не подписался. Ваш профиль виден в рейтинге.' : 'Вы ни на кого не подписаны. Загляните в рейтинг.';
+  const emptyText = tab === 'followers' ? t('follows.emptyFollowers') : t('follows.emptyFollowing');
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel="Назад">
+        <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel={t('common.back')}>
           <Text style={styles.back}>‹</Text>
         </Pressable>
-        <Text style={styles.title}>Подписки</Text>
+        <Text style={styles.title}>{t('follows.title')}</Text>
       </View>
 
       <View style={styles.tabs}>
@@ -93,7 +94,7 @@ export default function FollowsScreen({ client, initialTab = 'followers', onBack
             accessibilityState={{ selected: tab === key }}
           >
             <Text style={[styles.tabText, tab === key && styles.tabTextActive]}>
-              {key === 'followers' ? 'Подписчики' : 'Подписки'}
+              {key === 'followers' ? t('collection.followersLabel') : t('collection.followingLabel')}
             </Text>
           </Pressable>
         ))}
@@ -102,7 +103,7 @@ export default function FollowsScreen({ client, initialTab = 'followers', onBack
       {status === 'loading' ? (
         <ActivityIndicator style={styles.loader} />
       ) : status === 'error' ? (
-        <Text style={styles.empty}>Не удалось загрузить. Проверьте интернет и попробуйте позже.</Text>
+        <Text style={styles.empty}>{t('follows.loadFailed')}</Text>
       ) : (
         <FlatList
           data={entries}
@@ -119,7 +120,7 @@ export default function FollowsScreen({ client, initialTab = 'followers', onBack
                 <Text style={styles.name} numberOfLines={1}>
                   {item.displayName}
                 </Text>
-                {item.iFollow && item.followsMe && <Text style={styles.sub}>Взаимная подписка</Text>}
+                {item.iFollow && item.followsMe && <Text style={styles.sub}>{t('follows.mutual')}</Text>}
               </View>
               <FollowButton
                 compact

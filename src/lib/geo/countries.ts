@@ -1,5 +1,7 @@
 // Generated once from World Bank surface areas (AG.SRF.TOTL.K2) and ICU Russian region names.
 // Kosovo, Taiwan and the Vatican are added by hand: the World Bank list omits them.
+import { COUNTRY_NAMES_EN } from './countryNamesEn';
+
 export interface CountryInfo {
   code: string;
   name: string;
@@ -230,6 +232,14 @@ export const COUNTRIES: CountryInfo[] = [
 export const COUNTRY_BY_CODE: Readonly<Record<string, CountryInfo>> = Object.fromEntries(
   COUNTRIES.map((c) => [c.code, c])
 );
+
+// The name of a country in a language: Russian from the table, English from the English one, and the Russian one when a
+// language has no name for it.
+export function countryName(code: string, lang: string): string {
+  const known = COUNTRY_BY_CODE[code];
+  if (lang === 'en') return COUNTRY_NAMES_EN[code] ?? known?.name ?? code;
+  return known?.name ?? code;
+}
 
 // Flag emoji are missing from some system fonts (e.g. the iOS simulator), so flags are images.
 export function flagUrl(code: string): string {

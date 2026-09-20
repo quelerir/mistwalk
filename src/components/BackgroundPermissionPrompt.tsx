@@ -4,6 +4,7 @@ import SvgIcon from './icons/SvgIcon';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import { FONT } from '../theme/fonts';
+import { useT } from '../i18n/I18nProvider';
 
 export interface BackgroundPermissionPromptProps {
   visible: boolean;
@@ -11,17 +12,14 @@ export interface BackgroundPermissionPromptProps {
   onDecline: () => void;
 }
 
-const POINTS = [
-  'Туман открывается по мере прогулки, даже когда экран заблокирован.',
-  'Приложение не следит за вами: точки хранятся только в вашем аккаунте.',
-  'Батарея расходуется умеренно, режим можно выключить в профиле.',
-];
+const POINT_KEYS = ['bg.point1', 'bg.point2', 'bg.point3'] as const;
 
 export default function BackgroundPermissionPrompt({
   visible,
   onAccept,
   onDecline,
 }: BackgroundPermissionPromptProps) {
+  const t = useT();
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   return (
@@ -30,22 +28,19 @@ export default function BackgroundPermissionPrompt({
         <View style={styles.badge}>
           <SvgIcon name="locate" size={44} color={c.text} />
         </View>
-        <Text style={styles.title}>Открывайте карту, даже когда телефон в кармане</Text>
-        {POINTS.map((point) => (
-          <View key={point} style={styles.pointRow}>
+        <Text style={styles.title}>{t('bg.title')}</Text>
+        {POINT_KEYS.map((key) => (
+          <View key={key} style={styles.pointRow}>
             <Text style={styles.bullet}>•</Text>
-            <Text style={styles.pointText}>{point}</Text>
+            <Text style={styles.pointText}>{t(key)}</Text>
           </View>
         ))}
-        <Text style={styles.note}>
-          Дальше iOS спросит доступ к геолокации. Выберите «Всегда разрешать» (или «Оставить», если
-          система предложит).
-        </Text>
+        <Text style={styles.note}>{t('bg.iosNote')}</Text>
         <Pressable style={styles.primary} onPress={onAccept}>
-          <Text style={styles.primaryText}>Продолжить</Text>
+          <Text style={styles.primaryText}>{t('bg.continue')}</Text>
         </Pressable>
         <Pressable style={styles.secondary} onPress={onDecline}>
-          <Text style={styles.secondaryText}>Не сейчас</Text>
+          <Text style={styles.secondaryText}>{t('bg.notNow')}</Text>
         </Pressable>
       </View>
     </Modal>

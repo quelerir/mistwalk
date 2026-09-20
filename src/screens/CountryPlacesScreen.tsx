@@ -3,7 +3,7 @@ import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import { haversineDistanceMeters, type Coordinate } from '../lib/geo/distance';
 import { formatKm2, type CityStat } from '../lib/geo/cityStats';
 import { formatPercent, type CountryPlaces, type CountryStat } from '../lib/geo/countryStats';
-import { KIND_LABEL } from '../lib/poi/greeting';
+import { kindLabel } from '../lib/poi/greeting';
 import CityBadge from '../components/CityBadge';
 import { useCrests } from '../hooks/useCrests';
 import KindIcon from '../components/KindIcon';
@@ -13,6 +13,8 @@ import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import { FONT } from '../theme/fonts';
 import { KIND_COLOR, kindTint } from '../lib/poi/kindColors';
+import { useI18n } from '../i18n/I18nProvider';
+import { formatDate, formatDistance } from '../i18n/format';
 
 export interface CountryPlacesScreenProps {
   country: CountryStat;
@@ -24,14 +26,6 @@ export interface CountryPlacesScreenProps {
   onBack: () => void;
   onSelectHidden: (poi: Poi) => void;
   onOpenFound: (place: DiscoveredPlace) => void;
-}
-
-function formatDate(ts: number): string {
-  return new Date(ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-}
-
-function formatDistance(meters: number): string {
-  return meters < 1000 ? `${Math.round(meters / 10) * 10} м` : `${(meters / 1000).toFixed(1)} км`;
 }
 
 type Row =
@@ -50,6 +44,7 @@ export default function CountryPlacesScreen({
   onSelectHidden,
   onOpenFound,
 }: CountryPlacesScreenProps) {
+  const { t, lang } = useI18n();
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   const crests = useCrests(cities.map((city) => city.wikidata));
@@ -59,7 +54,7 @@ export default function CountryPlacesScreen({
       kind: 'found',
       place: p,
       icon: p.kind,
-      date: formatDate(p.discoveredAt),
+      date: formatDate(lang, p.discoveredAt),
     }));
     const hidden: Row[] = (places?.hidden ?? [])
       .map((poi) => ({ poi, meters: origin ? haversineDistanceMeters(origin, poi) : Infinity }))
@@ -68,32 +63,32 @@ export default function CountryPlacesScreen({
         kind: 'hidden',
         poi,
         icon: poi.kind,
-        where: origin ? `${formatDistance(meters)}, ${KIND_LABEL[poi.kind].toLowerCase()}` : KIND_LABEL[poi.kind],
+        where: origin ? `${formatDistance(t, meters)}, ${kindLabel(t, poi.kind).toLowerCase()}` : kindLabel(t, poi.kind),
       }));
     const cityRows: Row[] = cities.map((city) => ({ kind: 'city', city }));
     return [
-      { title: citiesPending ? 'Города · определяем…' : `Города · ${cityRows.length}`, data: cityRows },
-      { title: `Найдено · ${found.length}`, data: found },
-      { title: `Не посещено · ${hidden.length}`, data: hidden },
+      { title: citiesPending ? t('country.citiesDetecting') : t('country.cities', { n: cityRows.length }), data: cityRows },
+      { title: t('country.foundPlaces', { n: found.length }), data: found },
+      { title: t('country.hiddenPlaces', { n: hidden.length }), data: hidden },
     ].filter((section) => section.data.length > 0);
-  }, [places, cities, citiesPending, origin]);
+  }, [places, cities, citiesPending, origin, t, lang]);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel="Назад">
+        <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel={t('common.back')}>
           <Text style={styles.back}>‹</Text>
         </Pressable>
         <View style={styles.headerText}>
           <Text style={styles.title} numberOfLines={1}>
             {country.name}
           </Text>
-          <Text style={styles.subtitle}>Открыто {formatPercent(country.percent)}</Text>
+          <Text style={styles.subtitle}>{t('country.opened', { percent: formatPercent(lang, country.percent) })}</Text>
         </View>
       </View>
       {sections.length === 0 ? (
         <Text style={styles.empty}>
-          {citiesFailed ? 'Не удалось определить города. Проверьте интернет.' : 'Здесь пока нет известных мест. Пройдитесь по карте.'}
+          {citiesFailed ? t('country.citiesFailed') : t('country.noPlaces')}
         </Text>
       ) : (
         <SectionList
@@ -115,12 +110,12 @@ export default function CountryPlacesScreen({
                   </Text>
                   <Text style={styles.where}>
                     {item.city.totalKm2
-                      ? `${formatKm2(item.city.exploredKm2)} из ${formatKm2(item.city.totalKm2)}`
-                      : formatKm2(item.city.exploredKm2)}
-                    {item.city.found > 0 ? ` · мест: ${item.city.found}` : ''}
+                      ? t('country.areaOf', { explored: formatKm2(t, lang, item.city.exploredKm2), total: formatKm2(t, lang, item.city.totalKm2) })
+                      : formatKm2(t, lang, item.city.exploredKm2)}
+                    {item.city.found > 0 ? t('country.cityFound', { n: item.city.found }) : ''}
                   </Text>
                 </View>
-                {item.city.percent !== null && <Text style={styles.cityPercent}>{formatPercent(item.city.percent)}</Text>}
+                {item.city.percent !== null && <Text style={styles.cityPercent}>{formatPercent(lang, item.city.percent)}</Text>}
               </View>
             ) : item.kind === 'found' ? (
               <Pressable
@@ -141,7 +136,7 @@ export default function CountryPlacesScreen({
                 style={({ pressed }) => [styles.row, pressed && styles.pressed]}
                 onPress={() => onSelectHidden(item.poi)}
                 accessibilityRole="button"
-                accessibilityLabel="Показать на карте"
+                accessibilityLabel={t('common.showOnMap')}
               >
                 <View style={[styles.badge, styles.badgeHidden]}>
                   <KindIcon kind={item.icon} size={20} color={c.textFaint} />

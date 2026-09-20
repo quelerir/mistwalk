@@ -1,3 +1,4 @@
+import type { TFunc } from '../../i18n';
 import type { PoiKind } from './types';
 
 export const KIND_ICON: Record<PoiKind, string> = {
@@ -14,34 +15,11 @@ export const KIND_ICON: Record<PoiKind, string> = {
   nature: '▲',
 };
 
-export const KIND_LABEL: Record<PoiKind, string> = {
-  viewpoint: 'Смотровая площадка',
-  monument: 'Памятник',
-  castle: 'Замок',
-  ruins: 'Руины',
-  attraction: 'Достопримечательность',
-  artwork: 'Арт-объект',
-  museum: 'Музей',
-  park: 'Парк',
-  beach: 'Пляж',
-  worship: 'Храм',
-  nature: 'Природа',
-};
+// The name of a kind of place, and the words said when one is found, in the language in use.
+export function kindLabel(t: TFunc, kind: PoiKind): string {
+  return t(`kind.${kind}`);
+}
 
-const GREETINGS: Record<PoiKind, string> = {
-  viewpoint: 'Отсюда открывается вид. Остановитесь на минуту и оглядитесь.',
-  monument: 'Вы дошли до памятного места. Здесь есть что вспомнить.',
-  castle: 'Перед вами настоящая крепость. Добро пожаловать!',
-  ruins: 'Древние руины хранят много историй. Вы их нашли.',
-  attraction: 'Достопримечательность найдена. Хорошая прогулка!',
-  artwork: 'Вы нашли произведение искусства прямо на улице.',
-  museum: 'Здесь хранится много интересного. Загляните внутрь, если есть время.',
-  park: 'Тенистое место для прогулки. Можно немного отдохнуть.',
-  beach: 'Море совсем рядом. Самое время разуться.',
-  worship: 'Тихое место с длинной историей. Вы его нашли.',
-  nature: 'Красота, которую никто не строил. Хорошее место.',
-};
-
-export function greetingFor(kind: PoiKind): string {
-  return GREETINGS[kind];
+export function greetingFor(t: TFunc, kind: PoiKind): string {
+  return t(`greet.${kind}`);
 }
