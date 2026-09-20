@@ -2,7 +2,7 @@ import * as Notifications from 'expo-notifications';
 
 const IDENTIFIER = 'weekly-summary';
 
-// The text is fixed: the numbers are on the "Достижения" card, and the notification is scheduled
+// The text is fixed: the numbers are on the "Коллекция" card, and the notification is scheduled
 // once, so it could not know them anyway. Weekday 1 is Sunday.
 export async function scheduleWeeklySummary(): Promise<void> {
   await Notifications.cancelScheduledNotificationAsync(IDENTIFIER);

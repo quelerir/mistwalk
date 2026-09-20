@@ -12,6 +12,8 @@ export interface TabItem<K extends string> {
   icon: IconName;
   // A profile photo replaces the icon as a small circle.
   photoUri?: string | null;
+  // A small number in the corner, e.g. how many things are new; hidden when 0 or missing.
+  badge?: number | null;
 }
 
 export interface TabBarProps<K extends string> {
@@ -48,6 +50,11 @@ export default function TabBar<K extends string>({ tabs, active, onChange }: Tab
               ) : (
                 <SvgIcon name={tab.icon} size={24} color={on ? c.accent : c.textMuted} />
               )}
+              {tab.badge ? (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{tab.badge > 99 ? '99+' : tab.badge}</Text>
+                </View>
+              ) : null}
             </View>
             <Text style={[styles.label, on && styles.labelActive]} numberOfLines={1}>
               {tab.label}
@@ -74,5 +81,18 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   label: { fontSize: 11, fontWeight: '500', color: c.textMuted },
   labelActive: { fontWeight: '700', color: c.text },
   pressed: { opacity: 0.6 },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: 2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 5,
+    backgroundColor: c.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: { fontSize: 10, fontWeight: '700', color: c.bg },
   photo: { width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, backgroundColor: c.surfaceAlt },
 });

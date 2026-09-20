@@ -18,6 +18,7 @@ export type IconName =
   | 'sort-distance-desc'
   | 'sort-name-desc'
   | 'check'
+  | 'feed'
   | 'grid'
   | 'logout'
   | 'navigate'
@@ -136,6 +137,12 @@ export const ICONS: Record<IconName, { outline: IconLayer[]; active: IconLayer[]
     { d: 'M20 19V5M16.5 8.5L20 5l3.5 3.5', mode: 'stroke' },
   ]),
   check: line('M5 12.5l4.5 4.5L19 7.5'),
+  // A post card: a round avatar and lines of text, like an entry of a friend's feed.
+  feed: shapes([
+    { d: 'M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3z', mode: 'stroke' },
+    { d: circle(8.5, 9.5, 1.8), mode: 'stroke' },
+    { d: 'M13.5 8.5h3.5M13.5 12h3.5M7 16h10', mode: 'stroke' },
+  ]),
   // Four squares: "all kinds".
   grid: shapes([
     { d: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z', mode: 'stroke' },

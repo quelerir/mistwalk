@@ -14,7 +14,8 @@ import { FONT } from '../theme/fonts';
 
 export interface FeedScreenProps {
   client: SupabaseClient;
-  onBack: () => void;
+  // Only when the feed is opened from somewhere; as a tab of its own there is nowhere to go back to.
+  onBack?: () => void;
   onOpenPlayer: (player: { userId: string; displayName: string }) => void;
 }
 
@@ -44,10 +45,12 @@ export default function FeedScreen({ client, onBack, onOpenPlayer }: FeedScreenP
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel="Назад">
-          <Text style={styles.back}>‹</Text>
-        </Pressable>
-        <Text style={styles.title}>Лента друзей</Text>
+        {onBack && (
+          <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel="Назад">
+            <Text style={styles.back}>‹</Text>
+          </Pressable>
+        )}
+        <Text style={[styles.title, !onBack && styles.titleTab]}>Лента друзей</Text>
       </View>
 
       {status === 'loading' ? (
@@ -102,6 +105,8 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
   back: { fontSize: 36, lineHeight: 36, color: c.text, marginRight: 12, marginTop: -4 },
   title: { fontSize: 26, fontFamily: FONT.display, letterSpacing: -0.8, color: c.text },
+  // As a tab of its own the title matches the other tabs (Nearby, Collection).
+  titleTab: { fontSize: 34 },
   loader: { marginTop: 32 },
   empty: { marginTop: 32, paddingHorizontal: 24, textAlign: 'center', color: c.textMuted },
   row: { flexDirection: 'row', gap: 12, paddingVertical: 12, paddingHorizontal: 16 },

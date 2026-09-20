@@ -54,12 +54,13 @@ import { avatarUrl, buildSnapshot, type LeaderboardEntry, type PlaceRegion } fro
 
 const NO_PLACES: DiscoveredPlace[] = [];
 
-type TabKey = 'map' | 'nearby' | 'collection' | 'menu';
+type TabKey = 'map' | 'nearby' | 'feed' | 'collection' | 'menu';
 
 const TABS: Array<TabItem<TabKey>> = [
   { key: 'map', label: 'Карта', icon: 'map' },
   { key: 'nearby', label: 'Рядом', icon: 'compass' },
-  { key: 'collection', label: 'Достижения', icon: 'award' },
+  { key: 'feed', label: 'Лента', icon: 'feed' },
+  { key: 'collection', label: 'Коллекция', icon: 'award' },
   { key: 'menu', label: 'Меню', icon: 'user' },
 ];
 
@@ -94,7 +95,6 @@ export default function MainScreen({
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [openPlayer, setOpenPlayer] = useState<{ userId: string; displayName: string } | null>(null);
   const [showFollows, setShowFollows] = useState(false);
-  const [showFeed, setShowFeed] = useState(false);
   const [feedNew, setFeedNew] = useState<number | null>(null);
   const [followsTab, setFollowsTab] = useState<'followers' | 'following'>('followers');
   const [followCounts, setFollowCounts] = useState<{ followers: number; following: number } | null>(null);
@@ -161,11 +161,12 @@ export default function MainScreen({
   }, [menuOpen, offlineMapOn]);
   // How many finds of followed players are new since the feed was last opened; refreshed when it is left.
   useEffect(() => {
-    if (showFeed) return;
+    // The feed tab counts as seeing everything, so the number is only worth asking for elsewhere.
+    if (tab === 'feed') return;
     Promise.all([fetchFeed(client), getFeedSeen(AsyncStorage)])
       .then(([items, seen]) => setFeedNew(countNewer(items, seen)))
       .catch(() => {});
-  }, [client, showFeed]);
+  }, [client, tab]);
   const week = useMemo(() => weekSummary(points, discovered, Date.now()), [points, discovered]);
   const daily = useMemo(() => dailyKm(points, Date.now()), [points]);
 
@@ -215,7 +216,7 @@ export default function MainScreen({
   const profileSync = useProfileSync(client, userId, snapshot);
   const avatarUri = avatarUrl(client, profileSync.profile?.avatarPath ?? null);
   const tabs = useMemo(
-    () => TABS.map((t) => (t.key === 'menu' ? { ...t, photoUri: avatarUri } : t)),
+    () => TABS.map((t) => (t.key === 'menu' ? { ...t, photoUri: avatarUri } : t.key === 'feed' ? { ...t, badge: feedNew } : t)),
     [avatarUri]
   );
 
@@ -353,8 +354,8 @@ export default function MainScreen({
             onSelect={handleSelect}
           />
         )}
-        {tab === 'collection' &&
-          ((showLeaderboard || showFollows || showFeed) && openPlayer ? (
+        {tab === 'feed' &&
+          (openPlayer ? (
             <PlayerScreen
               client={client}
               playerId={openPlayer.userId}
@@ -362,8 +363,18 @@ export default function MainScreen({
               onBack={() => setOpenPlayer(null)}
               isMe={openPlayer.userId === userId}
             />
-          ) : showFeed ? (
-            <FeedScreen client={client} onBack={() => setShowFeed(false)} onOpenPlayer={setOpenPlayer} />
+          ) : (
+            <FeedScreen client={client} onOpenPlayer={setOpenPlayer} />
+          ))}
+        {tab === 'collection' &&
+          ((showLeaderboard || showFollows) && openPlayer ? (
+            <PlayerScreen
+              client={client}
+              playerId={openPlayer.userId}
+              fallbackName={openPlayer.displayName}
+              onBack={() => setOpenPlayer(null)}
+              isMe={openPlayer.userId === userId}
+            />
           ) : showFollows ? (
             <FollowsScreen client={client} initialTab={followsTab} onBack={() => setShowFollows(false)} onOpenPlayer={setOpenPlayer} />
           ) : showLeaderboard ? (
@@ -411,8 +422,6 @@ export default function MainScreen({
                 setShowFollows(true);
               }}
               followCounts={followCounts}
-              onOpenFeed={() => setShowFeed(true)}
-              feedNew={feedNew}
             />
           ))}
         <DiscoveryCard place={greeting} onDismiss={dismissGreeting} onOpen={setDetailPlace} />
@@ -423,14 +432,14 @@ export default function MainScreen({
         onChange={(key) => {
           if (key === 'menu') setMenuOpen(true);
           else {
+            // A player opened from the feed or the rating must not linger when you come back from another tab.
+            if (key !== tab) setOpenPlayer(null);
             setTab(key);
             if (key !== 'collection') {
               setShowCountries(false);
               setOpenCountry(null);
               setShowLeaderboard(false);
               setShowFollows(false);
-              setShowFeed(false);
-              setOpenPlayer(null);
             }
           }
         }}
