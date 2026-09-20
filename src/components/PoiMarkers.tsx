@@ -4,7 +4,7 @@ import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { projectToScreen, type MapView, type Size } from '../lib/geo/projection';
 import { readView, type ViewShared } from '../lib/map/viewShared';
 import { KIND_LABEL } from '../lib/poi/greeting';
-import { pickMarkers, type MarkerCandidate } from '../lib/poi/markerPicker';
+import { DETAIL_ZOOM, layoutMarkers, type LocatedCandidate } from '../lib/poi/markerPicker';
 import KindIcon from './KindIcon';
 import type { Poi } from '../lib/poi/types';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
@@ -20,11 +20,18 @@ export interface PoiMarkersProps {
   selectedId?: string | null;
   onSelect?: (poi: Poi) => void;
   onOpenFound?: (poi: Poi) => void;
+  // A cluster of places was tapped: the map zooms in on it so the places come apart.
+  onClusterPress?: (cluster: { lng: number; lat: number; pois: Poi[] }) => void;
 }
 
 const MAX_MARKERS = 90;
-// One marker per cell of this many pixels (a marker is 30 px wide), so places do not pile on each other.
-const CELL_PX = 34;
+// Places closer than this many pixels (a marker is 30 px wide) become one cluster with a count.
+const CLUSTER_RADIUS_PX = 44;
+// Zoomed in this far the places are metres apart; only ones on almost the same spot are joined, otherwise two places
+// next to each other could never be told apart however far you zoom.
+const DETAIL_RADIUS_PX = 10;
+// A new place this close to one you found gives way to it.
+const FOUND_CLEARANCE_PX = 30;
 // Wide, because the list is refreshed a few times a second while the map keeps moving under the markers.
 const MARGIN_PX = 400;
 
@@ -61,38 +68,54 @@ export default function PoiMarkers({
   selectedId = null,
   onSelect,
   onOpenFound,
+  onClusterPress,
 }: PoiMarkersProps) {
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
 
+  type Shown =
+    | { type: 'place'; poi: Poi; x: number; y: number; showLabel: boolean }
+    | { type: 'cluster'; key: string; pois: Poi[]; lng: number; lat: number };
+
   const visible = useMemo(() => {
     if (!view || size.width === 0) return [];
     const byId = new Map<string, Poi>();
-    const candidates: MarkerCandidate[] = [];
+    const candidates: LocatedCandidate[] = [];
+    let selectedPoi: { poi: Poi; x: number; y: number } | null = null;
     for (const poi of pois) {
       const { x, y } = projectToScreen(poi.lng, poi.lat, view, size);
       if (x < -MARGIN_PX || x > size.width + MARGIN_PX || y < -MARGIN_PX || y > size.height + MARGIN_PX) continue;
+      // The place picked from the list stays a marker of its own, never lost inside a cluster.
+      if (poi.id === selectedId) {
+        selectedPoi = { poi, x, y };
+        continue;
+      }
       byId.set(poi.id, poi);
-      candidates.push({ id: poi.id, x, y, found: discoveredIds.has(poi.id) });
+      candidates.push({ id: poi.id, x, y, found: discoveredIds.has(poi.id), lng: poi.lng, lat: poi.lat });
     }
 
     // Spread over the whole view, not "the first ones loaded" (those are the places next to you).
-    const result: Array<{ poi: Poi; x: number; y: number; showLabel: boolean }> = [];
+    const result: Shown[] = [];
     const placed: Array<{ l: number; t: number; r: number; b: number }> = [];
-    for (const m of pickMarkers(candidates, size, { cell: CELL_PX, max: MAX_MARKERS })) {
-      const poi = byId.get(m.id)!;
+    if (selectedPoi) result.push({ type: 'place', poi: selectedPoi.poi, x: selectedPoi.x, y: selectedPoi.y, showLabel: false });
+    for (const item of layoutMarkers(candidates, size, { radius: view.zoom >= DETAIL_ZOOM ? DETAIL_RADIUS_PX : CLUSTER_RADIUS_PX, max: MAX_MARKERS, clearance: FOUND_CLEARANCE_PX })) {
+      if (item.ids.length > 1) {
+        result.push({ type: 'cluster', key: `cluster:${item.ids[0]}:${item.ids.length}`, pois: item.ids.map((id) => byId.get(id)!), lng: item.lng, lat: item.lat });
+        continue;
+      }
+      const poi = byId.get(item.ids[0])!;
       let showLabel = false;
-      if (m.found) {
+      if (item.foundSingle) {
         const w = Math.min(120, poi.name.length * 7 + 8);
-        const rect = { l: m.x - w / 2, t: m.y + 18, r: m.x + w / 2, b: m.y + 34 };
+        const rect = { l: item.x - w / 2, t: item.y + 18, r: item.x + w / 2, b: item.y + 34 };
         showLabel = !placed.some((o) => rect.l < o.r && rect.r > o.l && rect.t < o.b && rect.b > o.t);
         if (showLabel) placed.push(rect);
       }
-      result.push({ poi, x: m.x, y: m.y, showLabel });
+      result.push({ type: 'place', poi, x: item.x, y: item.y, showLabel });
     }
     return result;
-  }, [pois, discoveredIds, view, size]);
+  }, [pois, discoveredIds, view, size, selectedId]);
 
   function onLayout(e: LayoutChangeEvent) {
     const { width, height } = e.nativeEvent.layout;
@@ -101,8 +124,24 @@ export default function PoiMarkers({
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none" onLayout={onLayout}>
-      {visible.map(({ poi, x, y, showLabel }) =>
-        discoveredIds.has(poi.id) ? (
+      {visible.map((entry) => {
+        if (entry.type === 'cluster') {
+          return (
+            <MarkerAnchor key={entry.key} shared={shared} lng={entry.lng} lat={entry.lat}>
+              <Pressable
+                onPress={() => onClusterPress?.({ lng: entry.lng, lat: entry.lat, pois: entry.pois })}
+                hitSlop={6}
+                style={styles.cluster}
+                accessibilityRole="button"
+                accessibilityLabel={`${entry.pois.length} мест, приблизить`}
+              >
+                <Text style={styles.clusterText}>{entry.pois.length > 99 ? '99+' : entry.pois.length}</Text>
+              </Pressable>
+            </MarkerAnchor>
+          );
+        }
+        const { poi, showLabel } = entry;
+        return discoveredIds.has(poi.id) ? (
           <MarkerAnchor key={poi.id} shared={shared} lng={poi.lng} lat={poi.lat}>
             <Pressable
               onPress={() => onOpenFound?.(poi)}
@@ -131,8 +170,8 @@ export default function PoiMarkers({
               <KindIcon kind={poi.kind} size={18} color={KIND_COLOR[poi.kind]} />
             </Pressable>
           </MarkerAnchor>
-        )
-      )}
+        );
+      })}
     </View>
   );
 }
@@ -151,6 +190,23 @@ const makeStyles = (c: Colors) => StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
   },
   selected: { borderWidth: 3, borderColor: c.accent, transform: [{ scale: 1.25 }] },
+  cluster: {
+    minWidth: 38,
+    height: 38,
+    borderRadius: 19,
+    paddingHorizontal: 6,
+    // Neutral, like the markers of places not found yet: the green ring means "found" and nothing else.
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+    borderWidth: 2,
+    borderColor: '#1f2937',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 1 },
+  },
+  clusterText: { fontSize: 14, fontWeight: '800', color: '#1f2937' },
   unknownMark: { fontSize: 18, fontWeight: '800', color: '#1f2937' },
   found: {
     width: 32,

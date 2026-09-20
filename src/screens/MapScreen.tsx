@@ -21,9 +21,13 @@ import SvgIcon from '../components/icons/SvgIcon';
 import type { MapView } from '../lib/geo/projection';
 import { MAP_STYLES } from '../lib/map/styles';
 import { useViewShared, writeView } from '../lib/map/viewShared';
-import type { Poi } from '../lib/poi/types';
+import type { Poi, PoiKind } from '../lib/poi/types';
 import type { PlacesStatus } from '../lib/poi/placesStatus';
 import PlacesStatusPill from '../components/PlacesStatusPill';
+import MapKindFilter from '../components/MapKindFilter';
+import ClusterList from '../components/ClusterList';
+import { DETAIL_ZOOM } from '../lib/poi/markerPicker';
+import { countByKind, filterByKinds } from '../lib/poi/kindFilter';
 import type { Wind } from '../lib/weather/weather';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
@@ -32,6 +36,8 @@ import type { Colors } from '../theme/palettes';
 const FOLLOW_ZOOM = 16;
 const FOLLOW_EASE_MS = 900;
 const VIEW_PUBLISH_MS = 250;
+const CLUSTER_ZOOM_STEP = 2;
+const MAX_CLUSTER_ZOOM = 19;
 
 export interface MapScreenProps {
   points: VisitedPoint[];
@@ -43,6 +49,9 @@ export interface MapScreenProps {
   rain: number;
   wind: Wind | null;
   placesStatus: PlacesStatus;
+  // Kinds of places switched off in the filter on the map.
+  hiddenKinds: ReadonlySet<PoiKind>;
+  onHiddenKindsChange: (next: Set<PoiKind>) => void;
   view: MapView | null;
   onViewChange: (view: MapView) => void;
   route: WalkingRoute | null;
@@ -67,6 +76,8 @@ export default function MapScreen({
   rain,
   wind,
   placesStatus,
+  hiddenKinds,
+  onHiddenKindsChange,
   view,
   onViewChange,
   route,
@@ -89,6 +100,7 @@ export default function MapScreen({
   const pendingView = useRef<MapView | null>(null);
   const hasCenteredRef = useRef(false);
   const [following, setFollowing] = useState(true);
+  const [clusterPois, setClusterPois] = useState<Poi[] | null>(null);
   const fittedFor = useRef<string | null>(null);
   const progress = useMemo(
     () => (route && livePosition ? routeProgress(route, livePosition) : null),
@@ -96,9 +108,21 @@ export default function MapScreen({
   );
   const routeTargetId = routing && selected ? selected.id : null;
 
+
+  const kindCounts = useMemo(() => countByKind(pois), [pois]);
+  // The place picked from the list is shown even when its kind is switched off.
+  const shownPois = useMemo(() => {
+    const filtered = filterByKinds(pois, hiddenKinds);
+    return selected && !filtered.some((p) => p.id === selected.id) ? [...filtered, selected] : filtered;
+  }, [pois, hiddenKinds, selected]);
+
   // Bring a picked place into view. The native camera doesn't exist while the tab is hidden,
   // so wait until the map is on screen.
   const selectedId = selected?.id ?? null;
+  // The list of places on one spot goes away when something else is picked or the map is left.
+  useEffect(() => {
+    setClusterPois(null);
+  }, [selectedId, routing, active]);
   useEffect(() => {
     if (!selected || !active) return;
     setFollowing(false);
@@ -161,6 +185,17 @@ export default function MapScreen({
     else if (!publishTimer.current) publishTimer.current = setTimeout(flushView, VIEW_PUBLISH_MS);
   }
 
+  // Tapping a cluster zooms in on it; the places come apart as they get farther apart on the screen. Zoomed in already
+  // (places on the same spot), it lists them instead.
+  function handleClusterPress({ lng, lat, pois: members }: { lng: number; lat: number; pois: Poi[] }) {
+    if ((view?.zoom ?? 0) >= DETAIL_ZOOM) {
+      setClusterPois(members);
+      return;
+    }
+    setFollowing(false);
+    cameraRef.current?.easeTo({ center: [lng, lat], zoom: Math.min(MAX_CLUSTER_ZOOM, (view?.zoom ?? FOLLOW_ZOOM) + CLUSTER_ZOOM_STEP), duration: 500 });
+  }
+
   async function handleMapLoaded() {
     try {
       const state = await mapRef.current?.getViewState();
@@ -192,14 +227,27 @@ export default function MapScreen({
       <FogOverlay points={points} livePosition={livePosition} shared={shared} view={view} fog={fog} animated={fogAnimated && active} rain={active ? rain : 0} wind={wind} userDot={Platform.OS === 'android'} />
       <RouteOverlay coordinates={progress?.coordinates ?? route?.coordinates ?? null} shared={shared} />
       <PoiMarkers
-        pois={pois}
+        pois={shownPois}
         discoveredIds={discoveredIds}
         view={view}
         shared={shared}
         selectedId={selectedId}
         onSelect={onSelect}
         onOpenFound={onOpenFound}
+        onClusterPress={handleClusterPress}
       />
+      {clusterPois && !routing && !selected && active && (
+        <ClusterList
+          pois={clusterPois}
+          foundIds={discoveredIds}
+          onPick={(poi) => {
+            setClusterPois(null);
+            if (discoveredIds.has(poi.id)) onOpenFound(poi);
+            else onSelect(poi);
+          }}
+          onClose={() => setClusterPois(null)}
+        />
+      )}
       {routing ? (
         <RouteCard
           status={routeStatus}
@@ -220,6 +268,7 @@ export default function MapScreen({
         )
       )}
       {active && <PlacesStatusPill status={placesStatus} />}
+      {active && <MapKindFilter counts={kindCounts} hidden={hiddenKinds} onChange={onHiddenKindsChange} />}
       {!following && (
         <Pressable
           style={styles.recenter}

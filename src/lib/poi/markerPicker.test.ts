@@ -1,35 +1,62 @@
-import { pickMarkers, type MarkerCandidate } from './markerPicker';
+import { layoutMarkers, type LocatedCandidate } from './markerPicker';
 
-const c = (id: string, x: number, y: number, found = false): MarkerCandidate => ({ id, x, y, found });
 const screen = { width: 400, height: 800 };
 
-describe('pickMarkers', () => {
-  it('keeps everything when there is room and nothing overlaps', () => {
-    const list = [c('a', 50, 50), c('b', 200, 300), c('c', 350, 700)];
-    expect(pickMarkers(list, screen, { cell: 36, max: 60 }).map((m) => m.id).sort()).toEqual(['a', 'b', 'c']);
+const loc = (id: string, x: number, y: number, found = false): LocatedCandidate => ({ id, x, y, found, lng: x / 100, lat: y / 100 });
+
+describe('layoutMarkers', () => {
+  it('keeps places that are far apart as single markers', () => {
+    const items = layoutMarkers([loc('a', 50, 50), loc('b', 200, 300), loc('c', 350, 700)], screen, { radius: 44, max: 90, clearance: 30 });
+    expect(items.map((i) => i.ids)).toHaveLength(3);
+    expect(items.every((i) => i.ids.length === 1)).toBe(true);
   });
 
-  it('thins a crowd to one marker per cell instead of dropping a whole side of the screen', () => {
-    // 100 places crowded in the top-left corner, and 3 spread over the rest of the screen.
-    const crowd = Array.from({ length: 100 }, (_, i) => c(`n${i}`, 10 + (i % 10) * 3, 10 + Math.floor(i / 10) * 3));
-    const far = [c('east', 380, 100), c('south', 200, 780), c('middle', 210, 400)];
-    const picked = pickMarkers([...crowd, ...far], screen, { cell: 36, max: 60 }).map((m) => m.id);
-    expect(picked).toEqual(expect.arrayContaining(['east', 'south', 'middle']));
-    expect(picked.filter((id) => id.startsWith('n')).length).toBeLessThan(10);
+  it('joins places that would overlap into one cluster with a count and a middle', () => {
+    const items = layoutMarkers([loc('a', 100, 100), loc('b', 110, 104), loc('c', 96, 96)], screen, { radius: 44, max: 90, clearance: 30 });
+    expect(items).toHaveLength(1);
+    expect(items[0].ids.sort()).toEqual(['a', 'b', 'c']);
+    expect(items[0].x).toBeCloseTo((100 + 110 + 96) / 3);
+    expect(items[0].lng).toBeCloseTo((1 + 1.1 + 0.96) / 3);
   });
 
-  it('prefers places found already, then the ones nearer the middle of the screen', () => {
-    const list = [c('edge', 12, 12), c('near', 20, 20, false), c('found', 25, 25, true)];
-    // all three fall into one cell: the found one wins
-    expect(pickMarkers(list, screen, { cell: 36, max: 60 }).map((m) => m.id)).toEqual(['found']);
-    const two = [c('edge', 12, 12), c('near', 22, 22)];
-    // no found place: the one nearer the middle (200, 400) wins
-    expect(pickMarkers(two, screen, { cell: 36, max: 60 }).map((m) => m.id)).toEqual(['near']);
+  it('splits into several markers once the places are far enough apart (zoomed in)', () => {
+    const close = layoutMarkers([loc('a', 100, 100), loc('b', 120, 100)], screen, { radius: 44, max: 90, clearance: 30 });
+    const apart = layoutMarkers([loc('a', 100, 100), loc('b', 220, 100)], screen, { radius: 44, max: 90, clearance: 30 });
+    expect(close).toHaveLength(1);
+    expect(apart).toHaveLength(2);
   });
 
-  it('never returns more than the limit, and keeps the nearest to the middle', () => {
-    const many = Array.from({ length: 200 }, (_, i) => c(`p${i}`, (i % 20) * 20, Math.floor(i / 20) * 80));
-    const picked = pickMarkers(many, screen, { cell: 10, max: 30 });
-    expect(picked).toHaveLength(30);
+  it('counts every new place: nothing is dropped inside a cluster', () => {
+    const crowd = Array.from({ length: 100 }, (_, i) => loc(`n${i}`, 10 + (i % 10) * 3, 10 + Math.floor(i / 10) * 3));
+    const items = layoutMarkers(crowd, screen, { radius: 44, max: 90, clearance: 30 });
+    expect(items.reduce((sum, i) => sum + i.ids.length, 0)).toBe(100);
+  });
+
+  it('keeps a found place as a marker of its own, never lost inside a cluster of new places', () => {
+    const lone = layoutMarkers([loc('f', 100, 100, true)], screen, { radius: 44, max: 90, clearance: 30 });
+    expect(lone[0].foundSingle).toBe(true);
+    // two new places within 44 px of each other and of the found one: they cluster, the found one stays single
+    const around = layoutMarkers([loc('f', 100, 100, true), loc('u1', 135, 100), loc('u2', 140, 105)], screen, { radius: 44, max: 90, clearance: 30 });
+    expect(around.find((i) => i.foundSingle)?.ids).toEqual(['f']);
+    expect(around.find((i) => i.ids.length === 2)?.ids.sort()).toEqual(['u1', 'u2']);
+  });
+
+  it('leaves out a new place that sits right on a found one', () => {
+    const items = layoutMarkers([loc('f', 100, 100, true), loc('u', 110, 100)], screen, { radius: 44, max: 90, clearance: 30 });
+    expect(items.map((i) => i.ids)).toEqual([['f']]);
+  });
+
+  it('groups found places among themselves', () => {
+    const items = layoutMarkers([loc('f1', 100, 100, true), loc('f2', 110, 100, true)], screen, { radius: 44, max: 90, clearance: 30 });
+    expect(items).toHaveLength(1);
+    expect(items[0].foundSingle).toBe(false);
+    expect(items[0].ids.sort()).toEqual(['f1', 'f2']);
+  });
+
+  it('never returns more than the limit, and keeps the found ones and those nearest the middle', () => {
+    const spread = Array.from({ length: 60 }, (_, i) => loc(`p${i}`, (i % 8) * 50, Math.floor(i / 8) * 100));
+    const items = layoutMarkers([...spread, loc('found', 390, 790, true)], screen, { radius: 20, max: 10, clearance: 8 });
+    expect(items).toHaveLength(10);
+    expect(items[0].ids).toEqual(['found']);
   });
 });

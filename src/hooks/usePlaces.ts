@@ -3,6 +3,7 @@ import { Dimensions, Vibration } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { MapView } from '../lib/geo/projection';
+import { appendPois, dedupePois, withAliases } from '../lib/poi/dedupe';
 import { findNewlyDiscovered } from '../lib/poi/discovery';
 import { createPoiLoader } from '../lib/poi/poiCache';
 import { createTileFetcher } from '../lib/poi/proxy';
@@ -38,21 +39,10 @@ function localKey(userId: string): string {
   return `places.discovered.v1.${userId}`;
 }
 
-function mergePois(current: Poi[], incoming: Poi[]): Poi[] {
-  if (incoming.length === 0) return current;
-  const byId = new Map(current.map((p) => [p.id, p]));
-  let changed = false;
-  for (const poi of incoming) {
-    if (!byId.has(poi.id)) {
-      byId.set(poi.id, poi);
-      changed = true;
-    }
-  }
-  return changed ? Array.from(byId.values()) : current;
-}
-
 export function usePlaces({ client, userId, view, livePosition }: UsePlacesOptions) {
-  const [pois, setPois] = useState<Poi[]>([]);
+  // Everything fetched as it came; `pois` is the same with twins of one real place folded together.
+  const [rawPois, setRawPois] = useState<Poi[]>([]);
+  const pois = useMemo(() => dedupePois(rawPois), [rawPois]);
   const [discovered, setDiscovered] = useState<DiscoveredPlace[]>([]);
   const [greeting, setGreeting] = useState<DiscoveredPlace | null>(null);
   const [ready, setReady] = useState(false);
@@ -75,7 +65,8 @@ export function usePlaces({ client, userId, view, livePosition }: UsePlacesOptio
   const alive = useRef(true);
   const [pendingTiles, setPendingTiles] = useState(0);
   const [failedTiles, setFailedTiles] = useState(0);
-  const discoveredIds = useMemo(() => new Set(discovered.map((d) => d.id)), [discovered]);
+  // Twins of one real place count as found together (a place found under any of their ids).
+  const discoveredIds = useMemo(() => withAliases(new Set(discovered.map((d) => d.id)), pois), [discovered, pois]);
 
   useEffect(() => {
     let cancelled = false;
@@ -128,7 +119,7 @@ export function usePlaces({ client, userId, view, livePosition }: UsePlacesOptio
         const found = await loader(tile);
         requestedTiles.current.set(key, Number.POSITIVE_INFINITY);
         if (failures.current.delete(key) && alive.current) setFailedTiles((n) => n - 1);
-        if (alive.current) setPois((current) => mergePois(current, found));
+        if (alive.current) setRawPois((current) => appendPois(current, found));
         await sleep(BETWEEN_REQUESTS_MS);
       } catch (err) {
         console.warn('[usePlaces] tile load failed', key, err);
@@ -209,7 +200,7 @@ export function usePlaces({ client, userId, view, livePosition }: UsePlacesOptio
     if (found.length === 0) return;
 
     const now = Date.now();
-    const fresh: DiscoveredPlace[] = found.map((p) => ({ ...p, discoveredAt: now }));
+    const fresh: DiscoveredPlace[] = found.map(({ aka: _aka, ...p }) => ({ ...p, discoveredAt: now }));
     const next = [...discovered, ...fresh];
     setDiscovered(next);
     setGreeting(fresh[fresh.length - 1]);

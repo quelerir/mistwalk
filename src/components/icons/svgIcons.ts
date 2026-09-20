@@ -19,6 +19,7 @@ export type IconName =
   | 'sort-name-desc'
   | 'check'
   | 'feed'
+  | 'filter'
   | 'grid'
   | 'logout'
   | 'navigate'
@@ -137,6 +138,8 @@ export const ICONS: Record<IconName, { outline: IconLayer[]; active: IconLayer[]
     { d: 'M20 19V5M16.5 8.5L20 5l3.5 3.5', mode: 'stroke' },
   ]),
   check: line('M5 12.5l4.5 4.5L19 7.5'),
+  // A funnel: which kinds of places to show.
+  filter: line('M3 5h18l-7 8.5V20l-4-2v-4.5z'),
   // A post card: a round avatar and lines of text, like an entry of a friend's feed.
   feed: shapes([
     { d: 'M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3z', mode: 'stroke' },

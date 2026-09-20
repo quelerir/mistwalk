@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import type { Coordinate } from '../lib/geo/distance';
 import { pickPlaceToNotify, recordNotified, type NotifyState } from '../lib/notifications/nearbyPlace';
+import { dedupePois, withAliases } from '../lib/poi/dedupe';
 import { tileForLngLat, tileKey } from '../lib/poi/tiles';
 import type { DiscoveredPlace, Poi } from '../lib/poi/types';
 import { getPlaceNotifications } from '../lib/settings/placeNotifications';
@@ -51,10 +52,12 @@ export async function notifyIfNearby(position: Coordinate, now: number = Date.no
 
     const discovered = await readJson<DiscoveredPlace[]>(DISCOVERED_KEY_PREFIX + setting.userId, []);
     const state = await readJson<NotifyState>(STATE_KEY, { lastAt: 0, places: {} });
+    // The same twins folding as on the map, so one real place cannot be announced twice, or announced after it was found.
+    const pois = dedupePois(await cachedPoisAround(position));
     const place = pickPlaceToNotify(
       position,
-      await cachedPoisAround(position),
-      new Set(discovered.map((d) => d.id)),
+      pois,
+      withAliases(new Set(discovered.map((d) => d.id)), pois),
       state,
       now
     );

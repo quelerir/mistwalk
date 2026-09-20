@@ -36,7 +36,8 @@ import CountriesScreen from './CountriesScreen';
 import CountryPlacesScreen from './CountryPlacesScreen';
 import { cellKey, groupPlacesByCountry, type CountryStat } from '../lib/geo/countryStats';
 import { useRoute } from '../hooks/useRoute';
-import type { DiscoveredPlace, Poi } from '../lib/poi/types';
+import type { DiscoveredPlace, Poi, PoiKind } from '../lib/poi/types';
+import { getHiddenKinds, setHiddenKinds } from '../lib/poi/kindFilter';
 import { useStats } from '../hooks/useStats';
 import { useCountryStats } from '../hooks/useCountryStats';
 import { useCityStats } from '../hooks/useCityStats';
@@ -104,6 +105,8 @@ export default function MainScreen({
   const [view, setView] = useState<MapView | null>(null);
   const [fogStyle, setFogStyleState] = useState<FogSetting>('ink');
   const [fogAnimated, setFogAnimatedState] = useState(true);
+  // Kinds of places switched off in the filter on the map; remembered between launches.
+  const [hiddenKinds, setHiddenKindsState] = useState<ReadonlySet<PoiKind>>(new Set());
   // Only "auto" fog reads the hour; checking once a minute is enough to switch at the boundary.
   const [hour, setHour] = useState(() => new Date().getHours());
   const [placeNotifications, setPlaceNotificationsState] = useState(false);
@@ -252,12 +255,18 @@ export default function MainScreen({
     void getWeeklySummary(AsyncStorage).then(setWeeklySummaryOn);
     void getOfflineMap(AsyncStorage).then(setOfflineMapOn);
     void getWeatherFog(AsyncStorage).then(setWeatherFogOn);
+    void getHiddenKinds(AsyncStorage).then(setHiddenKindsState);
     return () => clearInterval(tick);
   }, []);
 
   function handleFogStyleChange(style: FogSetting) {
     setFogStyleState(style);
     void setFogStyle(AsyncStorage, style);
+  }
+
+  function handleHiddenKindsChange(next: Set<PoiKind>) {
+    setHiddenKindsState(next);
+    void setHiddenKinds(AsyncStorage, next);
   }
 
   function handleFogAnimatedChange(next: boolean) {
@@ -333,6 +342,8 @@ export default function MainScreen({
             rain={rain}
             wind={wind}
             placesStatus={placesStatus}
+            hiddenKinds={hiddenKinds}
+            onHiddenKindsChange={handleHiddenKindsChange}
             view={view}
             onViewChange={setView}
             route={route}
