@@ -1,9 +1,28 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-export async function signUp(client: SupabaseClient, email: string, password: string) {
-  const { data, error } = await client.auth.signUp({ email, password });
+export interface SignUpInput {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  login: string;
+}
+
+// The name and the login travel as user metadata; a database trigger turns them into the player's profile.
+export async function signUp(client: SupabaseClient, input: SignUpInput) {
+  const { data, error } = await client.auth.signUp({
+    email: input.email,
+    password: input.password,
+    options: { data: { first_name: input.firstName, last_name: input.lastName, login: input.login } },
+  });
   if (error) throw error;
   return data;
+}
+
+export async function checkLoginAvailable(client: SupabaseClient, login: string): Promise<boolean> {
+  const { data, error } = await client.rpc('login_available', { candidate: login });
+  if (error) throw error;
+  return data === true;
 }
 
 export async function signIn(client: SupabaseClient, email: string, password: string) {
