@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import AuthField from '../components/AuthField';
 import { useLoginAvailability } from '../hooks/useLoginAvailability';
@@ -52,6 +53,7 @@ const EMPTY = { firstName: '', lastName: '', login: '', email: '', password: '' 
 
 export default function SignInScreen({ client, onSignedIn }: SignInScreenProps) {
   const t = useT();
+  const insets = useSafeAreaInsets();
   const styles = useStyles(makeStyles);
   const [mode, setMode] = useState<Mode>('in');
   const [values, setValues] = useState(EMPTY);
@@ -97,7 +99,15 @@ export default function SignInScreen({ client, onSignedIn }: SignInScreenProps) 
   const canSubmit = !busy && !loginBlocked && Object.keys(errors).length === 0;
 
   async function submit() {
-    if (!canSubmit) return;
+    if (!canSubmit) {
+      // Say why: show the error of every field on the form.
+      setTouched(
+        up
+          ? { firstName: true, lastName: true, login: true, email: true, password: true }
+          : { email: true, password: true },
+      );
+      return;
+    }
     setBusy(true);
     setServerError(null);
     try {
@@ -127,13 +137,18 @@ export default function SignInScreen({ client, onSignedIn }: SignInScreenProps) 
         ? { text: t('signin.login.free'), tone: 'ok' as const }
         : loginStatus === 'taken'
           ? { text: t('signin.login.taken'), tone: 'bad' as const }
-          : { text: t('signin.loginHint'), tone: 'muted' as const };
+          : loginStatus === 'invalid'
+            ? { text: t('signin.err.loginFormat'), tone: 'bad' as const }
+            : { text: t('signin.loginHint'), tone: 'muted' as const };
 
   return (
     <ImageBackground source={require('../../assets/icon.png')} style={styles.fill} resizeMode="cover">
       <View style={styles.scrim} />
       <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingTop: 20 + insets.top, paddingBottom: 20 + insets.bottom }]} keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.header}>
             <Text style={styles.title}>Mistwalk</Text>
             <Text style={styles.tagline}>{t('signin.tagline')}</Text>

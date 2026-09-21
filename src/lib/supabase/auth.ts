@@ -22,7 +22,9 @@ export async function signUp(client: SupabaseClient, input: SignUpInput) {
 export async function checkLoginAvailable(client: SupabaseClient, login: string): Promise<boolean> {
   const { data, error } = await client.rpc('login_available', { candidate: login });
   if (error) throw error;
-  return data === true;
+  // Anything but a plain yes or no means the function is not what we expect; the caller treats that as a failed check.
+  if (typeof data !== 'boolean') throw new Error('login_available returned an unexpected result');
+  return data;
 }
 
 export async function signIn(client: SupabaseClient, email: string, password: string) {

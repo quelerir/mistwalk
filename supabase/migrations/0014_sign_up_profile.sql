@@ -25,7 +25,8 @@ revoke all on function public.login_available(text) from public;
 grant execute on function public.login_available(text) to anon, authenticated;
 
 -- Creates the profile when a person signs up with a login and a name. An old app version signs up without them:
--- then nothing happens and the app makes its usual default profile. Only a duplicate login can make it fail.
+-- then nothing happens and the app makes its usual default profile. A duplicate login aborts the sign-up; every other
+-- failure is swallowed with a warning, so a profile problem never blocks a sign-up.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -45,8 +46,16 @@ begin
     return new;
   end if;
 
-  insert into public.player_profiles (user_id, display_name, is_public, first_name, last_name)
-  values (new.id, new_login, true, new_first, new_last);
+  begin
+    insert into public.player_profiles (user_id, display_name, is_public, first_name, last_name)
+    values (new.id, new_login, true, new_first, new_last);
+  exception
+    when unique_violation then
+      raise;                                   -- a taken login is the one thing that aborts the sign-up
+    when others then
+      raise warning 'handle_new_user: profile not created: %', sqlerrm;
+      return new;                              -- never block a sign-up over a profile problem
+  end;
   return new;
 end;
 $$;

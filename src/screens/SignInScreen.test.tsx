@@ -3,6 +3,8 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import SignInScreen from './SignInScreen';
 
+jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
+
 function makeClient(overrides: { signUp?: jest.Mock; signIn?: jest.Mock; rpc?: jest.Mock } = {}) {
   return {
     rpc: overrides.rpc ?? jest.fn().mockResolvedValue({ data: true, error: null }),
@@ -76,5 +78,40 @@ describe('SignInScreen', () => {
     expect(await findByText(/This login is taken|Этот логин занят/, {}, { timeout: 2000 })).toBeTruthy();
     fireEvent.press(getByTestId('signin-submit'));
     expect(signUp).not.toHaveBeenCalled();
+  });
+
+  it('still signs up when the login check fails (an old server)', async () => {
+    const rpc = jest.fn().mockResolvedValue({ data: null, error: new Error('no such function') });
+    const signUp = jest.fn().mockResolvedValue({ data: { user: { id: 'u1' } }, error: null });
+    const onSignedIn = jest.fn();
+    const { getByTestId } = render(<SignInScreen client={makeClient({ rpc, signUp })} onSignedIn={onSignedIn} />);
+    fireEvent.press(getByTestId('signin-tab-up'));
+    fireEvent.changeText(getByTestId('signin-firstName'), 'Anna');
+    fireEvent.changeText(getByTestId('signin-lastName'), 'K');
+    fireEvent.changeText(getByTestId('signin-login'), '@anna_k');
+    fireEvent.changeText(getByTestId('signin-email'), 'a@b.co');
+    fireEvent.changeText(getByTestId('signin-password'), 'secret1');
+    await waitFor(() => expect(getByTestId('signin-submit').props.accessibilityState?.disabled).toBeFalsy(), { timeout: 2000 });
+    fireEvent.press(getByTestId('signin-submit'));
+    await waitFor(() => expect(onSignedIn).toHaveBeenCalled());
+    expect(signUp).toHaveBeenCalledWith({
+      email: 'a@b.co',
+      password: 'secret1',
+      options: { data: { first_name: 'Anna', last_name: 'K', login: 'anna_k' } },
+    });
+  });
+
+  it('explains a badly formed login', () => {
+    const { getByTestId, getByText } = render(<SignInScreen client={makeClient()} onSignedIn={jest.fn()} />);
+    fireEvent.press(getByTestId('signin-tab-up'));
+    fireEvent.changeText(getByTestId('signin-login'), 'Анна');
+    expect(getByText(/3 to 20|От 3 до 20/)).toBeTruthy();
+  });
+
+  it('shows the errors when the keyboard submits an invalid form', () => {
+    const { getByTestId, queryByText, getAllByText } = render(<SignInScreen client={makeClient()} onSignedIn={jest.fn()} />);
+    expect(queryByText(/Fill in this field|Заполните поле/)).toBeNull();
+    fireEvent(getByTestId('signin-password'), 'submitEditing');
+    expect(getAllByText(/Fill in this field|Заполните поле/).length).toBeGreaterThan(0);
   });
 });

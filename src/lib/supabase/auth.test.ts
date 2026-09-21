@@ -47,6 +47,11 @@ describe('auth wrappers', () => {
     await expect(checkLoginAvailable(makeFakeClient({}, rpc), 'anna_k')).rejects.toThrow('no such function');
   });
 
+  it('checkLoginAvailable rejects a result that is not a boolean', async () => {
+    const rpc = jest.fn().mockResolvedValue({ data: null, error: null });
+    await expect(checkLoginAvailable(makeFakeClient({}, rpc), 'anna_k')).rejects.toThrow();
+  });
+
   it('signIn returns data on success', async () => {
     const client = makeFakeClient();
     const data = await signIn(client, 'a@b.com', 'password123');
