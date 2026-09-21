@@ -19,14 +19,17 @@ first name, a last name and a public login (`@login`).
 
 - `player_profiles` gets `first_name text` and `last_name text`. Both nullable: `saveMyProfile` upserts a row and must
   keep working for existing users who have no names. When set, each must be 1 to 40 characters after trimming.
-- The login format for **new** sign-ups (not enforced on old rows): letters, digits, `_` and `.`, 3 to 20 characters.
-  Enforced in the trigger and in the client; the existing table check (2 to 24) and the unique index on
-  `lower(display_name)` stay.
+- The login format for **new** sign-ups (not enforced on old rows): Latin letters, digits and `_`, 3 to 20 characters
+  (`^[A-Za-z0-9_]{3,20}$`). No dot and no `@`: the existing `sanitize_profile` trigger rejects names with `@`, `www.` or
+  a `.com`/`.ru`/... ending. Checked in the client, in `login_available` and in the sign-up trigger; the existing table
+  check (2 to 24) and the unique index on `lower(display_name)` stay.
 - **Trigger `handle_new_user` on `auth.users` (after insert).** Reads `first_name`, `last_name` and `login` from
-  `raw_user_meta_data` and inserts the `player_profiles` row with `is_public = false`. It works with or without a
-  session, so it is correct whether or not email confirmation is on. If any of the three is missing (an old app version
-  signing up without them) it does nothing and the sign-up goes through as before. A taken login raises a unique
-  violation, which aborts the sign-up; the client reads it as "login taken".
+  `raw_user_meta_data` and inserts the `player_profiles` row with `is_public = true`, like `createDefaultProfile` does
+  ("everyone takes part by default"). It works with or without a session, so it is correct whether or not email
+  confirmation is on. If any of the three is missing or malformed (an old app version signing up without them) it does
+  nothing and the sign-up goes through as before; the app then creates its usual default profile. A taken login raises a
+  unique violation, which aborts the sign-up; Supabase reports that as a generic "Database error saving new user", and
+  the client reads that message as "login taken".
 - **Function `login_available(candidate text) returns boolean`** (security definer, granted to `anon` and
   `authenticated`). Returns whether `lower(candidate)` is free and well formed. Returns nothing else, so it exposes no
   profile data. Used for the live check while typing.
@@ -57,7 +60,7 @@ first name, a last name and a public login (`@login`).
 - The migration is applied by hand (SQL editor or `supabase db push`, as before) and must be applied **before** an app
   build that sends the new fields. The trigger tolerates old clients, so applying it early is safe.
 - The trigger is on `auth.users`: a bug in it can block every sign-up, so it is written to never raise except for the
-  duplicate login, and is tested against the SQL by hand (a sign-up with and without the metadata) before the app
+  duplicate login (malformed details are skipped, not rejected), and is tested against the SQL by hand (a sign-up with and without the metadata) before the app
   release.
 
 ## Testing
