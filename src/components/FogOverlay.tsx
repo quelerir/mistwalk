@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { BlurMask, Canvas, Circle, ColorMatrix, FractalNoise, Group, Paint, Path, Rect, Skia, useClock } from '@shopify/react-native-skia';
-import { useDerivedValue, useFrameCallback, useSharedValue, withTiming } from 'react-native-reanimated';
+import { Easing, useDerivedValue, useFrameCallback, useSharedValue, withTiming } from 'react-native-reanimated';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
 import type { FogPalette } from '../lib/settings/fogStyle';
 import { windToDrift, type CloudDrift, type Wind } from '../lib/weather/weather';
@@ -46,18 +46,21 @@ const MAX_LINK_METERS = 300;
 // How far around the view (in screen diagonals) the reveal path is built; it is rebuilt when the view leaves it.
 const WINDOW_FACTOR = 1.6;
 const ORIGIN_REANCHOR_KM = 60;
+// GPS fixes arrive every few seconds, so the dot and the head of the cleared trail glide to each new fix over about
+// one fix interval instead of jumping. A saved point joins the drawn trail only once the glide has reached it.
+export const LIVE_GLIDE_MS = 2000;
+// A fix further than this from the last one is a jump (teleport, lost signal), not a walk: snap instead of gliding.
+const GLIDE_SNAP_METERS = 300;
 
 interface Node {
   lat: number;
   lng: number;
 }
 
-function buildTrail(points: VisitedPoint[], livePosition: LivePosition | null): Node[] {
-  const trail: Node[] = [...points]
+function buildTrail(points: VisitedPoint[]): Node[] {
+  return [...points]
     .sort((a, b) => a.ts - b.ts)
     .map((p) => ({ lat: p.lat, lng: p.lng }));
-  if (livePosition) trail.push(livePosition);
-  return trail;
 }
 
 function parseHex(hex: string): [number, number, number] {
@@ -293,7 +296,40 @@ export default function FogOverlay({ points, livePosition, shared, view, fog, an
     if (!origin || distanceKm(origin, here) > ORIGIN_REANCHOR_KM) setOrigin(here);
   }, [view, origin]);
 
-  const trail = useMemo(() => buildTrail(points, livePosition), [points, livePosition]);
+  // Points saved within the last glide are held back so the trail does not run ahead of the gliding dot.
+  const hasLive = livePosition !== null;
+  const newestTs = useMemo(() => points.reduce((m, p) => Math.max(m, p.ts), 0), [points]);
+  const [settledAt, setSettledAt] = useState(() => Date.now());
+  useEffect(() => {
+    const wait = newestTs + LIVE_GLIDE_MS - Date.now();
+    if (!hasLive || wait <= 0) return;
+    const timer = setTimeout(() => setSettledAt(Date.now()), wait + 30);
+    return () => clearTimeout(timer);
+  }, [newestTs, hasLive]);
+  const cutoff = hasLive ? settledAt - LIVE_GLIDE_MS : Infinity;
+  const trail = useMemo(() => buildTrail(points.filter((p) => p.ts <= cutoff)), [points, cutoff]);
+
+  // The gliding position: eased towards each new fix on the UI thread.
+  const glideLng = useSharedValue(0);
+  const glideLat = useSharedValue(0);
+  const lastFix = useRef<LivePosition | null>(null);
+  useEffect(() => {
+    if (!livePosition) {
+      lastFix.current = null;
+      return;
+    }
+    const prev = lastFix.current;
+    lastFix.current = livePosition;
+    if (!prev || haversineDistanceMeters(prev, livePosition) > GLIDE_SNAP_METERS) {
+      glideLng.value = livePosition.lng;
+      glideLat.value = livePosition.lat;
+      return;
+    }
+    const config = { duration: LIVE_GLIDE_MS, easing: Easing.linear };
+    glideLng.value = withTiming(livePosition.lng, config);
+    glideLat.value = withTiming(livePosition.lat, config);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [livePosition?.lng, livePosition?.lat]);
 
   // Which part of the world the path covers: a window around the view, rebuilt when the view leaves its middle.
   const windowKey = useMemo(() => {
@@ -338,16 +374,40 @@ export default function FogOverlay({ points, livePosition, shared, view, fog, an
 
   const revealWidth = origin ? (2 * REVEAL_RADIUS_METERS) / metersPerPixel(WORLD_ZOOM, origin.lat) : 0;
 
+  // Where the saved trail ends, in world space: the gliding head is drawn from here to the dot.
+  const headAnchor = useMemo(() => {
+    if (!origin || trail.length === 0) return null;
+    const last = trail[trail.length - 1];
+    return worldPoint(last.lng, last.lat, origin);
+  }, [origin, trail]);
+
+  const headPath = useDerivedValue(() => {
+    const path = Skia.Path.Make();
+    if (!origin || !hasLive) return path;
+    const p = worldPoint(glideLng.value, glideLat.value, origin);
+    if (headAnchor) {
+      const meters = Math.hypot(p.x - headAnchor.x, p.y - headAnchor.y) * metersPerPixel(WORLD_ZOOM, origin.lat);
+      if (meters <= MAX_LINK_METERS) {
+        path.moveTo(headAnchor.x, headAnchor.y);
+        path.lineTo(p.x, p.y);
+        return path;
+      }
+    }
+    path.moveTo(p.x, p.y);
+    path.lineTo(p.x + 0.01, p.y);
+    return path;
+  }, [origin, hasLive, headAnchor]);
+
   const sceneTransform = useDerivedValue(
     () => (origin ? worldTransform(readView(shared), origin) : []),
     [origin]
   );
   const dotTransform = useDerivedValue(() => {
-    if (!livePosition) return [];
+    if (!hasLive) return [];
     const v = readView(shared);
-    const p = projectToScreen(livePosition.lng, livePosition.lat, { center: [v.lng, v.lat], zoom: v.zoom, bearing: v.bearing }, { width: v.width, height: v.height });
+    const p = projectToScreen(glideLng.value, glideLat.value, { center: [v.lng, v.lat], zoom: v.zoom, bearing: v.bearing }, { width: v.width, height: v.height });
     return [{ translateX: p.x }, { translateY: p.y }];
-  }, [livePosition?.lng, livePosition?.lat]);
+  }, [hasLive]);
 
   function onLayout(e: LayoutChangeEvent) {
     const { width, height } = e.nativeEvent.layout;
@@ -362,19 +422,24 @@ export default function FogOverlay({ points, livePosition, shared, view, fog, an
         <Group layer={<Paint />}>
           <Rect x={0} y={0} width={size.width} height={size.height} color={fog.base} />
           {origin && <FogClouds shared={shared} origin={origin} fog={fog} animated={animated} drift={drift} />}
-          {origin && revealPath && (
+          {origin && (revealPath || hasLive) && (
             <Group transform={sceneTransform}>
-              <Path
-                path={revealPath}
-                style="stroke"
-                strokeWidth={revealWidth}
-                strokeCap="round"
-                strokeJoin="round"
-                color="black"
-                blendMode="dstOut"
-              >
-                <BlurMask blur={revealWidth * 0.18} style="normal" />
-              </Path>
+              {[revealPath, hasLive ? headPath : null].map((path, i) =>
+                path ? (
+                  <Path
+                    key={i}
+                    path={path}
+                    style="stroke"
+                    strokeWidth={revealWidth}
+                    strokeCap="round"
+                    strokeJoin="round"
+                    color="black"
+                    blendMode="dstOut"
+                  >
+                    <BlurMask blur={revealWidth * 0.18} style="normal" />
+                  </Path>
+                ) : null
+              )}
             </Group>
           )}
         </Group>

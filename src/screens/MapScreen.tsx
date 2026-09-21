@@ -9,7 +9,7 @@ import {
   type ViewStateChangeEvent,
 } from '@maplibre/maplibre-react-native';
 import type { FogPalette } from '../lib/settings/fogStyle';
-import FogOverlay, { type LivePosition } from '../components/FogOverlay';
+import FogOverlay, { LIVE_GLIDE_MS, type LivePosition } from '../components/FogOverlay';
 import { routeProgress } from '../lib/routing/progress';
 import RouteOverlay from '../components/RouteOverlay';
 import PlaceCard from '../components/PlaceCard';
@@ -35,7 +35,7 @@ import type { Colors } from '../theme/palettes';
 import { useT } from '../i18n/I18nProvider';
 
 const FOLLOW_ZOOM = 16;
-const FOLLOW_EASE_MS = 900;
+const FOLLOW_EASE_MS = LIVE_GLIDE_MS;
 const VIEW_PUBLISH_MS = 250;
 const CLUSTER_ZOOM_STEP = 2;
 const MAX_CLUSTER_ZOOM = 19;
