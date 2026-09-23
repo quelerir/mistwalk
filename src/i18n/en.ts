@@ -233,7 +233,6 @@ export const en: Record<Key, Text> = {
   'signin.signIn': 'Sign in',
   'signin.signUp': 'Sign up',
   'signin.failed': 'Could not sign in',
-  'signin.tagline': 'Uncover your city, step by step',
   'signin.tabIn': 'Sign in',
   'signin.tabUp': 'Sign up',
   'signin.firstName': 'First name',

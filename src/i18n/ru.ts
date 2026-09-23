@@ -238,7 +238,6 @@ export const ru = {
   'signin.signIn': 'Войти',
   'signin.signUp': 'Зарегистрироваться',
   'signin.failed': 'Не удалось войти',
-  'signin.tagline': 'Открывайте город шаг за шагом',
   'signin.tabIn': 'Вход',
   'signin.tabUp': 'Регистрация',
   'signin.firstName': 'Имя',

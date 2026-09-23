@@ -151,7 +151,6 @@ export default function SignInScreen({ client, onSignedIn }: SignInScreenProps) 
         >
           <View style={styles.header}>
             <Text style={styles.title}>Mistwalk</Text>
-            <Text style={styles.tagline}>{t('signin.tagline')}</Text>
           </View>
 
           <View style={styles.card}>
@@ -291,7 +290,6 @@ const makeStyles = (c: Colors) =>
     scroll: { flexGrow: 1, justifyContent: 'center', padding: 20, gap: 24 },
     header: { alignItems: 'center', gap: 6 },
     title: { color: '#FFFFFF', fontSize: 36, fontWeight: '800', letterSpacing: 0.5 },
-    tagline: { color: 'rgba(255,255,255,0.8)', fontSize: 15 },
     card: {
       backgroundColor: c.card,
       borderRadius: 24,
