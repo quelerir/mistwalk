@@ -18,8 +18,8 @@ export interface MapKindFilterProps {
 }
 
 const BUTTON_SIZE = 44;
-// Under the status bar and the loading pill, above the map's own controls.
-const TOP_OFFSET = 60;
+// Right under the status bar, in the corner, level with the loading pill (which sits in the middle).
+const TOP_OFFSET = 8;
 
 // A round button on the map that opens a small menu: which kinds of places to show. The button is filled while some
 // kind is switched off, so a map that looks emptier than expected explains itself.
