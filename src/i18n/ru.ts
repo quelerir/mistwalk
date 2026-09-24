@@ -196,6 +196,7 @@ export const ru = {
   'menu.feedbackSend': 'Отправить',
   'menu.feedbackSent': 'Спасибо! Сообщение отправлено.',
   'menu.feedbackFailed': 'Не удалось отправить. Проверьте интернет и попробуйте ещё раз.',
+  'menu.version': 'Mistwalk {version}',
   'menu.noEmail': 'Без почты',
   'menu.addPhoto': 'Добавить фото',
   'menu.changePhoto': 'Изменить фото',

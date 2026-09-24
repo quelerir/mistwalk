@@ -191,6 +191,7 @@ export const en: Record<Key, Text> = {
   'menu.feedbackSend': 'Send',
   'menu.feedbackSent': 'Thanks! Your message was sent.',
   'menu.feedbackFailed': 'Could not send it. Check your internet and try again.',
+  'menu.version': 'Mistwalk {version}',
   'menu.noEmail': 'No email',
   'menu.addPhoto': 'Add photo',
   'menu.changePhoto': 'Change photo',

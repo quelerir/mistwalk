@@ -26,13 +26,15 @@ export interface MenuSheetProps {
   visible: boolean;
   items: MenuItem[];
   header?: React.ReactNode;
+  // Shown below the list, outside the scroll area (e.g. the app version).
+  footer?: React.ReactNode;
   onClose: () => void;
 }
 
 // The handle, the sheet's paddings and a gap of backdrop on top: what the list cannot use of the screen height.
 const SHEET_CHROME = 90;
 
-export default function MenuSheet({ visible, items, header, onClose }: MenuSheetProps) {
+export default function MenuSheet({ visible, items, header, footer, onClose }: MenuSheetProps) {
   const t = useT();
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
@@ -85,6 +87,7 @@ export default function MenuSheet({ visible, items, header, onClose }: MenuSheet
             );
           })}
         </ScrollView>
+        {footer}
       </View>
     </Modal>
   );

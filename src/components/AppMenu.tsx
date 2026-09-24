@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Avatar from './Avatar';
 import MenuSheet, { type MenuItem } from './MenuSheet';
@@ -14,6 +15,8 @@ import {
   setAccuracyProfile,
   type AccuracyProfile,
 } from '../lib/settings/accuracyProfile';
+
+const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
 export interface AppMenuProps {
   visible: boolean;
@@ -354,7 +357,10 @@ export default function AppMenu({
     onClose();
   }
 
-  return <MenuSheet visible={visible} items={items} header={header} onClose={handleClose} />;
+  const footer =
+    page === 'main' ? <Text style={styles.version}>{t('menu.version', { version: APP_VERSION })}</Text> : undefined;
+
+  return <MenuSheet visible={visible} items={items} header={header} footer={footer} onClose={handleClose} />;
 }
 
 const makeStyles = (c: Colors) =>
@@ -384,4 +390,5 @@ const makeStyles = (c: Colors) =>
     },
     feedbackSendOff: { opacity: 0.5 },
     feedbackSendText: { color: c.buttonText, fontWeight: '700', fontSize: 15 },
+    version: { textAlign: 'center', paddingTop: 10, paddingBottom: 2, fontSize: 12, color: c.textFaint },
   });
