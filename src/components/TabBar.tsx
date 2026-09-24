@@ -41,14 +41,14 @@ export default function TabBar<K extends string>({ tabs, active, onChange }: Tab
             accessibilityState={{ selected: on }}
             hitSlop={4}
           >
-            <View style={[styles.pill, on && styles.pillActive]}>
+            <View style={styles.pill}>
               {tab.photoUri ? (
                 <Image
                   source={{ uri: tab.photoUri }}
-                  style={[styles.photo, { borderColor: on ? c.accent : 'transparent' }]}
+                  style={[styles.photo, { borderColor: on ? c.text : 'transparent' }]}
                 />
               ) : (
-                <SvgIcon name={tab.icon} size={24} color={on ? c.accent : c.textMuted} />
+                <SvgIcon name={tab.icon} active={on} size={24} color={on ? c.text : c.textMuted} />
               )}
               {tab.badge ? (
                 <View style={styles.badge}>
@@ -77,7 +77,6 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   },
   tab: { flex: 1, alignItems: 'center', gap: 4 },
   pill: { width: 58, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  pillActive: { backgroundColor: c.accentSoft },
   label: { fontSize: 11, fontWeight: '500', color: c.textMuted },
   labelActive: { fontWeight: '700', color: c.text },
   pressed: { opacity: 0.6 },
