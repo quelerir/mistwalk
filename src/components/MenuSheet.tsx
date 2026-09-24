@@ -64,7 +64,7 @@ export default function MenuSheet({ visible, items, header, footer, onClose }: M
                   accessibilityLabel={item.label}
                 >
                   <View style={styles.icon}>
-                    <SvgIcon name={item.icon} size={20} color={item.destructive ? c.danger : c.accent} background={c.surfaceAlt} />
+                    <SvgIcon name={item.icon} size={20} color={item.destructive ? c.danger : c.text} background={c.surfaceAlt} />
                   </View>
                   {/* No line under the last row of a group: the next group's title separates it. */}
                   <View style={[styles.labelWrap, next && next.group === item.group && styles.separator]}>
@@ -125,7 +125,8 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   hint: { marginTop: 2, fontSize: 13, lineHeight: 17, color: c.textMuted },
   value: { fontSize: 15, color: c.textMuted, marginLeft: 12 },
   track: { width: 48, height: 28, borderRadius: 14, backgroundColor: c.surfaceAlt, borderWidth: StyleSheet.hairlineWidth, borderColor: c.borderStrong, justifyContent: 'center', paddingHorizontal: 2 },
-  trackOn: { backgroundColor: c.accent, borderColor: c.accent },
+  trackOn: { backgroundColor: c.text, borderColor: c.text },
   knob: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#FFFFFF', alignSelf: 'flex-start', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 2, shadowOffset: { width: 0, height: 1 } },
-  knobOn: { alignSelf: 'flex-end' },
+  // On a dark track, a white knob loses contrast in dark mode (the track's "on" color is near-white there).
+  knobOn: { alignSelf: 'flex-end', backgroundColor: c.bg },
 });

@@ -343,7 +343,7 @@ export default function AppMenu({
           accessibilityRole="button"
         >
           {feedbackStatus === 'sending' ? (
-            <ActivityIndicator color={c.buttonText} />
+            <ActivityIndicator color={c.bg} />
           ) : (
             <Text style={styles.feedbackSendText}>{t('menu.feedbackSend')}</Text>
           )}
@@ -379,16 +379,16 @@ const makeStyles = (c: Colors) =>
       textAlignVertical: 'top',
       backgroundColor: c.surface,
     },
-    feedbackSent: { color: c.accent, fontSize: 13 },
+    feedbackSent: { color: c.text, fontWeight: '600', fontSize: 13 },
     feedbackError: { color: c.danger, fontSize: 13 },
     feedbackSend: {
-      backgroundColor: c.buttonBg,
+      backgroundColor: c.text,
       borderRadius: 12,
       minHeight: 46,
       alignItems: 'center',
       justifyContent: 'center',
     },
     feedbackSendOff: { opacity: 0.5 },
-    feedbackSendText: { color: c.buttonText, fontWeight: '700', fontSize: 15 },
+    feedbackSendText: { color: c.bg, fontWeight: '700', fontSize: 15 },
     version: { textAlign: 'center', paddingTop: 10, paddingBottom: 2, fontSize: 12, color: c.textFaint },
   });
