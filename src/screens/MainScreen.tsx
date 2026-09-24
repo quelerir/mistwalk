@@ -46,6 +46,7 @@ import LeaderboardScreen from './LeaderboardScreen';
 import FollowsScreen from './FollowsScreen';
 import FeedScreen from './FeedScreen';
 import { countNewer, fetchFeed } from '../lib/social/feed';
+import { sendFeedback } from '../lib/social/feedback';
 import { getFeedSeen } from '../lib/social/feedSeen';
 import { fetchFollowState } from '../lib/social/follows';
 import PlayerScreen from './PlayerScreen';
@@ -64,7 +65,7 @@ const TABS: Array<{ key: TabKey; labelKey: Key; icon: TabItem<TabKey>['icon'] }>
   { key: 'nearby', labelKey: 'tab.nearby', icon: 'compass' },
   { key: 'feed', labelKey: 'tab.feed', icon: 'feed' },
   { key: 'collection', labelKey: 'tab.collection', icon: 'award' },
-  { key: 'menu', labelKey: 'tab.menu', icon: 'user' },
+  { key: 'menu', labelKey: 'tab.menu', icon: 'menu' },
 ];
 
 export interface MainScreenProps {
@@ -229,6 +230,10 @@ export default function MainScreen({
       }),
     [avatarUri, feedNew, t]
   );
+
+  async function handleSubmitFeedback(message: string): Promise<void> {
+    await sendFeedback(client, userId, email || null, message);
+  }
 
   async function handleChangeAvatar(): Promise<string | null> {
     // iOS cannot present the photo picker over the menu sheet, so hide the sheet while picking.
@@ -497,6 +502,7 @@ export default function MainScreen({
         displayName={profileSync.profile?.displayName ?? email}
         onChangeAvatar={handleChangeAvatar}
         onRemoveAvatar={profileSync.clearAvatar}
+        onSubmitFeedback={handleSubmitFeedback}
       />
     </View>
   );

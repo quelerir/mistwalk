@@ -190,6 +190,12 @@ export const ru = {
   // Menu
   'menu.settings': 'Настройки',
   'menu.account': 'Аккаунт',
+  'menu.feedback': 'Обратная связь',
+  'menu.feedbackHint': 'Расскажите, что понравилось или что стоит исправить. Мы читаем каждое сообщение.',
+  'menu.feedbackPlaceholder': 'Напишите здесь…',
+  'menu.feedbackSend': 'Отправить',
+  'menu.feedbackSent': 'Спасибо! Сообщение отправлено.',
+  'menu.feedbackFailed': 'Не удалось отправить. Проверьте интернет и попробуйте ещё раз.',
   'menu.noEmail': 'Без почты',
   'menu.addPhoto': 'Добавить фото',
   'menu.changePhoto': 'Изменить фото',

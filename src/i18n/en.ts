@@ -185,6 +185,12 @@ export const en: Record<Key, Text> = {
   // Menu
   'menu.settings': 'Settings',
   'menu.account': 'Account',
+  'menu.feedback': 'Feedback',
+  'menu.feedbackHint': "Tell us what you liked or what to fix. We read every message.",
+  'menu.feedbackPlaceholder': 'Write here…',
+  'menu.feedbackSend': 'Send',
+  'menu.feedbackSent': 'Thanks! Your message was sent.',
+  'menu.feedbackFailed': 'Could not send it. Check your internet and try again.',
   'menu.noEmail': 'No email',
   'menu.addPhoto': 'Add photo',
   'menu.changePhoto': 'Change photo',

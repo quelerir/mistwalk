@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Avatar from './Avatar';
 import MenuSheet, { type MenuItem } from './MenuSheet';
-import { useTheme } from '../theme/ThemeProvider';
+import { useStyles, useTheme } from '../theme/ThemeProvider';
 import { nextThemePreference } from '../theme/palettes';
+import type { Colors } from '../theme/palettes';
 import { nextFogStyle, type FogSetting } from '../lib/settings/fogStyle';
 import { useI18n } from '../i18n/I18nProvider';
 import { LANGUAGES } from '../i18n';
@@ -40,6 +41,7 @@ export interface AppMenuProps {
   displayName: string;
   onChangeAvatar: () => Promise<string | null>;
   onRemoveAvatar: () => Promise<void>;
+  onSubmitFeedback: (message: string) => Promise<void>;
 }
 
 export default function AppMenu({
@@ -68,11 +70,15 @@ export default function AppMenu({
   displayName,
   onChangeAvatar,
   onRemoveAvatar,
+  onSubmitFeedback,
 }: AppMenuProps) {
   const [accuracy, setAccuracy] = useState<AccuracyProfile>('battery-saver');
   const { preference, setPreference, colors: c } = useTheme();
+  const styles = useStyles(makeStyles);
   const [note, setNote] = useState<string | null>(null);
-  const [page, setPage] = useState<'main' | 'settings' | 'account' | 'language'>('main');
+  const [page, setPage] = useState<'main' | 'settings' | 'account' | 'language' | 'feedback'>('main');
+  const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const { t, setting, setSetting } = useI18n();
   // Settings are listed in these groups, in this order.
   const APPEARANCE = t('menu.group.appearance');
@@ -96,9 +102,33 @@ export default function AppMenu({
     };
   }
 
+  function openFeedback() {
+    setFeedbackStatus('idle');
+    setPage('feedback');
+  }
+
+  async function submitFeedback() {
+    const message = feedbackText.trim();
+    if (!message || feedbackStatus === 'sending') return;
+    setFeedbackStatus('sending');
+    try {
+      await onSubmitFeedback(message);
+      setFeedbackText('');
+      setFeedbackStatus('sent');
+    } catch (err) {
+      console.warn('[feedback] send failed', err);
+      setFeedbackStatus('error');
+    }
+  }
+
   const mainItems: MenuItem[] = [
     { key: 'settings', icon: 'settings', label: t('menu.settings'), onPress: () => setPage('settings') },
     { key: 'account', icon: 'user', label: t('menu.account'), onPress: () => setPage('account') },
+    { key: 'feedback', icon: 'mail', label: t('menu.feedback'), onPress: openFeedback },
+  ];
+
+  const feedbackItems: MenuItem[] = [
+    { key: 'back', icon: 'back', label: t('common.back'), onPress: () => setPage('main') },
   ];
 
   const accountItems: MenuItem[] = [
@@ -263,7 +293,15 @@ export default function AppMenu({
   ];
 
   const items =
-    page === 'main' ? mainItems : page === 'settings' ? settingsItems : page === 'language' ? languageItems : accountItems;
+    page === 'main'
+      ? mainItems
+      : page === 'settings'
+        ? settingsItems
+        : page === 'language'
+          ? languageItems
+          : page === 'feedback'
+            ? feedbackItems
+            : accountItems;
 
   const header =
     page === 'account' ? (
@@ -271,6 +309,42 @@ export default function AppMenu({
         <Avatar uri={avatarUri} name={displayName} size={88} />
         <Text style={{ color: c.text, fontWeight: '700', fontSize: 17, marginTop: 10 }}>{displayName}</Text>
         {note && <Text style={{ color: c.textMuted, marginTop: 4 }}>{note}</Text>}
+      </View>
+    ) : page === 'feedback' ? (
+      <View style={styles.feedback}>
+        <Text style={styles.feedbackTitle}>{t('menu.feedback')}</Text>
+        <Text style={styles.feedbackHint}>{t('menu.feedbackHint')}</Text>
+        <TextInput
+          style={styles.feedbackInput}
+          multiline
+          numberOfLines={5}
+          maxLength={2000}
+          placeholder={t('menu.feedbackPlaceholder')}
+          placeholderTextColor={c.textFaint}
+          value={feedbackText}
+          onChangeText={(text) => {
+            setFeedbackText(text);
+            if (feedbackStatus === 'sent' || feedbackStatus === 'error') setFeedbackStatus('idle');
+          }}
+          editable={feedbackStatus !== 'sending'}
+        />
+        {feedbackStatus === 'sent' ? (
+          <Text style={styles.feedbackSent}>{t('menu.feedbackSent')}</Text>
+        ) : feedbackStatus === 'error' ? (
+          <Text style={styles.feedbackError}>{t('menu.feedbackFailed')}</Text>
+        ) : null}
+        <Pressable
+          style={[styles.feedbackSend, !feedbackText.trim() && styles.feedbackSendOff]}
+          disabled={!feedbackText.trim() || feedbackStatus === 'sending'}
+          onPress={() => void submitFeedback()}
+          accessibilityRole="button"
+        >
+          {feedbackStatus === 'sending' ? (
+            <ActivityIndicator color={c.buttonText} />
+          ) : (
+            <Text style={styles.feedbackSendText}>{t('menu.feedbackSend')}</Text>
+          )}
+        </Pressable>
       </View>
     ) : null;
 
@@ -282,3 +356,32 @@ export default function AppMenu({
 
   return <MenuSheet visible={visible} items={items} header={header} onClose={handleClose} />;
 }
+
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    feedback: { paddingHorizontal: 18, paddingTop: 14, paddingBottom: 6, gap: 10 },
+    feedbackTitle: { color: c.text, fontWeight: '700', fontSize: 17 },
+    feedbackHint: { color: c.textMuted, fontSize: 13 },
+    feedbackInput: {
+      minHeight: 110,
+      borderWidth: 1,
+      borderColor: c.borderStrong,
+      borderRadius: 12,
+      padding: 12,
+      color: c.text,
+      fontSize: 15,
+      textAlignVertical: 'top',
+      backgroundColor: c.surface,
+    },
+    feedbackSent: { color: c.accent, fontSize: 13 },
+    feedbackError: { color: c.danger, fontSize: 13 },
+    feedbackSend: {
+      backgroundColor: c.buttonBg,
+      borderRadius: 12,
+      minHeight: 46,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    feedbackSendOff: { opacity: 0.5 },
+    feedbackSendText: { color: c.buttonText, fontWeight: '700', fontSize: 15 },
+  });

@@ -8,6 +8,7 @@ export type IconName =
   | 'cloud'
   | 'moon'
   | 'bell'
+  | 'mail'
   | 'flag'
   | 'download'
   | 'weather'
@@ -163,6 +164,7 @@ export const ICONS: Record<IconName, { outline: IconLayer[]; active: IconLayer[]
   download: line('M12 3v12M7 10l5 5 5-5M4 21h16'),
   flag: line('M4 22V4M4 4h13l-2 4 2 4H4'),
   bell: line('M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0'),
+  mail: line('M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM3.5 6.5l8.5 7 8.5-7'),
   'poi-viewpoint': shapes([
     { d: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z', mode: 'stroke' },
     { d: circle(12, 12, 3), mode: 'stroke' },
