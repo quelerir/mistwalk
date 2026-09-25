@@ -40,6 +40,8 @@ export interface FogOverlayProps {
   wind?: Wind | null;
   // Draw the "you are here" dot ourselves (Android; the native MapLibre one is left out there).
   userDot?: boolean;
+  // The fog itself is a layer of the map; this overlay then draws only the rain and the user dot.
+  nativeFog?: boolean;
 }
 
 const REVEAL_RADIUS_METERS = 60;
@@ -274,7 +276,7 @@ function distanceKm(a: WorldOrigin, b: WorldOrigin): number {
   return haversineDistanceMeters({ lat: a.lat, lng: a.lng }, { lat: b.lat, lng: b.lng }) / 1000;
 }
 
-export default function FogOverlay({ points, livePosition, shared, view, fog, animated = true, rain = 0, wind = null, userDot = false }: FogOverlayProps) {
+export default function FogOverlay({ points, livePosition, shared, view, fog, animated = true, rain = 0, wind = null, userDot = false, nativeFog = false }: FogOverlayProps) {
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
   const [origin, setOrigin] = useState<WorldOrigin | null>(null);
   const drift = useMemo(() => windToDrift(wind), [wind]);
@@ -409,30 +411,32 @@ export default function FogOverlay({ points, livePosition, shared, view, fog, an
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none" onLayout={onLayout}>
       <Canvas style={StyleSheet.absoluteFill}>
-        <Group layer={<Paint />}>
-          <Rect x={0} y={0} width={size.width} height={size.height} color={fog.base} />
-          {origin && <FogClouds shared={shared} origin={origin} fog={fog} animated={animated} drift={drift} />}
-          {origin && (revealPath || hasLive) && (
-            <Group transform={sceneTransform}>
-              {[revealPath, hasLive ? headPath : null].map((path, i) =>
-                path ? (
-                  <Path
-                    key={i}
-                    path={path}
-                    style="stroke"
-                    strokeWidth={revealWidth}
-                    strokeCap="round"
-                    strokeJoin="round"
-                    color="black"
-                    blendMode="dstOut"
-                  >
-                    <BlurMask blur={revealWidth * 0.18} style="normal" />
-                  </Path>
-                ) : null
-              )}
-            </Group>
-          )}
-        </Group>
+        {!nativeFog && (
+          <Group layer={<Paint />}>
+            <Rect x={0} y={0} width={size.width} height={size.height} color={fog.base} />
+            {origin && <FogClouds shared={shared} origin={origin} fog={fog} animated={animated} drift={drift} />}
+            {origin && (revealPath || hasLive) && (
+              <Group transform={sceneTransform}>
+                {[revealPath, hasLive ? headPath : null].map((path, i) =>
+                  path ? (
+                    <Path
+                      key={i}
+                      path={path}
+                      style="stroke"
+                      strokeWidth={revealWidth}
+                      strokeCap="round"
+                      strokeJoin="round"
+                      color="black"
+                      blendMode="dstOut"
+                    >
+                      <BlurMask blur={revealWidth * 0.18} style="normal" />
+                    </Path>
+                  ) : null
+                )}
+              </Group>
+            )}
+          </Group>
+        )}
         {rain > 0 && size.width > 0 && <Rain size={size} rain={rain} animated={animated} />}
         {userDot && livePosition && (
           <Group transform={dotTransform}>

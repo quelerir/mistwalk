@@ -21,6 +21,8 @@ import SvgIcon from '../components/icons/SvgIcon';
 import type { MapView } from '../lib/geo/projection';
 import { useMapStyle } from '../hooks/useMapStyle';
 import { useViewShared, writeView } from '../lib/map/viewShared';
+import { NATIVE_FOG } from '../lib/map/nativeLayers';
+import FogLayer from '../components/FogLayer';
 import type { Poi, PoiKind } from '../lib/poi/types';
 import type { PlacesStatus } from '../lib/poi/placesStatus';
 import PlacesStatusPill from '../components/PlacesStatusPill';
@@ -227,10 +229,11 @@ export default function MapScreen({
         >
           <Camera ref={cameraRef} initialViewState={{ zoom: FOLLOW_ZOOM }} />
           {Platform.OS !== 'android' && <UserLocation />}
+          {NATIVE_FOG && <FogLayer points={points} fog={fog} lat={view?.center[1] ?? 0} />}
         </Map>
       )}
       {/* The map stays mounted under the other tabs; its fog and rain must not keep drawing frames nobody sees. */}
-      <FogOverlay points={points} livePosition={livePosition} shared={shared} view={view} fog={fog} animated={fogAnimated && active} rain={active ? rain : 0} wind={wind} userDot={Platform.OS === 'android'} />
+      <FogOverlay points={points} livePosition={livePosition} shared={shared} view={view} fog={fog} animated={fogAnimated && active} rain={active ? rain : 0} wind={wind} userDot={Platform.OS === 'android'} nativeFog={NATIVE_FOG} />
       <RouteOverlay coordinates={progress?.coordinates ?? route?.coordinates ?? null} shared={shared} />
       <PoiMarkers
         pois={shownPois}
