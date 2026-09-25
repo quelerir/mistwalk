@@ -96,7 +96,8 @@ export default function MenuSheet({ visible, items, header, footer, onClose }: M
 const makeStyles = (c: Colors) => StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
   sheet: {
-    backgroundColor: c.sheetBg,
+    // Matches the tab bar below it (c.sheetBg has a slight green cast in dark mode).
+    backgroundColor: c.bg,
     paddingTop: 10,
   },
   handle: {
