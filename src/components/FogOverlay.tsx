@@ -19,6 +19,7 @@ import {
   type WorldOrigin,
 } from '../lib/geo/projection';
 import { readView, type ViewShared } from '../lib/map/viewShared';
+import { buildTrail } from '../lib/map/fogTrail';
 
 export interface LivePosition {
   lat: number;
@@ -51,17 +52,6 @@ const ORIGIN_REANCHOR_KM = 60;
 export const LIVE_GLIDE_MS = 2000;
 // A fix further than this from the last one is a jump (teleport, lost signal), not a walk: snap instead of gliding.
 const GLIDE_SNAP_METERS = 300;
-
-interface Node {
-  lat: number;
-  lng: number;
-}
-
-function buildTrail(points: VisitedPoint[]): Node[] {
-  return [...points]
-    .sort((a, b) => a.ts - b.ts)
-    .map((p) => ({ lat: p.lat, lng: p.lng }));
-}
 
 function parseHex(hex: string): [number, number, number] {
   const n = parseInt(hex.slice(1), 16);
