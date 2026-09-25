@@ -1,4 +1,4 @@
-package com.shout68.fogofwarmap
+package com.quelerir.mistwalk
 
 import android.app.Application
 import android.content.res.Configuration

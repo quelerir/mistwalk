@@ -32,7 +32,7 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-          <string>com.shout68.fog-of-war-map</string>
+          <string>com.quelerir.mistwalk</string>
         </array>
       </dict>
     </array>

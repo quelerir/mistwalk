@@ -1,4 +1,4 @@
-package com.shout68.fogofwarmap
+package com.quelerir.mistwalk
 
 import android.os.Build
 import android.os.Bundle

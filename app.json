@@ -13,7 +13,7 @@
           "location"
         ]
       },
-      "bundleIdentifier": "com.shout68.fog-of-war-map"
+      "bundleIdentifier": "com.quelerir.mistwalk"
     },
     "android": {
       "adaptiveIcon": {
@@ -22,7 +22,7 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.shout68.fogofwarmap",
+      "package": "com.quelerir.mistwalk",
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",

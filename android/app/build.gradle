@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.shout68.fogofwarmap'
+    namespace 'com.quelerir.mistwalk'
     defaultConfig {
-        applicationId 'com.shout68.fogofwarmap'
+        applicationId 'com.quelerir.mistwalk'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 9
