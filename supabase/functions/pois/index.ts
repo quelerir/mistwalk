@@ -94,7 +94,7 @@ async function fetchOverpass(query: string) {
     try {
       const response = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "FogOfWarMap/0.1 (+https://github.com/quelerir/fog-of-war-map)" },
+        headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "Mistwalk/1.0 (+https://github.com/quelerir/mistwalk)" },
         body: "data=" + encodeURIComponent(query),
         signal: AbortSignal.timeout(MIRROR_TIMEOUT_MS),
       });

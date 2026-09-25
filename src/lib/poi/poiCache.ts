@@ -49,13 +49,16 @@ export function createPoiLoader({ storage, fetchTile, now = Date.now }: PoiCache
 // and try the next one instead of hanging on the first.
 export const DIRECT_TIMEOUT_MS = 20000;
 
+// overpass-api.de answers 406 to requests with no User-Agent (and throttles ones it does not like), so say who we are.
+export const OVERPASS_USER_AGENT = 'Mistwalk/1.0 (+https://github.com/quelerir/mistwalk)';
+
 async function fetchOverpassOnce(url: string, query: string): Promise<Poi[]> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), DIRECT_TIMEOUT_MS);
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': OVERPASS_USER_AGENT },
       body: `data=${encodeURIComponent(query)}`,
       signal: controller.signal,
     });
