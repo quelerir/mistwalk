@@ -18,6 +18,7 @@ import {
 
 const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 const PRIVACY_POLICY_URL = 'https://quelerir.github.io/mistwalk-legal/';
+const TERMS_OF_USE_URL = 'https://quelerir.github.io/mistwalk-legal/terms.html';
 
 export interface AppMenuProps {
   visible: boolean;
@@ -197,6 +198,12 @@ export default function AppMenu({
       icon: 'book',
       label: t('menu.privacyPolicy'),
       onPress: () => void Linking.openURL(PRIVACY_POLICY_URL),
+    },
+    {
+      key: 'termsOfUse',
+      icon: 'book',
+      label: t('menu.termsOfUse'),
+      onPress: () => void Linking.openURL(TERMS_OF_USE_URL),
     },
     {
       key: 'signout',
