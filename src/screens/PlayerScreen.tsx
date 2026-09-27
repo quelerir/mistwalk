@@ -9,6 +9,7 @@ import { formatKm2 } from '../lib/geo/cityStats';
 import SvgIcon from '../components/icons/SvgIcon';
 import { KIND_COLOR, kindTint } from '../lib/poi/kindColors';
 import { avatarUrl, fetchPlayerProfile, reportPlayer, type PlayerProfile, type ReportReason } from '../lib/social/profiles';
+import { blockPlayer } from '../lib/social/blocks';
 import FollowButton from '../components/FollowButton';
 import { fetchFollowState, followPlayer, unfollowPlayer, type FollowState } from '../lib/social/follows';
 import PlayerCountryScreen from './PlayerCountryScreen';
@@ -99,6 +100,24 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
     ]);
   }
 
+  function confirmBlock() {
+    Alert.alert(t('player.blockTitle'), t('player.blockConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('player.block'), style: 'destructive', onPress: () => void block() },
+    ]);
+  }
+
+  async function block() {
+    try {
+      await blockPlayer(client, playerId);
+      Alert.alert(t('player.blockThanksTitle'), t('player.blockThanks'));
+      onBack();
+    } catch (err) {
+      console.warn('[player] block failed', err);
+      Alert.alert(t('player.blockFailed'), t('common.checkInternet'));
+    }
+  }
+
   if (player && countryCode) {
     return <PlayerCountryScreen player={player} countryCode={countryCode} onBack={() => setCountryCode(null)} />;
   }
@@ -110,9 +129,14 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
           <SvgIcon name="back" size={22} color={c.text} />
         </Pressable>
         {!isMe && status === 'ready' && (
-          <Pressable onPress={report} hitSlop={8} style={styles.roundButton} accessibilityRole="button" accessibilityLabel={t('player.report')}>
-            <SvgIcon name="flag" size={20} color={c.textMuted} />
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable onPress={report} hitSlop={8} style={styles.roundButton} accessibilityRole="button" accessibilityLabel={t('player.report')}>
+              <SvgIcon name="flag" size={20} color={c.textMuted} />
+            </Pressable>
+            <Pressable onPress={confirmBlock} hitSlop={8} style={styles.roundButton} accessibilityRole="button" accessibilityLabel={t('player.block')}>
+              <SvgIcon name="close" size={20} color={c.textMuted} />
+            </Pressable>
+          </View>
         )}
       </View>
       <View style={styles.identity}>
@@ -225,6 +249,7 @@ const makeStyles = (c: Colors) =>
     container: { flex: 1, backgroundColor: c.bg },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 12 },
     roundButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: c.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
+    headerActions: { flexDirection: 'row', gap: 8 },
     identity: { alignItems: 'center', paddingTop: 4, paddingBottom: 16 },
     avatarRing: { padding: 3, borderRadius: 50, borderWidth: 2, borderColor: c.accent },
     pressed: { opacity: 0.5 },
