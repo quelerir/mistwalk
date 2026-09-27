@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Avatar from './Avatar';
 import MenuSheet, { type MenuItem } from './MenuSheet';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
@@ -38,6 +38,7 @@ export interface AppMenuProps {
   backgroundEnabled: boolean;
   onEnableBackground: () => Promise<boolean>;
   onSignOut: () => Promise<void>;
+  onDeleteAccount: () => Promise<void>;
   email: string;
   leaderboardVisible: boolean | null;
   onLeaderboardVisibleChange: (next: boolean) => Promise<void>;
@@ -67,6 +68,7 @@ export default function AppMenu({
   backgroundEnabled,
   onEnableBackground,
   onSignOut,
+  onDeleteAccount,
   email,
   leaderboardVisible,
   onLeaderboardVisibleChange,
@@ -80,6 +82,7 @@ export default function AppMenu({
   const { preference, setPreference, colors: c } = useTheme();
   const styles = useStyles(makeStyles);
   const [note, setNote] = useState<string | null>(null);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [page, setPage] = useState<'main' | 'settings' | 'account' | 'language' | 'feedback'>('main');
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
@@ -122,6 +125,26 @@ export default function AppMenu({
     } catch (err) {
       console.warn('[feedback] send failed', err);
       setFeedbackStatus('error');
+    }
+  }
+
+  function confirmDeleteAccount() {
+    Alert.alert(t('menu.deleteAccountTitle'), t('menu.deleteAccountConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('menu.deleteAccount'), style: 'destructive', onPress: () => void runDeleteAccount() },
+    ]);
+  }
+
+  async function runDeleteAccount() {
+    if (deletingAccount) return;
+    setNote(null);
+    setDeletingAccount(true);
+    try {
+      await onDeleteAccount();
+    } catch (err) {
+      console.warn('[account] delete failed', err);
+      setNote(t('menu.deleteAccountFailed'));
+      setDeletingAccount(false);
     }
   }
 
@@ -181,6 +204,14 @@ export default function AppMenu({
       label: t('menu.signOut'),
       destructive: true,
       onPress: closeThen(() => void onSignOut()),
+    },
+    {
+      key: 'deleteAccount',
+      icon: 'logout',
+      label: t('menu.deleteAccount'),
+      value: deletingAccount ? '…' : undefined,
+      destructive: true,
+      onPress: confirmDeleteAccount,
     },
   ];
 
