@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import { Linking, Modal, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -7,6 +7,7 @@ import type { LocationSubscription } from 'expo-location';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import AppMenu from '../components/AppMenu';
+import BlockedScreen from './BlockedScreen';
 import PlaceSheet from '../components/PlaceSheet';
 import DiscoveryCard from '../components/DiscoveryCard';
 import TabBar, { type TabItem } from '../components/TabBar';
@@ -102,6 +103,7 @@ export default function MainScreen({
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [openPlayer, setOpenPlayer] = useState<{ userId: string; displayName: string } | null>(null);
   const [showFollows, setShowFollows] = useState(false);
+  const [showBlocked, setShowBlocked] = useState(false);
   const [feedNew, setFeedNew] = useState<number | null>(null);
   const [followsTab, setFollowsTab] = useState<'followers' | 'following'>('followers');
   const [followCounts, setFollowCounts] = useState<{ followers: number; following: number } | null>(null);
@@ -518,6 +520,7 @@ export default function MainScreen({
         onEnableBackground={onEnableBackground}
         onSignOut={handleSignOut}
         onDeleteAccount={handleDeleteAccount}
+        onOpenBlocked={() => setShowBlocked(true)}
         email={email}
         leaderboardVisible={profileSync.profile?.isPublic ?? null}
         onLeaderboardVisibleChange={profileSync.setVisible}
@@ -527,6 +530,9 @@ export default function MainScreen({
         onRemoveAvatar={profileSync.clearAvatar}
         onSubmitFeedback={handleSubmitFeedback}
       />
+      <Modal visible={showBlocked} animationType="slide" onRequestClose={() => setShowBlocked(false)}>
+        <BlockedScreen client={client} onBack={() => setShowBlocked(false)} />
+      </Modal>
     </View>
   );
 }

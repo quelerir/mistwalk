@@ -40,6 +40,7 @@ export interface AppMenuProps {
   onEnableBackground: () => Promise<boolean>;
   onSignOut: () => Promise<void>;
   onDeleteAccount: () => Promise<void>;
+  onOpenBlocked: () => void;
   email: string;
   leaderboardVisible: boolean | null;
   onLeaderboardVisibleChange: (next: boolean) => Promise<void>;
@@ -70,6 +71,7 @@ export default function AppMenu({
   onEnableBackground,
   onSignOut,
   onDeleteAccount,
+  onOpenBlocked,
   email,
   leaderboardVisible,
   onLeaderboardVisibleChange,
@@ -198,6 +200,12 @@ export default function AppMenu({
       icon: 'book',
       label: t('menu.privacyPolicy'),
       onPress: () => void Linking.openURL(PRIVACY_POLICY_URL),
+    },
+    {
+      key: 'blocked',
+      icon: 'flag',
+      label: t('menu.blocked'),
+      onPress: closeThen(onOpenBlocked),
     },
     {
       key: 'termsOfUse',
