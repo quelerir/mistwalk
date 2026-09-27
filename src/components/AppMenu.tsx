@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Avatar from './Avatar';
 import MenuSheet, { type MenuItem } from './MenuSheet';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
@@ -17,6 +17,7 @@ import {
 } from '../lib/settings/accuracyProfile';
 
 const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
+const PRIVACY_POLICY_URL = 'https://quelerir.github.io/mistwalk-legal/';
 
 export interface AppMenuProps {
   visible: boolean;
@@ -167,6 +168,12 @@ export default function AppMenu({
       onPress: () => {
         if (leaderboardVisible !== null) void onLeaderboardVisibleChange(!leaderboardVisible);
       },
+    },
+    {
+      key: 'privacyPolicy',
+      icon: 'book',
+      label: t('menu.privacyPolicy'),
+      onPress: () => void Linking.openURL(PRIVACY_POLICY_URL),
     },
     {
       key: 'signout',

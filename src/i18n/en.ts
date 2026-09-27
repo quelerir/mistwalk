@@ -198,6 +198,7 @@ export const en: Record<Key, Text> = {
   'menu.removePhoto': 'Remove photo',
   'menu.removePhotoFailed': 'Could not remove the photo',
   'menu.inRating': 'Visible in the ranking',
+  'menu.privacyPolicy': 'Privacy Policy',
   'menu.signOut': 'Sign out',
   'menu.group.appearance': 'Appearance',
   'menu.group.mapPosition': 'Map and position',

@@ -203,6 +203,7 @@ export const ru = {
   'menu.removePhoto': 'Удалить фото',
   'menu.removePhotoFailed': 'Не удалось удалить фото',
   'menu.inRating': 'Виден в рейтинге',
+  'menu.privacyPolicy': 'Политика конфиденциальности',
   'menu.signOut': 'Выйти',
   'menu.group.appearance': 'Внешний вид',
   'menu.group.mapPosition': 'Карта и позиция',
