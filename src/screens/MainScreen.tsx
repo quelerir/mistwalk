@@ -520,7 +520,7 @@ export default function MainScreen({
         onEnableBackground={onEnableBackground}
         onSignOut={handleSignOut}
         onDeleteAccount={handleDeleteAccount}
-        onOpenBlocked={() => setShowBlocked(true)}
+        onOpenBlocked={() => setTimeout(() => setShowBlocked(true), 300)}
         email={email}
         leaderboardVisible={profileSync.profile?.isPublic ?? null}
         onLeaderboardVisibleChange={profileSync.setVisible}

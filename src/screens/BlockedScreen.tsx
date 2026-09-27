@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import Avatar from '../components/Avatar';
 import { fetchBlocked, unblockPlayer, type BlockedEntry } from '../lib/social/blocks';
@@ -16,6 +17,7 @@ export interface BlockedScreenProps {
 
 export default function BlockedScreen({ client, onBack }: BlockedScreenProps) {
   const t = useT();
+  const insets = useSafeAreaInsets();
   const styles = useStyles(makeStyles);
   const [entries, setEntries] = useState<BlockedEntry[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -57,7 +59,7 @@ export default function BlockedScreen({ client, onBack }: BlockedScreenProps) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel={t('common.back')}>
           <Text style={styles.back}>‹</Text>
         </Pressable>
