@@ -1,4 +1,4 @@
-import { createProgressStore } from './progressStore';
+import { createProgressStore, clearProgressStorage } from './progressStore';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 function makeFakeStorage() {
@@ -150,5 +150,21 @@ describe('createProgressStore', () => {
     expect(client.insertMock).toHaveBeenCalledWith([
       { user_id: 'u1', lat: 3, lng: 4, radius: 30, created_at: new Date(2000).toISOString() },
     ]);
+  });
+});
+
+describe('clearProgressStorage', () => {
+  it('empties the persisted points so a later loadFromDisk starts empty', async () => {
+    const storage = makeFakeStorage();
+    await storage.setItem(
+      'progressStore.points.v1',
+      JSON.stringify([{ lat: 1, lng: 2, radius: 30, ts: 1 }])
+    );
+
+    await clearProgressStorage(storage);
+
+    const { useProgressStore } = createProgressStore({ client: makeFakeClient([]), userId: 'u1', storage });
+    await useProgressStore.getState().loadFromDisk();
+    expect(useProgressStore.getState().points).toEqual([]);
   });
 });

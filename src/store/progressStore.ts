@@ -54,6 +54,13 @@ function mergePoints(local: VisitedPoint[], remote: VisitedPoint[]): VisitedPoin
   return merged;
 }
 
+// The persisted points are not scoped to a user id, so whoever signs out (or is deleted) must
+// clear this before another account can sign in on the same device — otherwise hydrateFromRemote
+// would treat the old points as "unsent" and upload them under the new user's id.
+export async function clearProgressStorage(storage: KeyValueStorage = AsyncStorage): Promise<void> {
+  await storage.setItem(STORAGE_KEY, JSON.stringify([]));
+}
+
 export function createProgressStore(options: CreateProgressStoreOptions) {
   const storage: KeyValueStorage = options.storage ?? AsyncStorage;
   let throttleMeters = options.throttleMeters ?? DEFAULT_THROTTLE_METERS;

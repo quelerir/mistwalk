@@ -28,7 +28,8 @@ import { ensureNotificationPermission } from '../services/notificationPermission
 import { cancelWeeklySummary, scheduleWeeklySummary } from '../services/weeklySummaryNotification';
 import { deleteAccount, signOut, signOutLocal } from '../lib/supabase/auth';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
-import { stopBackgroundTracking } from '../services/backgroundLocationTask';
+import { clearProgressStorage } from '../store/progressStore';
+import { drainPendingBackgroundPoints, stopBackgroundTracking } from '../services/backgroundLocationTask';
 import { stopForegroundTracking } from '../services/locationTracker';
 import MapScreen from './MapScreen';
 import NearbyScreen from './NearbyScreen';
@@ -353,6 +354,10 @@ export default function MainScreen({
         void setWeeklySummary(AsyncStorage, false);
         void cancelWeeklySummary();
         void setPlaceNotifications(AsyncStorage, { enabled: false, userId: null });
+        // Not scoped to a user id: left in place, the next account signed in on this device
+        // would have these old points re-uploaded as if they were its own (see clearProgressStorage).
+        await clearProgressStorage(AsyncStorage);
+        await drainPendingBackgroundPoints();
         await signOutLocal(client);
       },
       onDeleted: onSignedOut,
