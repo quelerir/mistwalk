@@ -16,18 +16,21 @@
 --    that (or one from any other race) never becomes visible while a block exists between the
 --    two users, regardless of how it got there.
 
-revoke all on function public.leaderboard(integer) from public;
+-- Supabase grants EXECUTE directly to the anon role in addition to PUBLIC, so revoking from
+-- PUBLIC alone (as 0004/0005/0006 did) is not enough on this project — confirmed live via
+-- has_function_privilege('anon', ...) still returning true after a PUBLIC-only revoke.
+revoke all on function public.leaderboard(integer) from public, anon;
 grant execute on function public.leaderboard(integer) to authenticated;
 
-revoke all on function public.blocked_between(uuid, uuid) from public;
+revoke all on function public.blocked_between(uuid, uuid) from public, anon;
 
-revoke all on function public.block_player(uuid) from public;
+revoke all on function public.block_player(uuid) from public, anon;
 grant execute on function public.block_player(uuid) to authenticated;
 
-revoke all on function public.unblock_player(uuid) from public;
+revoke all on function public.unblock_player(uuid) from public, anon;
 grant execute on function public.unblock_player(uuid) to authenticated;
 
-revoke all on function public.my_blocked(integer) from public;
+revoke all on function public.my_blocked(integer) from public, anon;
 grant execute on function public.my_blocked(integer) to authenticated;
 
 create or replace function public.follow_state(target uuid)
