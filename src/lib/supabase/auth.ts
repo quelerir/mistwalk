@@ -43,6 +43,11 @@ export async function signOutLocal(client: SupabaseClient) {
   if (error) throw error;
 }
 
+export async function deleteAccount(client: SupabaseClient): Promise<void> {
+  const { error } = await client.functions.invoke('delete-account');
+  if (error) throw error;
+}
+
 export async function getSession(client: SupabaseClient) {
   const { data, error } = await client.auth.getSession();
   if (error) throw error;

@@ -1,9 +1,14 @@
-import { signUp, signIn, signOut, signOutLocal, getSession, checkLoginAvailable } from './auth';
+import { signUp, signIn, signOut, signOutLocal, getSession, checkLoginAvailable, deleteAccount } from './auth';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-function makeFakeClient(overrides: Partial<SupabaseClient['auth']> = {}, rpc = jest.fn().mockResolvedValue({ data: true, error: null })) {
+function makeFakeClient(
+  overrides: Partial<SupabaseClient['auth']> = {},
+  rpc = jest.fn().mockResolvedValue({ data: true, error: null }),
+  functionsInvoke = jest.fn().mockResolvedValue({ data: { ok: true }, error: null })
+) {
   return {
     rpc,
+    functions: { invoke: functionsInvoke },
     auth: {
       signUp: jest.fn().mockResolvedValue({ data: { user: { id: 'u1' } }, error: null }),
       signInWithPassword: jest.fn().mockResolvedValue({ data: { user: { id: 'u1' } }, error: null }),
@@ -77,5 +82,18 @@ describe('auth wrappers', () => {
     const client = makeFakeClient();
     const session = await getSession(client);
     expect(session?.user.id).toBe('u1');
+  });
+
+  it('deleteAccount invokes the delete-account function and resolves on success', async () => {
+    const functionsInvoke = jest.fn().mockResolvedValue({ data: { ok: true }, error: null });
+    const client = makeFakeClient({}, undefined, functionsInvoke);
+    await expect(deleteAccount(client)).resolves.toBeUndefined();
+    expect(functionsInvoke).toHaveBeenCalledWith('delete-account');
+  });
+
+  it('deleteAccount throws when the function call fails', async () => {
+    const functionsInvoke = jest.fn().mockResolvedValue({ data: null, error: new Error('unreachable') });
+    const client = makeFakeClient({}, undefined, functionsInvoke);
+    await expect(deleteAccount(client)).rejects.toThrow('unreachable');
   });
 });
