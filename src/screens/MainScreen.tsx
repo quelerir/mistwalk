@@ -14,6 +14,7 @@ import type { LivePosition } from '../components/FogOverlay';
 import { usePlaces } from '../hooks/usePlaces';
 import type { MapView } from '../lib/geo/projection';
 import { performSignOut } from '../lib/session/signOutFlow';
+import { performAccountDeletion } from '../lib/session/deleteAccountFlow';
 import { FOG_PALETTES, getFogAnimated, getFogStyle, resolveFogStyle, setFogAnimated, setFogStyle, type FogSetting } from '../lib/settings/fogStyle';
 import { getPlaceNotifications, setPlaceNotifications } from '../lib/settings/placeNotifications';
 import { getWeeklySummary, setWeeklySummary } from '../lib/settings/weeklySummary';
@@ -25,7 +26,7 @@ import { clearOfflineAreas, ensureOfflineArea, offlineMapBytes } from '../servic
 import { dailyKm, weekSummary } from '../lib/stats/weekly';
 import { ensureNotificationPermission } from '../services/notificationPermission';
 import { cancelWeeklySummary, scheduleWeeklySummary } from '../services/weeklySummaryNotification';
-import { signOut, signOutLocal } from '../lib/supabase/auth';
+import { deleteAccount, signOut, signOutLocal } from '../lib/supabase/auth';
 import type { VisitedPoint } from '../lib/supabase/visitedPoints';
 import { stopBackgroundTracking } from '../services/backgroundLocationTask';
 import { stopForegroundTracking } from '../services/locationTracker';
@@ -343,6 +344,22 @@ export default function MainScreen({
     });
   }
 
+  function handleDeleteAccount() {
+    return performAccountDeletion({
+      deleteRemote: () => deleteAccount(client),
+      stopForeground: () => stopForegroundTracking(subscription),
+      stopBackground: stopBackgroundTracking,
+      clearLocalSession: async () => {
+        void setWeeklySummary(AsyncStorage, false);
+        void cancelWeeklySummary();
+        void setPlaceNotifications(AsyncStorage, { enabled: false, userId: null });
+        await signOutLocal(client);
+      },
+      onDeleted: onSignedOut,
+      onWarn: (message, err) => console.warn('[delete-account]', message, err),
+    });
+  }
+
   return (
     <View style={styles.container}>
       <View style={[styles.content, { paddingTop: tab === 'map' ? 0 : insets.top }]}>
@@ -495,6 +512,7 @@ export default function MainScreen({
         backgroundEnabled={backgroundEnabled}
         onEnableBackground={onEnableBackground}
         onSignOut={handleSignOut}
+        onDeleteAccount={handleDeleteAccount}
         email={email}
         leaderboardVisible={profileSync.profile?.isPublic ?? null}
         onLeaderboardVisibleChange={profileSync.setVisible}
