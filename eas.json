@@ -10,6 +10,15 @@
         "buildType": "apk"
       },
       "environment": "preview"
+    },
+    "production": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "ios": {
+        "distribution": "store"
+      },
+      "environment": "production"
     }
   }
 }
