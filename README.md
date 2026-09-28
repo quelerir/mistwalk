@@ -14,8 +14,8 @@
 ## Первый запуск
 
 ```bash
-git clone https://github.com/quelerir/fog-of-war-map.git
-cd fog-of-war-map
+git clone https://github.com/quelerir/mistwalk.git
+cd mistwalk
 npm install
 cp .env.example .env
 ```
@@ -33,7 +33,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=...
 
 1. На телефоне: Настройки → Конфиденциальность и безопасность → **Режим разработчика** → включить (телефон перезагрузится).
 2. Подключите телефон кабелем к Mac и нажмите «Доверять».
-3. **Сначала установите Pods** (без этого Xcode выдаёт ошибку `Unable to open base configuration reference file ... Pods-FogofWarMap.debug.xcconfig`):
+3. **Сначала установите Pods** (без этого Xcode выдаёт ошибку `Unable to open base configuration reference file ... Pods-Mistwalk.debug.xcconfig`):
 
 ```bash
 cd ios
@@ -41,7 +41,7 @@ LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pod install
 cd ..
 ```
 
-4. Откройте в Xcode именно **`ios/FogofWarMap.xcworkspace`** (не `.xcodeproj`). Выберите таргет FogofWarMap → **Signing & Capabilities**:
+4. Откройте в Xcode именно **`ios/Mistwalk.xcworkspace`** (не `.xcodeproj`). Выберите таргет Mistwalk → **Signing & Capabilities**:
    - поставьте **Team** (ваш Apple ID, бесплатного хватает);
    - смените **Bundle Identifier** на свой уникальный, например `com.ваше-имя.fogofwar`. Идентификатор автора привязан к его аккаунту, чужой подписать нельзя.
 5. Соберите и поставьте на телефон, чтобы приложение работало без компьютера. Xcode закройте или оставьте, команде это не мешает:
