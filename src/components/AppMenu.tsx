@@ -41,6 +41,7 @@ export interface AppMenuProps {
   onSignOut: () => Promise<void>;
   onDeleteAccount: () => Promise<void>;
   onOpenBlocked: () => void;
+  onOpenCollection: () => void;
   email: string;
   leaderboardVisible: boolean | null;
   onLeaderboardVisibleChange: (next: boolean) => Promise<void>;
@@ -72,6 +73,7 @@ export default function AppMenu({
   onSignOut,
   onDeleteAccount,
   onOpenBlocked,
+  onOpenCollection,
   email,
   leaderboardVisible,
   onLeaderboardVisibleChange,
@@ -152,6 +154,7 @@ export default function AppMenu({
   }
 
   const mainItems: MenuItem[] = [
+    { key: 'collection', icon: 'award', label: t('menu.collection'), onPress: closeThen(onOpenCollection) },
     { key: 'settings', icon: 'settings', label: t('menu.settings'), onPress: () => setPage('settings') },
     { key: 'account', icon: 'user', label: t('menu.account'), onPress: () => setPage('account') },
     { key: 'feedback', icon: 'mail', label: t('menu.feedback'), onPress: openFeedback },

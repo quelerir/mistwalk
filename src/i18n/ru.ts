@@ -39,7 +39,6 @@ export const ru = {
   'tab.map': 'Карта',
   'tab.nearby': 'Рядом',
   'tab.feed': 'Лента',
-  'tab.collection': 'Коллекция',
   'tab.menu': 'Меню',
 
   // Kinds of places
@@ -198,6 +197,7 @@ export const ru = {
   'rating.you': ' (вы)',
 
   // Menu
+  'menu.collection': 'Коллекция',
   'menu.settings': 'Настройки',
   'menu.account': 'Аккаунт',
   'menu.feedback': 'Обратная связь',

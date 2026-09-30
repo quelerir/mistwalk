@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import Avatar from '../components/Avatar';
 import { avatarUrl, fetchLeaderboard, type LeaderboardEntry } from '../lib/social/profiles';
@@ -17,6 +18,7 @@ export interface LeaderboardScreenProps {
 
 export default function LeaderboardScreen({ client, userId, onBack, onOpenPlayer }: LeaderboardScreenProps) {
   const t = useT();
+  const insets = useSafeAreaInsets();
   const styles = useStyles(makeStyles);
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -40,7 +42,7 @@ export default function LeaderboardScreen({ client, userId, onBack, onOpenPlayer
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel={t('common.back')}>
           <Text style={styles.back}>‹</Text>
         </Pressable>
