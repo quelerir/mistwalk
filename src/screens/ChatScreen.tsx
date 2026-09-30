@@ -92,7 +92,6 @@ export default function ChatScreen({ client, myId, otherId, otherName, onBack }:
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={insets.top}
     >
       <View style={styles.header}>
         <Pressable onPress={onBack} hitSlop={8} style={styles.roundButton} accessibilityRole="button" accessibilityLabel={t('common.back')}>
