@@ -20,6 +20,7 @@ export type IconName =
   | 'sort-name-desc'
   | 'check'
   | 'feed'
+  | 'chat'
   | 'filter'
   | 'globe'
   | 'grid'
@@ -154,6 +155,15 @@ export const ICONS: Record<IconName, { outline: IconLayer[]; active: IconLayer[]
     { d: circle(8.5, 9.5, 1.8), mode: 'stroke' },
     { d: 'M13.5 8.5h3.5M13.5 12h3.5M7 16h10', mode: 'stroke' },
   ]),
+  // A speech bubble: direct messages.
+  chat: {
+    outline: [
+      { d: 'M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-5 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z', mode: 'stroke' },
+    ],
+    active: [
+      { d: 'M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-5 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z', mode: 'fill' },
+    ],
+  },
   // Four squares: "all kinds".
   grid: shapes([
     { d: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z', mode: 'stroke' },

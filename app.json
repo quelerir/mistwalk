@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Mistwalk",
-    "slug": "mistwalk",
+    "slug": "fog-of-war-map",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

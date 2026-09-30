@@ -39,6 +39,7 @@ export const ru = {
   'tab.map': 'Карта',
   'tab.nearby': 'Рядом',
   'tab.feed': 'Лента',
+  'tab.chats': 'Чаты',
   'tab.collection': 'Коллекция',
   'tab.menu': 'Меню',
 
@@ -147,6 +148,7 @@ export const ru = {
   'country.cityFound': ' · мест: {n}',
 
   // Other players
+  'player.message': 'Написать',
   'player.report': 'Пожаловаться',
   'player.reportTitle': 'Пожаловаться на игрока',
   'player.reportAsk': 'На что именно?',
@@ -191,6 +193,13 @@ export const ru = {
   'feed.title': 'Лента друзей',
   'feed.loadFailed': 'Не удалось загрузить ленту. Проверьте интернет и попробуйте позже.',
   'feed.empty': 'Здесь появятся находки тех, на кого вы подписаны. Подпишитесь на игроков в рейтинге.',
+  'chats.title': 'Сообщения',
+  'chats.loadFailed': 'Не удалось загрузить. Проверьте интернет и попробуйте позже.',
+  'chats.empty': 'Пока нет переписок. Напишите кому-нибудь из профиля игрока.',
+  'chats.emptyThread': 'Пока нет сообщений. Напишите первым.',
+  'chats.placeholder': 'Сообщение…',
+  'chats.send': 'Отправить',
+  'chats.youPrefix': 'Вы: {text}',
   'rating.title': 'Рейтинг',
   'rating.subtitle': 'По найденным местам',
   'rating.unavailable': 'Рейтинг пока недоступен. Проверьте интернет и попробуйте позже.',

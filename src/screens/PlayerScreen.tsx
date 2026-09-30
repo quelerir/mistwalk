@@ -25,9 +25,10 @@ export interface PlayerScreenProps {
   fallbackName: string;
   onBack: () => void;
   isMe: boolean;
+  onOpenChat?: (other: { userId: string; displayName: string }) => void;
 }
 
-export default function PlayerScreen({ client, playerId, fallbackName, onBack, isMe }: PlayerScreenProps) {
+export default function PlayerScreen({ client, playerId, fallbackName, onBack, isMe, onOpenChat }: PlayerScreenProps) {
   const { t, lang } = useI18n();
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
@@ -130,6 +131,17 @@ export default function PlayerScreen({ client, playerId, fallbackName, onBack, i
         </Pressable>
         {!isMe && status === 'ready' && (
           <View style={styles.headerActions}>
+            {onOpenChat && (
+              <Pressable
+                onPress={() => onOpenChat({ userId: playerId, displayName: player?.displayName ?? fallbackName })}
+                hitSlop={8}
+                style={styles.roundButton}
+                accessibilityRole="button"
+                accessibilityLabel={t('player.message')}
+              >
+                <SvgIcon name="chat" size={20} color={c.textMuted} />
+              </Pressable>
+            )}
             <Pressable onPress={report} hitSlop={8} style={styles.roundButton} accessibilityRole="button" accessibilityLabel={t('player.report')}>
               <SvgIcon name="flag" size={20} color={c.textMuted} />
             </Pressable>
