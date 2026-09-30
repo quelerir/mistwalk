@@ -8,8 +8,8 @@ Draft for App Store Connect and Google Play Console. Character limits noted per 
 
 **App Store** (30 chars max) / **Google Play** (30 chars max)
 
-- RU: `Mistwalk: карта тумана войны`  (28)
-- EN: `Mistwalk: Fog of War Map`  (24)
+- RU: `Mistwalk`  (8)
+- EN: `Mistwalk`  (8)
 
 ## Subtitle (App Store, 30 chars) / Short description (Google Play, 80 chars)
 
