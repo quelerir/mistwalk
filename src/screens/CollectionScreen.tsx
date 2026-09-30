@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { CountryStat } from '../lib/geo/countryStats';
 import type { Stats } from '../hooks/useStats';
 import type { WeekSummary } from '../lib/stats/weekly';
@@ -19,6 +20,7 @@ export interface CollectionScreenProps {
   onOpenLeaderboard: () => void;
   onOpenFollows: (tab: 'followers' | 'following') => void;
   followCounts: { followers: number; following: number } | null;
+  onBack: () => void;
 }
 
 function delta(t: TFunc, now: number, before: number, digits = 0): string {
@@ -40,8 +42,10 @@ export default function CollectionScreen({
   onOpenLeaderboard,
   onOpenFollows,
   followCounts,
+  onBack,
 }: CollectionScreenProps) {
   const t = useT();
+  const insets = useSafeAreaInsets();
   const styles = useStyles(makeStyles);
   const dayLabels = useMemo(() => {
     const today = new Date();
@@ -57,7 +61,12 @@ export default function CollectionScreen({
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>{t('collection.title')}</Text>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel={t('common.back')}>
+          <Text style={styles.back}>‹</Text>
+        </Pressable>
+        <Text style={styles.title}>{t('collection.title')}</Text>
+      </View>
 
       <View style={styles.followRow}>
         <Pressable onPress={() => onOpenFollows('followers')} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('collection.followersLabel')}>
@@ -141,8 +150,10 @@ export default function CollectionScreen({
 
 const makeStyles = (c: Colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: c.bg },
-  content: { padding: 16, paddingBottom: 32 },
-  title: { fontSize: 34, fontFamily: FONT.display, letterSpacing: -0.8, color: c.text, marginBottom: 8 },
+  content: { paddingHorizontal: 16, paddingBottom: 32 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingBottom: 8 },
+  back: { fontSize: 36, lineHeight: 36, color: c.text, marginRight: 12, marginTop: -4 },
+  title: { fontSize: 34, fontFamily: FONT.display, letterSpacing: -0.8, color: c.text },
   followRow: { flexDirection: 'row', gap: 28, marginBottom: 14 },
   followValue: { fontSize: 22, fontFamily: FONT.display, letterSpacing: -0.4, color: c.text },
   followLabel: { fontSize: 13, color: c.textMuted, marginTop: 1 },

@@ -40,7 +40,6 @@ export const en: Record<Key, Text> = {
   'tab.nearby': 'Nearby',
   'tab.feed': 'Feed',
   'tab.chats': 'Chats',
-  'tab.collection': 'Collection',
   'tab.menu': 'Menu',
 
   // Kinds of places
@@ -202,6 +201,7 @@ export const en: Record<Key, Text> = {
   'rating.you': ' (you)',
 
   // Menu
+  'menu.collection': 'Collection',
   'menu.settings': 'Settings',
   'menu.account': 'Account',
   'menu.feedback': 'Feedback',

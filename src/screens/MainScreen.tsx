@@ -64,14 +64,13 @@ import type { Key } from '../i18n';
 
 const NO_PLACES: DiscoveredPlace[] = [];
 
-type TabKey = 'map' | 'nearby' | 'feed' | 'chats' | 'collection' | 'menu';
+type TabKey = 'map' | 'nearby' | 'feed' | 'chats' | 'menu';
 
 const TABS: Array<{ key: TabKey; labelKey: Key; icon: TabItem<TabKey>['icon'] }> = [
   { key: 'map', labelKey: 'tab.map', icon: 'map' },
   { key: 'nearby', labelKey: 'tab.nearby', icon: 'compass' },
   { key: 'feed', labelKey: 'tab.feed', icon: 'feed' },
   { key: 'chats', labelKey: 'tab.chats', icon: 'chat' },
-  { key: 'collection', labelKey: 'tab.collection', icon: 'award' },
   { key: 'menu', labelKey: 'tab.menu', icon: 'menu' },
 ];
 
@@ -108,6 +107,7 @@ export default function MainScreen({
   const [openPlayer, setOpenPlayer] = useState<{ userId: string; displayName: string } | null>(null);
   const [showFollows, setShowFollows] = useState(false);
   const [showBlocked, setShowBlocked] = useState(false);
+  const [showCollection, setShowCollection] = useState(false);
   const [feedNew, setFeedNew] = useState<number | null>(null);
   const [unreadMessages, setUnreadMessages] = useState<number | null>(null);
   const [openChatWith, setOpenChatWith] = useState<{ userId: string; displayName: string } | null>(null);
@@ -371,6 +371,15 @@ export default function MainScreen({
     });
   }
 
+  function handleCloseCollection() {
+    setShowCollection(false);
+    setOpenPlayer(null);
+    setShowFollows(false);
+    setShowLeaderboard(false);
+    setShowCountries(false);
+    setOpenCountry(null);
+  }
+
   function handleDeleteAccount() {
     return performAccountDeletion({
       deleteRemote: () => deleteAccount(client),
@@ -458,65 +467,6 @@ export default function MainScreen({
           ) : (
             <ChatsScreen client={client} onOpenChat={setOpenChatWith} />
           ))}
-        {tab === 'collection' &&
-          ((showLeaderboard || showFollows) && openPlayer ? (
-            <PlayerScreen
-              client={client}
-              playerId={openPlayer.userId}
-              fallbackName={openPlayer.displayName}
-              onBack={() => setOpenPlayer(null)}
-              isMe={openPlayer.userId === userId}
-              onOpenChat={handleOpenChat}
-            />
-          ) : showFollows ? (
-            <FollowsScreen client={client} initialTab={followsTab} onBack={() => setShowFollows(false)} onOpenPlayer={setOpenPlayer} />
-          ) : showLeaderboard ? (
-            <LeaderboardScreen
-              client={client}
-              userId={userId}
-              onBack={() => setShowLeaderboard(false)}
-              onOpenPlayer={setOpenPlayer}
-            />
-          ) : showCountries && openCountry ? (
-            <CountryPlacesScreen
-              country={openCountry}
-              places={placesByCountry.get(openCountry.code)}
-              cities={cityStats.cities}
-              citiesPending={cityStats.pending}
-              citiesFailed={cityStats.failed}
-              origin={livePosition}
-              onBack={() => setOpenCountry(null)}
-              onOpenFound={setDetailPlace}
-              onSelectHidden={(poi) => {
-                setShowCountries(false);
-                setOpenCountry(null);
-                handleSelect(poi);
-              }}
-            />
-          ) : showCountries ? (
-            <CountriesScreen
-              countries={countryStats.countries}
-              pending={countryStats.pending}
-              failed={countryStats.failed}
-              placesByCountry={placesByCountry}
-              onBack={() => setShowCountries(false)}
-              onOpenCountry={setOpenCountry}
-            />
-          ) : (
-            <CollectionScreen
-              stats={stats}
-              week={week}
-              daily={daily}
-              countries={countryStats.countries}
-              onOpenCountries={() => setShowCountries(true)}
-              onOpenLeaderboard={() => setShowLeaderboard(true)}
-              onOpenFollows={(tab) => {
-                setFollowsTab(tab);
-                setShowFollows(true);
-              }}
-              followCounts={followCounts}
-            />
-          ))}
         <DiscoveryCard place={greeting} onDismiss={dismissGreeting} onOpen={setDetailPlace} />
       </View>
       <TabBar
@@ -525,18 +475,12 @@ export default function MainScreen({
         onChange={(key) => {
           if (key === 'menu') setMenuOpen(true);
           else {
-            // A player opened from the feed or the rating must not linger when you come back from another tab.
+            // A player opened from the feed must not linger when you come back from another tab.
             if (key !== tab) {
               setOpenPlayer(null);
               if (key !== 'chats') setOpenChatWith(null);
             }
             setTab(key);
-            if (key !== 'collection') {
-              setShowCountries(false);
-              setOpenCountry(null);
-              setShowLeaderboard(false);
-              setShowFollows(false);
-            }
           }
         }}
       />
@@ -562,6 +506,7 @@ export default function MainScreen({
         onSignOut={handleSignOut}
         onDeleteAccount={handleDeleteAccount}
         onOpenBlocked={() => setTimeout(() => setShowBlocked(true), 300)}
+        onOpenCollection={() => setTimeout(() => setShowCollection(true), 300)}
         email={email}
         leaderboardVisible={profileSync.profile?.isPublic ?? null}
         onLeaderboardVisibleChange={profileSync.setVisible}
@@ -573,6 +518,67 @@ export default function MainScreen({
       />
       <Modal visible={showBlocked} animationType="slide" onRequestClose={() => setShowBlocked(false)}>
         <BlockedScreen client={client} onBack={() => setShowBlocked(false)} />
+      </Modal>
+      <Modal visible={showCollection} animationType="slide" onRequestClose={handleCloseCollection}>
+        {(showLeaderboard || showFollows) && openPlayer ? (
+          <View style={{ flex: 1, paddingTop: insets.top }}>
+            <PlayerScreen
+              client={client}
+              playerId={openPlayer.userId}
+              fallbackName={openPlayer.displayName}
+              onBack={() => setOpenPlayer(null)}
+              isMe={openPlayer.userId === userId}
+            />
+          </View>
+        ) : showFollows ? (
+          <FollowsScreen client={client} initialTab={followsTab} onBack={() => setShowFollows(false)} onOpenPlayer={setOpenPlayer} />
+        ) : showLeaderboard ? (
+          <LeaderboardScreen
+            client={client}
+            userId={userId}
+            onBack={() => setShowLeaderboard(false)}
+            onOpenPlayer={setOpenPlayer}
+          />
+        ) : showCountries && openCountry ? (
+          <CountryPlacesScreen
+            country={openCountry}
+            places={placesByCountry.get(openCountry.code)}
+            cities={cityStats.cities}
+            citiesPending={cityStats.pending}
+            citiesFailed={cityStats.failed}
+            origin={livePosition}
+            onBack={() => setOpenCountry(null)}
+            onOpenFound={setDetailPlace}
+            onSelectHidden={(poi) => {
+              handleCloseCollection();
+              handleSelect(poi);
+            }}
+          />
+        ) : showCountries ? (
+          <CountriesScreen
+            countries={countryStats.countries}
+            pending={countryStats.pending}
+            failed={countryStats.failed}
+            placesByCountry={placesByCountry}
+            onBack={() => setShowCountries(false)}
+            onOpenCountry={setOpenCountry}
+          />
+        ) : (
+          <CollectionScreen
+            stats={stats}
+            week={week}
+            daily={daily}
+            countries={countryStats.countries}
+            onOpenCountries={() => setShowCountries(true)}
+            onOpenLeaderboard={() => setShowLeaderboard(true)}
+            onOpenFollows={(tab) => {
+              setFollowsTab(tab);
+              setShowFollows(true);
+            }}
+            followCounts={followCounts}
+            onBack={handleCloseCollection}
+          />
+        )}
       </Modal>
     </View>
   );
