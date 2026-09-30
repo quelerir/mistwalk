@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import Avatar from '../components/Avatar';
 import FollowButton from '../components/FollowButton';
@@ -27,6 +28,7 @@ export interface FollowsScreenProps {
 
 export default function FollowsScreen({ client, initialTab = 'followers', onBack, onOpenPlayer }: FollowsScreenProps) {
   const t = useT();
+  const insets = useSafeAreaInsets();
   const styles = useStyles(makeStyles);
   const [tab, setTab] = useState<Tab>(initialTab);
   const [entries, setEntries] = useState<FollowEntry[]>([]);
@@ -77,7 +79,7 @@ export default function FollowsScreen({ client, initialTab = 'followers', onBack
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel={t('common.back')}>
           <Text style={styles.back}>‹</Text>
         </Pressable>

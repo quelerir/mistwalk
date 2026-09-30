@@ -1,5 +1,6 @@
 import React from 'react';
 import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { flagUrl } from '../lib/geo/countries';
 import { formatPercent, type CountryPlaces, type CountryStat } from '../lib/geo/countryStats';
 import { useStyles } from '../theme/ThemeProvider';
@@ -25,6 +26,7 @@ export default function CountriesScreen({
   onOpenCountry,
 }: CountriesScreenProps) {
   const { t, lang } = useI18n();
+  const insets = useSafeAreaInsets();
   const styles = useStyles(makeStyles);
   const visited = countries.filter((c) => c.percent > 0).length;
   const status = pending
@@ -35,7 +37,7 @@ export default function CountriesScreen({
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel={t('common.back')}>
           <Text style={styles.back}>‹</Text>
         </Pressable>

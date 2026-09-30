@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { haversineDistanceMeters, type Coordinate } from '../lib/geo/distance';
 import { formatKm2, type CityStat } from '../lib/geo/cityStats';
 import { formatPercent, type CountryPlaces, type CountryStat } from '../lib/geo/countryStats';
@@ -45,6 +46,7 @@ export default function CountryPlacesScreen({
   onOpenFound,
 }: CountryPlacesScreenProps) {
   const { t, lang } = useI18n();
+  const insets = useSafeAreaInsets();
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   const crests = useCrests(cities.map((city) => city.wikidata));
@@ -75,7 +77,7 @@ export default function CountryPlacesScreen({
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel={t('common.back')}>
           <Text style={styles.back}>‹</Text>
         </Pressable>
