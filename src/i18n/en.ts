@@ -39,6 +39,7 @@ export const en: Record<Key, Text> = {
   'tab.map': 'Map',
   'tab.nearby': 'Nearby',
   'tab.feed': 'Feed',
+  'tab.chats': 'Chats',
   'tab.menu': 'Menu',
 
   // Kinds of places
@@ -141,6 +142,7 @@ export const en: Record<Key, Text> = {
   'country.cityFound': ' · places: {n}',
 
   // Other players
+  'player.message': 'Message',
   'player.report': 'Report',
   'player.reportTitle': 'Report this player',
   'player.reportAsk': 'What is wrong?',
@@ -185,6 +187,13 @@ export const en: Record<Key, Text> = {
   'feed.title': 'Friends feed',
   'feed.loadFailed': 'Could not load the feed. Check your connection and try again later.',
   'feed.empty': 'The finds of the players you follow will appear here. Follow players from the ranking.',
+  'chats.title': 'Messages',
+  'chats.loadFailed': 'Couldn’t load. Check your connection and try again later.',
+  'chats.empty': 'No conversations yet. Message someone from their profile.',
+  'chats.emptyThread': 'No messages yet. Say hi.',
+  'chats.placeholder': 'Message…',
+  'chats.send': 'Send',
+  'chats.youPrefix': 'You: {text}',
   'rating.title': 'Ranking',
   'rating.subtitle': 'By places found',
   'rating.unavailable': 'The ranking is not available right now. Check your connection and try again later.',

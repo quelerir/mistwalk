@@ -48,6 +48,9 @@ import { cityCellKey } from '../lib/geo/cityStats';
 import LeaderboardScreen from './LeaderboardScreen';
 import FollowsScreen from './FollowsScreen';
 import FeedScreen from './FeedScreen';
+import ChatsScreen from './ChatsScreen';
+import ChatScreen from './ChatScreen';
+import { fetchUnreadCount } from '../lib/social/messages';
 import { countNewer, fetchFeed } from '../lib/social/feed';
 import { sendFeedback } from '../lib/social/feedback';
 import { getFeedSeen } from '../lib/social/feedSeen';
@@ -61,12 +64,13 @@ import type { Key } from '../i18n';
 
 const NO_PLACES: DiscoveredPlace[] = [];
 
-type TabKey = 'map' | 'nearby' | 'feed' | 'menu';
+type TabKey = 'map' | 'nearby' | 'feed' | 'chats' | 'menu';
 
 const TABS: Array<{ key: TabKey; labelKey: Key; icon: TabItem<TabKey>['icon'] }> = [
   { key: 'map', labelKey: 'tab.map', icon: 'map' },
   { key: 'nearby', labelKey: 'tab.nearby', icon: 'compass' },
   { key: 'feed', labelKey: 'tab.feed', icon: 'feed' },
+  { key: 'chats', labelKey: 'tab.chats', icon: 'chat' },
   { key: 'menu', labelKey: 'tab.menu', icon: 'menu' },
 ];
 
@@ -105,6 +109,8 @@ export default function MainScreen({
   const [showBlocked, setShowBlocked] = useState(false);
   const [showCollection, setShowCollection] = useState(false);
   const [feedNew, setFeedNew] = useState<number | null>(null);
+  const [unreadMessages, setUnreadMessages] = useState<number | null>(null);
+  const [openChatWith, setOpenChatWith] = useState<{ userId: string; displayName: string } | null>(null);
   const [followsTab, setFollowsTab] = useState<'followers' | 'following'>('followers');
   const [followCounts, setFollowCounts] = useState<{ followers: number; following: number } | null>(null);
   const [selected, setSelected] = useState<Poi | null>(null);
@@ -178,6 +184,13 @@ export default function MainScreen({
       .then(([items, seen]) => setFeedNew(countNewer(items, seen)))
       .catch(() => {});
   }, [client, tab]);
+  // How many unread messages there are; refreshed whenever the chats tab is left.
+  useEffect(() => {
+    if (tab === 'chats' && !openChatWith) return;
+    fetchUnreadCount(client)
+      .then(setUnreadMessages)
+      .catch(() => {});
+  }, [client, tab, openChatWith]);
   const week = useMemo(() => weekSummary(points, discovered, Date.now()), [points, discovered]);
   const daily = useMemo(() => dailyKm(points, Date.now()), [points]);
 
@@ -230,10 +243,21 @@ export default function MainScreen({
     () =>
       TABS.map(({ key, labelKey, icon }): TabItem<TabKey> => {
         const tab = { key, label: t(labelKey), icon };
-        return key === 'menu' ? { ...tab, photoUri: avatarUri } : key === 'feed' ? { ...tab, badge: feedNew } : tab;
+        return key === 'menu'
+          ? { ...tab, photoUri: avatarUri }
+          : key === 'feed'
+            ? { ...tab, badge: feedNew }
+            : key === 'chats'
+              ? { ...tab, badge: unreadMessages }
+              : tab;
       }),
-    [avatarUri, feedNew, t]
+    [avatarUri, feedNew, unreadMessages, t]
   );
+
+  function handleOpenChat(other: { userId: string; displayName: string }) {
+    setOpenChatWith(other);
+    setTab('chats');
+  }
 
   async function handleSubmitFeedback(message: string): Promise<void> {
     await sendFeedback(client, userId, email || null, message);
@@ -426,9 +450,22 @@ export default function MainScreen({
               fallbackName={openPlayer.displayName}
               onBack={() => setOpenPlayer(null)}
               isMe={openPlayer.userId === userId}
+              onOpenChat={handleOpenChat}
             />
           ) : (
             <FeedScreen client={client} onOpenPlayer={setOpenPlayer} />
+          ))}
+        {tab === 'chats' &&
+          (openChatWith ? (
+            <ChatScreen
+              client={client}
+              myId={userId}
+              otherId={openChatWith.userId}
+              otherName={openChatWith.displayName}
+              onBack={() => setOpenChatWith(null)}
+            />
+          ) : (
+            <ChatsScreen client={client} onOpenChat={setOpenChatWith} />
           ))}
         <DiscoveryCard place={greeting} onDismiss={dismissGreeting} onOpen={setDetailPlace} />
       </View>
@@ -439,7 +476,10 @@ export default function MainScreen({
           if (key === 'menu') setMenuOpen(true);
           else {
             // A player opened from the feed must not linger when you come back from another tab.
-            if (key !== tab) setOpenPlayer(null);
+            if (key !== tab) {
+              setOpenPlayer(null);
+              if (key !== 'chats') setOpenChatWith(null);
+            }
             setTab(key);
           }
         }}

@@ -221,6 +221,13 @@ export default function MapScreen({
           style={styles.map}
           mapStyle={mapStyle}
           touchPitch={false}
+          // While another tab sits on top, the map stays mounted for continuity (see below) but must
+          // not fight that tab's own touches (e.g. a text input) for gesture recognition.
+          dragPan={active}
+          touchZoom={active}
+          doubleTapZoom={active}
+          doubleTapHoldZoom={active}
+          touchRotate={active}
           onDidFinishLoadingMap={() => void handleMapLoaded()}
           onRegionIsChanging={(e) => handleRegion(e, false)}
           onRegionDidChange={(e) => handleRegion(e, true)}
