@@ -7,7 +7,7 @@
 //   RESEND_API_KEY        - from resend.com
 //   FEEDBACK_WEBHOOK_SECRET - a random string you also set as a header on the Database Webhook (any value; it
 //                             just has to match on both sides), so only that webhook can trigger a send.
-//   FEEDBACK_TO_EMAIL     - where the notification goes (e.g. quelerir@gmail.com)
+//   FEEDBACK_TO_EMAIL     - where the notification goes (e.g. mistwalk.app@gmail.com)
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 const WEBHOOK_SECRET = Deno.env.get('FEEDBACK_WEBHOOK_SECRET');

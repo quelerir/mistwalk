@@ -10,7 +10,7 @@ this is a notification only, so a Resend outage or a missing key never blocks a 
    of 2026-09-24). Copy it.
 2. **Secrets** (Project Settings → Edge Functions → Secrets, or `Manage → Secrets` under Edge Functions):
    - `RESEND_API_KEY` — the key from step 1.
-   - `FEEDBACK_TO_EMAIL` — `quelerir@gmail.com`.
+   - `FEEDBACK_TO_EMAIL` — `mistwalk.app@gmail.com`.
    - `FEEDBACK_WEBHOOK_SECRET` — a random string (any value works, it only has to match step 4). One was generated
      for this setup: ask the assistant's session notes, or make a new one (`openssl rand -base64 32`) and reuse it
      in step 4.

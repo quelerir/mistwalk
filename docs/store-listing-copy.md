@@ -80,7 +80,7 @@ Mistwalk isn't about rankings or competition. It's about opening the map one day
 ---
 
 **Support URL:** https://quelerir.github.io/mistwalk-legal/support.html
-**Contact email:** quelerir@gmail.com
+**Contact email:** mistwalk.app@gmail.com
 **Privacy policy URL:** https://quelerir.github.io/mistwalk-legal/
 **Terms of use URL:** https://quelerir.github.io/mistwalk-legal/terms.html
 

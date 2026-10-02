@@ -36,7 +36,7 @@ underlying data collection, different form shape.
 account), which deletes the auth user and cascades deletion across all
 related tables (visited points, discovered places, follows, feedback) plus
 the avatar file, immediately, no waiting period. Also mention the support
-email (quelerir@gmail.com) as a fallback contact for data requests.
+email (mistwalk.app@gmail.com) as a fallback contact for data requests.
 
 ## Data collection is required or optional
 
