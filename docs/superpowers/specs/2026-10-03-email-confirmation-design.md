@@ -27,9 +27,10 @@ arrives in a message. This stops sign-ups on other people's addresses and throwa
     returns the data (it contains the session).
   - `resendCode(client, email)`: `client.auth.resend({ type: 'signup', email })`, throws on error.
 - `src/lib/auth/validation.ts` (pure)
-  - New error codes: `codeInvalid` (wrong code), `codeExpired`, `tooManyRequests`, `emailNotConfirmed`.
-  - `mapAuthError` recognises them: `otp_expired` or "expired" gives `codeExpired`; "token ... invalid" gives
-    `codeInvalid`; `over_email_send_rate_limit` / `over_request_rate_limit` / HTTP 429 gives `tooManyRequests`;
+  - New error codes: `codeInvalid`, `tooManyRequests`, `emailNotConfirmed`.
+  - `mapAuthError` recognises them: `otp_expired` or "expired or is invalid" gives `codeInvalid` (Supabase answers a
+    wrong and an expired code with the same error, so the message says "wrong or expired" and suggests a new code);
+    `over_email_send_rate_limit` / `over_request_rate_limit` / HTTP 429 gives `tooManyRequests`;
     `email_not_confirmed` / "Email not confirmed" gives `emailNotConfirmed`.
   - `validateCode(value)`: exactly 6 digits after trimming.
 - `src/screens/VerifyEmailScreen.tsx` (new), same fog look and theme as `SignInScreen`
@@ -37,7 +38,7 @@ arrives in a message. This stops sign-ups on other people's addresses and throwa
     disabled until the code is 6 digits.
   - "Send the code again" with a 60 second countdown; the button is disabled while it runs.
   - "Use another email" returns to the sign-up form (state kept).
-  - Errors under the field: wrong code, expired code (suggests sending a new one), too many requests, network.
+  - Errors under the field: wrong or expired code (suggests sending a new one), too many requests, network.
   - On success it calls `onSignedIn()`, as `SignInScreen` does today.
 - `src/screens/SignInScreen.tsx`
   - After `signUp`: if `data.session` exists call `onSignedIn()` as now; otherwise show `VerifyEmailScreen` for that
@@ -79,7 +80,7 @@ arrives in a message. This stops sign-ups on other people's addresses and throwa
 
 - Unit: `verifyEmail` and `resendCode` (payloads, error pass-through), `validateCode`, the new `mapAuthError` cases.
 - Screen tests with a mocked client: sign-up without a session shows the verify view; with a session it signs in at
-  once; a correct code signs in; a wrong and an expired code show their messages; the resend button is disabled during
+  once; a correct code signs in; a wrong or expired code shows its message; the resend button is disabled during
   the countdown and calls `resendCode` after it; sign-in with an unconfirmed email opens the verify view.
 - By hand in the simulator, with the dashboard switch on against the built-in mailer (one or two messages are within its
   limit): full sign-up with a real message, a wrong code, a resend, both languages, a small screen with the keyboard open.
