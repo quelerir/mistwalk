@@ -5,11 +5,16 @@ import SignInScreen from './SignInScreen';
 
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 
-function makeClient(overrides: { signUp?: jest.Mock; signIn?: jest.Mock; rpc?: jest.Mock } = {}) {
+// What sign-up returns while email confirmation is off: a session at once.
+const WITH_SESSION = { data: { user: { id: 'u1' }, session: { access_token: 't' } }, error: null };
+
+function makeClient(overrides: { signUp?: jest.Mock; signIn?: jest.Mock; rpc?: jest.Mock; resend?: jest.Mock } = {}) {
   return {
     rpc: overrides.rpc ?? jest.fn().mockResolvedValue({ data: true, error: null }),
     auth: {
-      signUp: overrides.signUp ?? jest.fn().mockResolvedValue({ data: { user: { id: 'u1' } }, error: null }),
+      signUp: overrides.signUp ?? jest.fn().mockResolvedValue(WITH_SESSION),
+      resend: overrides.resend ?? jest.fn().mockResolvedValue({ data: {}, error: null }),
+      verifyOtp: jest.fn().mockResolvedValue({ data: { session: { access_token: 't' } }, error: null }),
       signInWithPassword: overrides.signIn ?? jest.fn().mockResolvedValue({ data: { user: { id: 'u1' } }, error: null }),
     },
   } as unknown as SupabaseClient;
@@ -45,7 +50,7 @@ describe('SignInScreen', () => {
   });
 
   it('switches to sign-up and sends the name, the login and the credentials', async () => {
-    const signUp = jest.fn().mockResolvedValue({ data: { user: { id: 'u1' } }, error: null });
+    const signUp = jest.fn().mockResolvedValue(WITH_SESSION);
     const onSignedIn = jest.fn();
     const { getByTestId } = render(<SignInScreen client={makeClient({ signUp })} onSignedIn={onSignedIn} />);
     fireEvent.press(getByTestId('signin-tab-up'));
@@ -82,7 +87,7 @@ describe('SignInScreen', () => {
 
   it('still signs up when the login check fails (an old server)', async () => {
     const rpc = jest.fn().mockResolvedValue({ data: null, error: new Error('no such function') });
-    const signUp = jest.fn().mockResolvedValue({ data: { user: { id: 'u1' } }, error: null });
+    const signUp = jest.fn().mockResolvedValue(WITH_SESSION);
     const onSignedIn = jest.fn();
     const { getByTestId } = render(<SignInScreen client={makeClient({ rpc, signUp })} onSignedIn={onSignedIn} />);
     fireEvent.press(getByTestId('signin-tab-up'));
@@ -113,5 +118,59 @@ describe('SignInScreen', () => {
     expect(queryByText(/Fill in this field|Заполните поле/)).toBeNull();
     fireEvent(getByTestId('signin-password'), 'submitEditing');
     expect(getAllByText(/Fill in this field|Заполните поле/).length).toBeGreaterThan(0);
+  });
+
+  describe('email confirmation', () => {
+    // What sign-up returns while confirmation is on: a user and no session.
+    const NO_SESSION = { data: { user: { id: 'u1' }, session: null }, error: null };
+
+    async function signUpForm(utils: ReturnType<typeof render>) {
+      const { getByTestId } = utils;
+      fireEvent.press(getByTestId('signin-tab-up'));
+      fireEvent.changeText(getByTestId('signin-firstName'), 'Anna');
+      fireEvent.changeText(getByTestId('signin-lastName'), 'K');
+      fireEvent.changeText(getByTestId('signin-login'), '@anna_k');
+      fireEvent.changeText(getByTestId('signin-email'), 'a@b.co');
+      fireEvent.changeText(getByTestId('signin-password'), 'secret1');
+      await waitFor(() => expect(getByTestId('signin-submit').props.accessibilityState?.disabled).toBeFalsy(), { timeout: 2000 });
+      fireEvent.press(getByTestId('signin-submit'));
+    }
+
+    it('opens the verify screen for that email when sign-up returns no session', async () => {
+      const onSignedIn = jest.fn();
+      const utils = render(<SignInScreen client={makeClient({ signUp: jest.fn().mockResolvedValue(NO_SESSION) })} onSignedIn={onSignedIn} />);
+      await signUpForm(utils);
+      expect(await utils.findByTestId('verify-code')).toBeTruthy();
+      expect(utils.getByText(/a@b\.co/)).toBeTruthy();
+      expect(onSignedIn).not.toHaveBeenCalled();
+    });
+
+    it('opens the verify screen and sends a new code when sign-in says the email is not confirmed', async () => {
+      const signIn = jest.fn().mockResolvedValue({ data: null, error: { message: 'Email not confirmed', code: 'email_not_confirmed' } });
+      const resend = jest.fn().mockResolvedValue({ data: {}, error: null });
+      const { getByTestId, findByTestId } = render(<SignInScreen client={makeClient({ signIn, resend })} onSignedIn={jest.fn()} />);
+      fireEvent.changeText(getByTestId('signin-email'), 'a@b.co');
+      fireEvent.changeText(getByTestId('signin-password'), 'secret1');
+      fireEvent.press(getByTestId('signin-submit'));
+      expect(await findByTestId('verify-code')).toBeTruthy();
+      expect(resend).toHaveBeenCalledWith({ type: 'signup', email: 'a@b.co' });
+    });
+
+    it('"use another email" returns to the form with the typed values kept', async () => {
+      const utils = render(<SignInScreen client={makeClient({ signUp: jest.fn().mockResolvedValue(NO_SESSION) })} onSignedIn={jest.fn()} />);
+      await signUpForm(utils);
+      fireEvent.press(await utils.findByTestId('verify-back'));
+      expect(utils.getByTestId('signin-email').props.value).toBe('a@b.co');
+      expect(utils.getByTestId('signin-login').props.value).toBe('@anna_k');
+    });
+
+    it('a correct code on the verify screen signs in', async () => {
+      const onSignedIn = jest.fn();
+      const utils = render(<SignInScreen client={makeClient({ signUp: jest.fn().mockResolvedValue(NO_SESSION) })} onSignedIn={onSignedIn} />);
+      await signUpForm(utils);
+      fireEvent.changeText(await utils.findByTestId('verify-code'), '123456');
+      fireEvent.press(utils.getByTestId('verify-submit'));
+      await waitFor(() => expect(onSignedIn).toHaveBeenCalled());
+    });
   });
 });

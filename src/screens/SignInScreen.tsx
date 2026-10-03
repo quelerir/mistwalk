@@ -22,11 +22,12 @@ import {
   type ErrorCode,
   type Field,
 } from '../lib/auth/validation';
-import { signIn, signUp } from '../lib/supabase/auth';
+import { ERROR_KEYS } from '../lib/auth/errorKeys';
+import { resendCode, signIn, signUp } from '../lib/supabase/auth';
+import VerifyEmailScreen from './VerifyEmailScreen';
 import { useStyles } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import { useT } from '../i18n/I18nProvider';
-import type { Key } from '../i18n/ru';
 
 export interface SignInScreenProps {
   client: SupabaseClient;
@@ -34,20 +35,6 @@ export interface SignInScreenProps {
 }
 
 type Mode = 'in' | 'up';
-
-const ERROR_KEYS: Record<ErrorCode, Key> = {
-  required: 'signin.err.required',
-  tooLong: 'signin.err.tooLong',
-  loginFormat: 'signin.err.loginFormat',
-  email: 'signin.err.email',
-  passwordShort: 'signin.err.passwordShort',
-  passwordWeak: 'signin.err.passwordWeak',
-  emailTaken: 'signin.err.emailTaken',
-  loginTaken: 'signin.err.loginTaken',
-  badCredentials: 'signin.err.badCredentials',
-  network: 'signin.err.network',
-  unknown: 'signin.failed',
-};
 
 const EMPTY = { firstName: '', lastName: '', login: '', email: '', password: '' };
 
@@ -60,6 +47,8 @@ export default function SignInScreen({ client, onSignedIn }: SignInScreenProps) 
   const [touched, setTouched] = useState<Partial<Record<Field, boolean>>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Set while a code from the email is awaited; the form's values stay as they were.
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   // What the server said: on a field, or about the form as a whole.
   const [serverError, setServerError] = useState<{ field: Field | null; code: ErrorCode } | null>(null);
 
@@ -110,21 +99,34 @@ export default function SignInScreen({ client, onSignedIn }: SignInScreenProps) 
     }
     setBusy(true);
     setServerError(null);
+    const email = values.email.trim();
     try {
       if (up) {
-        await signUp(client, {
-          email: values.email.trim(),
+        const data = await signUp(client, {
+          email,
           password: values.password,
           firstName: values.firstName.trim(),
           lastName: values.lastName.trim(),
           login: normalizeLogin(values.login),
         });
+        // No session means the email still has to be confirmed with a code.
+        if (!data.session) {
+          setPendingEmail(email);
+          return;
+        }
       } else {
-        await signIn(client, values.email.trim(), values.password);
+        await signIn(client, email, values.password);
       }
       onSignedIn();
     } catch (err) {
-      setServerError(mapAuthError(err));
+      const mapped = mapAuthError(err);
+      if (!up && mapped.code === 'emailNotConfirmed') {
+        // A fresh code goes out; if that fails the verify screen has its own "send again".
+        await resendCode(client, email).catch(() => undefined);
+        setPendingEmail(email);
+        return;
+      }
+      setServerError(mapped);
     } finally {
       setBusy(false);
     }
@@ -140,6 +142,10 @@ export default function SignInScreen({ client, onSignedIn }: SignInScreenProps) 
           : loginStatus === 'invalid'
             ? { text: t('signin.err.loginFormat'), tone: 'bad' as const }
             : { text: t('signin.loginHint'), tone: 'muted' as const };
+
+  if (pendingEmail) {
+    return <VerifyEmailScreen client={client} email={pendingEmail} onVerified={onSignedIn} onBack={() => setPendingEmail(null)} />;
+  }
 
   return (
     <ImageBackground source={require('../../assets/icon.png')} style={styles.fill} resizeMode="cover">
