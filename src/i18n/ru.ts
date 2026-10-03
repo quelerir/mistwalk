@@ -82,7 +82,6 @@ export const ru = {
     many: '{n} мест, приблизить',
     other: '{n} места, приблизить',
   },
-  'map.closeMenu': 'Закрыть меню',
 
   // Place card, sheet, discovery, route
   'place.buildRoute': 'Построить маршрут',

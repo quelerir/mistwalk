@@ -1,0 +1,113 @@
+import React from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import SvgIcon from './icons/SvgIcon';
+import type { IconName } from './icons/svgIcons';
+import { useStyles, useTheme } from '../theme/ThemeProvider';
+import type { Colors } from '../theme/palettes';
+import { FONT } from '../theme/fonts';
+
+export interface MenuItem {
+  key: string;
+  icon: IconName;
+  label: string;
+  value?: string;
+  // A short grey line under the label for settings that are not obvious.
+  hint?: string;
+  // A switch instead of a value: on/off settings.
+  on?: boolean;
+  destructive?: boolean;
+  // Items of the same group sit together under a small title; a new group starts where the name changes.
+  group?: string;
+  onPress: () => void;
+}
+
+export interface MenuScreenProps {
+  items: MenuItem[];
+  // A large title above everything, as on the other tabs.
+  title?: string;
+  header?: React.ReactNode;
+  // Shown below the list, outside the scroll area (e.g. the app version).
+  footer?: React.ReactNode;
+}
+
+// The menu tab: a list on the screen like the feed and the chats, not a sheet over the map.
+export default function MenuScreen({ items, title, header, footer }: MenuScreenProps) {
+  const styles = useStyles(makeStyles);
+  const { colors: c } = useTheme();
+
+  return (
+    <View style={styles.screen}>
+      {title ? <Text style={styles.title}>{title}</Text> : null}
+      {header}
+      <ScrollView style={styles.list} contentContainerStyle={{ paddingBottom: 12 }} showsVerticalScrollIndicator={false}>
+        {items.map((item, index) => {
+          const color = item.destructive ? c.danger : c.text;
+          const next = items[index + 1];
+          const startsGroup = item.group !== undefined && item.group !== items[index - 1]?.group;
+          return (
+            <React.Fragment key={item.key}>
+              {startsGroup && <Text style={styles.group}>{item.group}</Text>}
+              <Pressable
+                style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+                onPress={item.onPress}
+                accessibilityRole={item.on !== undefined ? 'switch' : 'button'}
+                accessibilityState={item.on !== undefined ? { checked: item.on } : undefined}
+                accessibilityLabel={item.label}
+              >
+                <View style={styles.icon}>
+                  <SvgIcon name={item.icon} size={20} color={item.destructive ? c.danger : c.text} background={c.surfaceAlt} />
+                </View>
+                {/* No line under the last row of a group: the next group's title separates it. */}
+                <View style={[styles.labelWrap, next && next.group === item.group && styles.separator]}>
+                  <View style={styles.labelText}>
+                    <Text style={[styles.label, { color }]} numberOfLines={1}>
+                      {item.label}
+                    </Text>
+                    {item.hint ? <Text style={styles.hint}>{item.hint}</Text> : null}
+                  </View>
+                  {item.on !== undefined ? (
+                    <View style={[styles.track, item.on && styles.trackOn]}>
+                      <View style={[styles.knob, item.on && styles.knobOn]} />
+                    </View>
+                  ) : item.value ? (
+                    <Text style={styles.value}>{item.value}</Text>
+                  ) : null}
+                </View>
+              </Pressable>
+            </React.Fragment>
+          );
+        })}
+      </ScrollView>
+      {footer}
+    </View>
+  );
+}
+
+const makeStyles = (c: Colors) => StyleSheet.create({
+  // Matches the tab bar below it.
+  screen: { flex: 1, backgroundColor: c.bg },
+  title: { fontSize: 34, fontFamily: FONT.display, letterSpacing: -0.8, color: c.text, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
+  list: { flex: 1 },
+  group: { paddingHorizontal: 18, paddingTop: 14, paddingBottom: 2, fontSize: 12, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', color: c.textMuted },
+  row: { flexDirection: 'row', alignItems: 'center', paddingLeft: 18, minHeight: 60 },
+  rowPressed: { backgroundColor: c.surfaceAlt },
+  icon: { width: 40, height: 40, borderRadius: 20, backgroundColor: c.surfaceAlt, alignItems: 'center', justifyContent: 'center', marginRight: 14 },
+  labelWrap: {
+    flex: 1,
+    minHeight: 60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingRight: 18,
+  },
+  separator: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
+  labelText: { flex: 1, paddingVertical: 10, paddingRight: 12 },
+  label: { fontSize: 17, fontWeight: '600' },
+  hint: { marginTop: 2, fontSize: 13, lineHeight: 17, color: c.textMuted },
+  value: { fontSize: 15, color: c.textMuted, marginLeft: 12 },
+  track: { width: 48, height: 28, borderRadius: 14, backgroundColor: c.surfaceAlt, borderWidth: StyleSheet.hairlineWidth, borderColor: c.borderStrong, justifyContent: 'center', paddingHorizontal: 2 },
+  trackOn: { backgroundColor: c.text, borderColor: c.text },
+  knob: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#FFFFFF', alignSelf: 'flex-start', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 2, shadowOffset: { width: 0, height: 1 } },
+  // On a dark track, a white knob loses contrast in dark mode (the track's "on" color is near-white there).
+  knobOn: { alignSelf: 'flex-end', backgroundColor: c.bg },
+});

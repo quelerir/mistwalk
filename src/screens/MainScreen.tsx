@@ -99,8 +99,7 @@ export default function MainScreen({
 }: MainScreenProps) {
   const { t } = useI18n();
   const styles = useStyles(makeStyles);
-  const [tab, setTab] = useState<Exclude<TabKey, 'menu'>>('map');
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [tab, setTab] = useState<TabKey>('map');
   const [showCountries, setShowCountries] = useState(false);
   const [openCountry, setOpenCountry] = useState<CountryStat | null>(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
@@ -171,11 +170,11 @@ export default function MainScreen({
   useEffect(() => {
     if (offlineMapOn && livePosition) void ensureOfflineArea(livePosition, MAP_STYLES[scheme]);
   }, [offlineMapOn, livePosition, scheme]);
-  // The size shown in the menu is read when the menu opens.
+  // The size shown in the menu is read when the menu tab opens.
   useEffect(() => {
-    if (!menuOpen || !offlineMapOn) return;
+    if (tab !== 'menu' || !offlineMapOn) return;
     void offlineMapBytes().then((bytes) => setOfflineMb(bytes > 0 ? Math.max(1, Math.round(bytes / (1024 * 1024))) : null));
-  }, [menuOpen, offlineMapOn]);
+  }, [tab, offlineMapOn]);
   // How many finds of followed players are new since the feed was last opened; refreshed when it is left.
   useEffect(() => {
     // The feed tab counts as seeing everything, so the number is only worth asking for elsewhere.
@@ -264,9 +263,6 @@ export default function MainScreen({
   }
 
   async function handleChangeAvatar(): Promise<string | null> {
-    // iOS cannot present the photo picker over the menu sheet, so hide the sheet while picking.
-    setMenuOpen(false);
-    await new Promise((resolve) => setTimeout(resolve, 450));
     try {
       const picked = await pickAvatar();
       if (picked.kind === 'denied') return t('photo.noAccess');
@@ -276,8 +272,6 @@ export default function MainScreen({
     } catch (err) {
       console.warn('[avatar] upload failed', err);
       return t('photo.failed');
-    } finally {
-      setMenuOpen(true);
     }
   }
 
@@ -467,55 +461,52 @@ export default function MainScreen({
           ) : (
             <ChatsScreen client={client} onOpenChat={setOpenChatWith} />
           ))}
+        {tab === 'menu' && (
+          <AppMenu
+            fogStyle={fogStyle}
+            onFogStyleChange={handleFogStyleChange}
+            fogAnimated={fogAnimated}
+            onFogAnimatedChange={handleFogAnimatedChange}
+            placeNotifications={placeNotifications}
+            onPlaceNotificationsChange={handlePlaceNotificationsChange}
+            weeklySummary={weeklySummaryOn}
+            weatherFog={weatherFogOn}
+            onWeatherFogChange={handleWeatherFogChange}
+            offlineMap={offlineMapOn}
+            offlineMapMb={offlineMb}
+            onOfflineMapChange={handleOfflineMapChange}
+            onWeeklySummaryChange={handleWeeklySummaryChange}
+            backgroundEnabled={backgroundEnabled}
+            onEnableBackground={onEnableBackground}
+            onSignOut={handleSignOut}
+            onDeleteAccount={handleDeleteAccount}
+            onOpenBlocked={() => setShowBlocked(true)}
+            onOpenCollection={() => setShowCollection(true)}
+            email={email}
+            leaderboardVisible={profileSync.profile?.isPublic ?? null}
+            onLeaderboardVisibleChange={profileSync.setVisible}
+            avatarUri={avatarUri}
+            displayName={profileSync.profile?.displayName ?? email}
+            onChangeAvatar={handleChangeAvatar}
+            onRemoveAvatar={profileSync.clearAvatar}
+            onSubmitFeedback={handleSubmitFeedback}
+          />
+        )}
         <DiscoveryCard place={greeting} onDismiss={dismissGreeting} onOpen={setDetailPlace} />
       </View>
       <TabBar
         tabs={tabs}
         active={tab}
         onChange={(key) => {
-          if (key === 'menu') setMenuOpen(true);
-          else {
-            // A player opened from the feed must not linger when you come back from another tab.
-            if (key !== tab) {
-              setOpenPlayer(null);
-              if (key !== 'chats') setOpenChatWith(null);
-            }
-            setTab(key);
+          // A player opened from the feed must not linger when you come back from another tab.
+          if (key !== tab) {
+            setOpenPlayer(null);
+            if (key !== 'chats') setOpenChatWith(null);
           }
+          setTab(key);
         }}
       />
       <PlaceSheet place={detailWithTags} onClose={() => setDetailPlace(null)} />
-      <AppMenu
-        visible={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        fogStyle={fogStyle}
-        onFogStyleChange={handleFogStyleChange}
-        fogAnimated={fogAnimated}
-        onFogAnimatedChange={handleFogAnimatedChange}
-        placeNotifications={placeNotifications}
-        onPlaceNotificationsChange={handlePlaceNotificationsChange}
-        weeklySummary={weeklySummaryOn}
-        weatherFog={weatherFogOn}
-        onWeatherFogChange={handleWeatherFogChange}
-        offlineMap={offlineMapOn}
-        offlineMapMb={offlineMb}
-        onOfflineMapChange={handleOfflineMapChange}
-        onWeeklySummaryChange={handleWeeklySummaryChange}
-        backgroundEnabled={backgroundEnabled}
-        onEnableBackground={onEnableBackground}
-        onSignOut={handleSignOut}
-        onDeleteAccount={handleDeleteAccount}
-        onOpenBlocked={() => setTimeout(() => setShowBlocked(true), 300)}
-        onOpenCollection={() => setTimeout(() => setShowCollection(true), 300)}
-        email={email}
-        leaderboardVisible={profileSync.profile?.isPublic ?? null}
-        onLeaderboardVisibleChange={profileSync.setVisible}
-        avatarUri={avatarUri}
-        displayName={profileSync.profile?.displayName ?? email}
-        onChangeAvatar={handleChangeAvatar}
-        onRemoveAvatar={profileSync.clearAvatar}
-        onSubmitFeedback={handleSubmitFeedback}
-      />
       <Modal visible={showBlocked} animationType="slide" onRequestClose={() => setShowBlocked(false)}>
         <BlockedScreen client={client} onBack={() => setShowBlocked(false)} />
       </Modal>
