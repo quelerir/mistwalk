@@ -1,6 +1,8 @@
 import {
   mapAuthError,
+  normalizeCode,
   normalizeLogin,
+  validateCode,
   validateEmail,
   validateLogin,
   validateName,
@@ -98,9 +100,34 @@ describe('mapAuthError', () => {
     [{ message: 'Password should be at least 6 characters.' }, 'password', 'passwordWeak'],
     [{ message: 'x', code: 'weak_password' }, 'password', 'passwordWeak'],
     [{ message: 'Network request failed' }, null, 'network'],
+    [{ message: 'Token has expired or is invalid', code: 'otp_expired' }, null, 'codeInvalid'],
+    [{ message: 'x', code: 'over_email_send_rate_limit' }, null, 'tooManyRequests'],
+    [{ message: 'x', code: 'over_request_rate_limit' }, null, 'tooManyRequests'],
+    [{ message: 'x', status: 429 }, null, 'tooManyRequests'],
+    [{ message: 'Email not confirmed', code: 'email_not_confirmed' }, null, 'emailNotConfirmed'],
     [new Error('something else'), null, 'unknown'],
     ['not an error', null, 'unknown'],
   ])('%p maps to field %p and code %p', (err, field, code) => {
     expect(mapAuthError(err)).toEqual({ field, code });
+  });
+});
+
+describe('normalizeCode', () => {
+  it.each([
+    ['123 456', '123456'],
+    ['12a3', '123'],
+    ['1234567', '123456'],
+    ['', ''],
+  ])('%p becomes %p', (raw, expected) => {
+    expect(normalizeCode(raw)).toBe(expected);
+  });
+});
+
+describe('validateCode', () => {
+  it('asks for a code when empty', () => expect(validateCode('')).toBe('required'));
+  it('rejects fewer than 6 digits', () => expect(validateCode('12345')).toBe('codeInvalid'));
+  it('accepts 6 digits, also typed with a space', () => {
+    expect(validateCode('123456')).toBeNull();
+    expect(validateCode('123 456')).toBeNull();
   });
 });

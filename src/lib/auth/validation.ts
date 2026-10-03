@@ -8,6 +8,9 @@ export type ErrorCode =
   | 'emailTaken'
   | 'loginTaken'
   | 'badCredentials'
+  | 'codeInvalid'
+  | 'tooManyRequests'
+  | 'emailNotConfirmed'
   | 'network'
   | 'unknown';
 
@@ -28,6 +31,19 @@ const MIN_PASSWORD = 6;
 
 export function normalizeLogin(raw: string): string {
   return raw.trim().replace(/^@+/, '');
+}
+
+const CODE_LENGTH = 6;
+
+// What the code field holds: digits only, so a pasted "123 456" works.
+export function normalizeCode(raw: string): string {
+  return raw.replace(/\D/g, '').slice(0, CODE_LENGTH);
+}
+
+export function validateCode(value: string): ErrorCode | null {
+  const v = normalizeCode(value);
+  if (v === '') return 'required';
+  return v.length === CODE_LENGTH ? null : 'codeInvalid';
 }
 
 export function validateName(value: string): ErrorCode | null {
@@ -83,11 +99,19 @@ export function mapAuthError(err: unknown): { field: Field | null; code: ErrorCo
     : '';
   const code = typeof err === 'object' && err !== null && 'code' in err ? String((err as { code: unknown }).code) : '';
 
+  const status = typeof err === 'object' && err !== null && 'status' in err ? Number((err as { status: unknown }).status) : 0;
+
   if (/invalid login credentials/i.test(message)) return { field: null, code: 'badCredentials' };
   if (code === 'user_already_exists' || /already (been )?registered/i.test(message)) return { field: 'email', code: 'emailTaken' };
   // A taken login makes the sign-up trigger fail, which Supabase reports only in general terms.
   if (/database error saving new user/i.test(message)) return { field: 'login', code: 'loginTaken' };
   if (code === 'weak_password' || /password should be|weak password/i.test(message)) return { field: 'password', code: 'passwordWeak' };
+  // Supabase answers a wrong and an expired code alike.
+  if (code === 'otp_expired' || /expired or is invalid/i.test(message)) return { field: null, code: 'codeInvalid' };
+  if (code === 'over_email_send_rate_limit' || code === 'over_request_rate_limit' || status === 429) {
+    return { field: null, code: 'tooManyRequests' };
+  }
+  if (code === 'email_not_confirmed' || /email not confirmed/i.test(message)) return { field: null, code: 'emailNotConfirmed' };
   if (/network|fetch|timeout|timed out/i.test(message)) return { field: null, code: 'network' };
   return { field: null, code: 'unknown' };
 }

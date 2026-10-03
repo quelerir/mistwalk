@@ -22,6 +22,7 @@ import {
   type ErrorCode,
   type Field,
 } from '../lib/auth/validation';
+import { ERROR_KEYS } from '../lib/auth/errorKeys';
 import { signIn, signUp } from '../lib/supabase/auth';
 import { useStyles } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
@@ -34,20 +35,6 @@ export interface SignInScreenProps {
 }
 
 type Mode = 'in' | 'up';
-
-const ERROR_KEYS: Record<ErrorCode, Key> = {
-  required: 'signin.err.required',
-  tooLong: 'signin.err.tooLong',
-  loginFormat: 'signin.err.loginFormat',
-  email: 'signin.err.email',
-  passwordShort: 'signin.err.passwordShort',
-  passwordWeak: 'signin.err.passwordWeak',
-  emailTaken: 'signin.err.emailTaken',
-  loginTaken: 'signin.err.loginTaken',
-  badCredentials: 'signin.err.badCredentials',
-  network: 'signin.err.network',
-  unknown: 'signin.failed',
-};
 
 const EMPTY = { firstName: '', lastName: '', login: '', email: '', password: '' };
 
