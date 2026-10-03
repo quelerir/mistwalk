@@ -150,10 +150,12 @@ export default function AppMenu({
   }
 
   const mainItems: MenuItem[] = [
+    { key: 'account', icon: 'user', label: t('menu.account'), onPress: () => setPage('account') },
     { key: 'collection', icon: 'award', label: t('menu.collection'), onPress: leaveThen(onOpenCollection) },
     { key: 'settings', icon: 'settings', label: t('menu.settings'), onPress: () => setPage('settings') },
-    { key: 'account', icon: 'user', label: t('menu.account'), onPress: () => setPage('account') },
     { key: 'feedback', icon: 'mail', label: t('menu.feedback'), onPress: openFeedback },
+    { key: 'privacyPolicy', icon: 'book', label: t('menu.privacyPolicy'), onPress: () => void Linking.openURL(PRIVACY_POLICY_URL) },
+    { key: 'termsOfUse', icon: 'book', label: t('menu.termsOfUse'), onPress: () => void Linking.openURL(TERMS_OF_USE_URL) },
   ];
 
   const feedbackItems: MenuItem[] = [
@@ -195,22 +197,10 @@ export default function AppMenu({
       },
     },
     {
-      key: 'privacyPolicy',
-      icon: 'book',
-      label: t('menu.privacyPolicy'),
-      onPress: () => void Linking.openURL(PRIVACY_POLICY_URL),
-    },
-    {
       key: 'blocked',
       icon: 'flag',
       label: t('menu.blocked'),
       onPress: leaveThen(onOpenBlocked),
-    },
-    {
-      key: 'termsOfUse',
-      icon: 'book',
-      label: t('menu.termsOfUse'),
-      onPress: () => void Linking.openURL(TERMS_OF_USE_URL),
     },
     {
       key: 'signout',
