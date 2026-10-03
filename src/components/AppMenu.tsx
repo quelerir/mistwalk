@@ -406,7 +406,7 @@ export default function AppMenu({
   const footer =
     page === 'main' ? <Text style={styles.version}>{t('menu.version', { version: APP_VERSION })}</Text> : undefined;
 
-  return <MenuScreen items={items} header={header} footer={footer} />;
+  return <MenuScreen items={items} title={page === 'main' ? t('tab.menu') : undefined} header={header} footer={footer} />;
 }
 
 const makeStyles = (c: Colors) =>

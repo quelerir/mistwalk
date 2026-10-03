@@ -3,8 +3,9 @@ import { Modal, Text } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
 import MenuScreen, { type MenuItem } from './MenuScreen';
 
-// The icons are drawn with Skia, a native module Jest cannot load.
+// The icons are drawn with Skia and the fonts come from Expo, native modules Jest cannot load.
 jest.mock('./icons/SvgIcon', () => () => null);
+jest.mock('../theme/fonts', () => ({ FONT: { display: 'display' } }));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 
 const item = (over: Partial<MenuItem> = {}): MenuItem => ({ key: 'a', icon: 'settings', label: 'Settings', onPress: jest.fn(), ...over });
@@ -46,5 +47,12 @@ describe('MenuScreen', () => {
     const { getByText } = render(<MenuScreen items={[item()]} header={<Text>head</Text>} footer={<Text>foot</Text>} />);
     expect(getByText('head')).toBeTruthy();
     expect(getByText('foot')).toBeTruthy();
+  });
+
+  it('shows the title above the list when there is one, and none otherwise', () => {
+    const withTitle = render(<MenuScreen items={[item()]} title="Menu" />);
+    expect(withTitle.getByText('Menu')).toBeTruthy();
+    const without = render(<MenuScreen items={[item()]} />);
+    expect(without.queryByText('Menu')).toBeNull();
   });
 });

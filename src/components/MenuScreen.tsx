@@ -4,6 +4,7 @@ import SvgIcon from './icons/SvgIcon';
 import type { IconName } from './icons/svgIcons';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
+import { FONT } from '../theme/fonts';
 
 export interface MenuItem {
   key: string;
@@ -22,18 +23,21 @@ export interface MenuItem {
 
 export interface MenuScreenProps {
   items: MenuItem[];
+  // A large title above everything, as on the other tabs.
+  title?: string;
   header?: React.ReactNode;
   // Shown below the list, outside the scroll area (e.g. the app version).
   footer?: React.ReactNode;
 }
 
 // The menu tab: a list on the screen like the feed and the chats, not a sheet over the map.
-export default function MenuScreen({ items, header, footer }: MenuScreenProps) {
+export default function MenuScreen({ items, title, header, footer }: MenuScreenProps) {
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
 
   return (
     <View style={styles.screen}>
+      {title ? <Text style={styles.title}>{title}</Text> : null}
       {header}
       <ScrollView style={styles.list} contentContainerStyle={{ paddingBottom: 12 }} showsVerticalScrollIndicator={false}>
         {items.map((item, index) => {
@@ -82,6 +86,7 @@ export default function MenuScreen({ items, header, footer }: MenuScreenProps) {
 const makeStyles = (c: Colors) => StyleSheet.create({
   // Matches the tab bar below it.
   screen: { flex: 1, backgroundColor: c.bg },
+  title: { fontSize: 34, fontFamily: FONT.display, letterSpacing: -0.8, color: c.text, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
   list: { flex: 1 },
   group: { paddingHorizontal: 18, paddingTop: 14, paddingBottom: 2, fontSize: 12, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', color: c.textMuted },
   row: { flexDirection: 'row', alignItems: 'center', paddingLeft: 18, minHeight: 60 },
