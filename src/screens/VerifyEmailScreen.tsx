@@ -143,7 +143,7 @@ export default function VerifyEmailScreen({ client, email, onVerified, onBack, i
 const makeStyles = (c: Colors) =>
   StyleSheet.create({
     fill: { flex: 1 },
-    scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(8, 20, 22, 0.62)' },
+    scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10, 12, 16, 0.62)' },
     scroll: { flexGrow: 1, justifyContent: 'center', padding: 20, gap: 24 },
     header: { alignItems: 'center', gap: 6 },
     title: { color: '#FFFFFF', fontSize: 36, fontWeight: '800', letterSpacing: 0.5 },
