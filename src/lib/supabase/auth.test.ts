@@ -1,4 +1,4 @@
-import { signUp, signIn, signOut, signOutLocal, getSession, checkLoginAvailable, deleteAccount } from './auth';
+import { verifyEmail, resendCode, signUp, signIn, signOut, signOutLocal, getSession, checkLoginAvailable, deleteAccount } from './auth';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 function makeFakeClient(
@@ -13,6 +13,8 @@ function makeFakeClient(
       signUp: jest.fn().mockResolvedValue({ data: { user: { id: 'u1' } }, error: null }),
       signInWithPassword: jest.fn().mockResolvedValue({ data: { user: { id: 'u1' } }, error: null }),
       signOut: jest.fn().mockResolvedValue({ error: null }),
+      verifyOtp: jest.fn().mockResolvedValue({ data: { session: { access_token: 't' }, user: { id: 'u1' } }, error: null }),
+      resend: jest.fn().mockResolvedValue({ data: {}, error: null }),
       getSession: jest.fn().mockResolvedValue({ data: { session: { user: { id: 'u1' } } }, error: null }),
       ...overrides,
     },
@@ -38,6 +40,29 @@ describe('auth wrappers', () => {
       signUp: jest.fn().mockResolvedValue({ data: null, error: new Error('taken') }),
     });
     await expect(signUp(client, details)).rejects.toThrow('taken');
+  });
+
+  it('verifyEmail calls verifyOtp with the email, the token and type "email" and returns data', async () => {
+    const client = makeFakeClient();
+    const data = await verifyEmail(client, 'a@b.com', '123456');
+    expect(client.auth.verifyOtp).toHaveBeenCalledWith({ email: 'a@b.com', token: '123456', type: 'email' });
+    expect(data.session?.access_token).toBe('t');
+  });
+
+  it('verifyEmail throws the error verifyOtp returns', async () => {
+    const client = makeFakeClient({ verifyOtp: jest.fn().mockResolvedValue({ data: null, error: new Error('Token has expired or is invalid') }) });
+    await expect(verifyEmail(client, 'a@b.com', '000000')).rejects.toThrow('Token has expired or is invalid');
+  });
+
+  it('resendCode calls resend with type "signup" and the email', async () => {
+    const client = makeFakeClient();
+    await expect(resendCode(client, 'a@b.com')).resolves.toBeUndefined();
+    expect(client.auth.resend).toHaveBeenCalledWith({ type: 'signup', email: 'a@b.com' });
+  });
+
+  it('resendCode throws the error resend returns', async () => {
+    const client = makeFakeClient({ resend: jest.fn().mockResolvedValue({ data: null, error: new Error('rate limit') }) });
+    await expect(resendCode(client, 'a@b.com')).rejects.toThrow('rate limit');
   });
 
   it('checkLoginAvailable returns the answer of the function', async () => {

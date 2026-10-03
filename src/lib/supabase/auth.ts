@@ -19,6 +19,18 @@ export async function signUp(client: SupabaseClient, input: SignUpInput) {
   return data;
 }
 
+// Confirms a sign-up with the 6-digit code from the email; the returned data holds the new session.
+export async function verifyEmail(client: SupabaseClient, email: string, code: string) {
+  const { data, error } = await client.auth.verifyOtp({ email, token: code, type: 'email' });
+  if (error) throw error;
+  return data;
+}
+
+export async function resendCode(client: SupabaseClient, email: string): Promise<void> {
+  const { error } = await client.auth.resend({ type: 'signup', email });
+  if (error) throw error;
+}
+
 export async function checkLoginAvailable(client: SupabaseClient, login: string): Promise<boolean> {
   const { data, error } = await client.rpc('login_available', { candidate: login });
   if (error) throw error;
