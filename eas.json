@@ -19,6 +19,12 @@
         "distribution": "store"
       },
       "environment": "production"
+    },
+    "production-apk": {
+      "extends": "production",
+      "android": {
+        "buildType": "apk"
+      }
     }
   }
 }
