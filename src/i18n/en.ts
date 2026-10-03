@@ -77,7 +77,6 @@ export const en: Record<Key, Text> = {
   'map.filterTitle': 'Show on the map',
   'map.cluster': 'At this spot: {n}',
   'map.clusterZoom': { one: '{n} place, zoom in', other: '{n} places, zoom in' },
-  'map.closeMenu': 'Close menu',
 
   // Place card, sheet, discovery, route
   'place.buildRoute': 'Get directions',

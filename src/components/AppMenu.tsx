@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Avatar from './Avatar';
-import MenuSheet, { type MenuItem } from './MenuSheet';
+import MenuScreen, { type MenuItem } from './MenuScreen';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import { nextThemePreference } from '../theme/palettes';
 import type { Colors } from '../theme/palettes';
@@ -21,8 +21,6 @@ const PRIVACY_POLICY_URL = 'https://quelerir.github.io/mistwalk-legal/';
 const TERMS_OF_USE_URL = 'https://quelerir.github.io/mistwalk-legal/terms.html';
 
 export interface AppMenuProps {
-  visible: boolean;
-  onClose: () => void;
   fogStyle: FogSetting;
   onFogStyleChange: (style: FogSetting) => void;
   fogAnimated: boolean;
@@ -53,8 +51,6 @@ export interface AppMenuProps {
 }
 
 export default function AppMenu({
-  visible,
-  onClose,
   fogStyle,
   onFogStyleChange,
   fogAnimated,
@@ -106,10 +102,10 @@ export default function AppMenu({
     void setAccuracyProfile(AsyncStorage, next);
   }
 
-  function closeThen(action: () => void) {
+  // Opens a screen over the menu; coming back lands on the main page again.
+  function leaveThen(action: () => void) {
     return () => {
       setPage('main');
-      onClose();
       action();
     };
   }
@@ -154,7 +150,7 @@ export default function AppMenu({
   }
 
   const mainItems: MenuItem[] = [
-    { key: 'collection', icon: 'award', label: t('menu.collection'), onPress: closeThen(onOpenCollection) },
+    { key: 'collection', icon: 'award', label: t('menu.collection'), onPress: leaveThen(onOpenCollection) },
     { key: 'settings', icon: 'settings', label: t('menu.settings'), onPress: () => setPage('settings') },
     { key: 'account', icon: 'user', label: t('menu.account'), onPress: () => setPage('account') },
     { key: 'feedback', icon: 'mail', label: t('menu.feedback'), onPress: openFeedback },
@@ -208,7 +204,7 @@ export default function AppMenu({
       key: 'blocked',
       icon: 'flag',
       label: t('menu.blocked'),
-      onPress: closeThen(onOpenBlocked),
+      onPress: leaveThen(onOpenBlocked),
     },
     {
       key: 'termsOfUse',
@@ -221,7 +217,7 @@ export default function AppMenu({
       icon: 'logout',
       label: t('menu.signOut'),
       destructive: true,
-      onPress: closeThen(() => void onSignOut()),
+      onPress: leaveThen(() => void onSignOut()),
     },
     {
       key: 'deleteAccount',
@@ -407,16 +403,10 @@ export default function AppMenu({
       </View>
     ) : null;
 
-  // A user-driven close starts from the main page next time; the avatar flow reopens where it left off.
-  function handleClose() {
-    setPage('main');
-    onClose();
-  }
-
   const footer =
     page === 'main' ? <Text style={styles.version}>{t('menu.version', { version: APP_VERSION })}</Text> : undefined;
 
-  return <MenuSheet visible={visible} items={items} header={header} footer={footer} onClose={handleClose} />;
+  return <MenuScreen items={items} header={header} footer={footer} />;
 }
 
 const makeStyles = (c: Colors) =>
