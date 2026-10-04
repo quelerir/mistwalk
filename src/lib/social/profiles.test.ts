@@ -8,6 +8,7 @@ import {
   avatarUrl,
   reportPlayer,
   saveMyProfile,
+  searchPlayers,
   uploadAvatar,
 } from './profiles';
 
@@ -149,5 +150,28 @@ describe('reportPlayer', () => {
   it('throws when the call fails', async () => {
     const rpc = jest.fn().mockResolvedValue({ error: new Error('nope') });
     await expect(reportPlayer({ rpc } as unknown as SupabaseClient, 'u2', 'name')).rejects.toThrow('nope');
+  });
+});
+
+describe('searchPlayers', () => {
+  it('maps rows from search_players', async () => {
+    const rpc = jest.fn().mockResolvedValue({
+      data: [{ user_id: 'u1', display_name: 'anna_k', avatar_path: null, i_follow: true }],
+      error: null,
+    });
+    const list = await searchPlayers({ rpc } as unknown as SupabaseClient, '  an ');
+    expect(rpc).toHaveBeenCalledWith('search_players', { q: 'an', max_rows: 20 });
+    expect(list).toEqual([{ userId: 'u1', displayName: 'anna_k', avatarPath: null, iFollow: true }]);
+  });
+
+  it('does not call the server for a query shorter than 2 characters', async () => {
+    const rpc = jest.fn();
+    expect(await searchPlayers({ rpc } as unknown as SupabaseClient, ' a ')).toEqual([]);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('throws when the server fails', async () => {
+    const rpc = jest.fn().mockResolvedValue({ data: null, error: new Error('boom') });
+    await expect(searchPlayers({ rpc } as unknown as SupabaseClient, 'an')).rejects.toThrow('boom');
   });
 });

@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import SvgIcon from '../components/icons/SvgIcon';
+import { useTypingIndicator } from '../hooks/useTypingIndicator';
 import {
   fetchMessagesWith,
   markConversationRead,
@@ -43,6 +44,7 @@ export default function ChatScreen({ client, myId, otherId, otherName, onBack }:
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const listRef = useRef<FlatList<ChatMessage>>(null);
+  const { otherTyping, notifyTyping, stopTyping, clearTyping } = useTypingIndicator(client, myId, otherId);
 
   const load = useCallback(async () => {
     try {
@@ -63,19 +65,21 @@ export default function ChatScreen({ client, myId, otherId, otherName, onBack }:
   useEffect(() => {
     const channel = subscribeToIncomingMessages(client, myId, (message) => {
       if (message.senderId !== otherId) return;
+      clearTyping();
       setMessages((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]));
       void markConversationRead(client, otherId);
     });
     return () => {
       void client.removeChannel(channel);
     };
-  }, [client, myId, otherId]);
+  }, [client, myId, otherId, clearTyping]);
 
   async function handleSend() {
     const body = draft.trim();
     if (!body || sending) return;
     setSending(true);
     setDraft('');
+    stopTyping();
     try {
       const sent = await sendMessage(client, otherId, body);
       setMessages((prev) => [...prev, sent]);
@@ -97,9 +101,15 @@ export default function ChatScreen({ client, myId, otherId, otherName, onBack }:
         <Pressable onPress={onBack} hitSlop={8} style={styles.roundButton} accessibilityRole="button" accessibilityLabel={t('common.back')}>
           <SvgIcon name="back" size={22} color={c.text} />
         </Pressable>
-        <Text style={styles.title} numberOfLines={1}>
-          {otherName}
-        </Text>
+        <View style={styles.titleBox}>
+          <Text style={styles.title} numberOfLines={1}>
+            {otherName}
+          </Text>
+          {/* Always laid out, only shown while typing, so the header does not jump. */}
+          <Text style={[styles.typing, !otherTyping && styles.typingHidden]} accessibilityElementsHidden={!otherTyping}>
+            {t('chats.typing')}
+          </Text>
+        </View>
         <View style={styles.roundButton} />
       </View>
 
@@ -132,7 +142,11 @@ export default function ChatScreen({ client, myId, otherId, otherName, onBack }:
         <TextInput
           style={styles.input}
           value={draft}
-          onChangeText={setDraft}
+          onChangeText={(text) => {
+            setDraft(text);
+            if (text.trim()) notifyTyping();
+            else stopTyping();
+          }}
           placeholder={t('chats.placeholder')}
           placeholderTextColor={c.textFaint}
           multiline
@@ -156,7 +170,10 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: c.bg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
   roundButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  title: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700', color: c.text, marginHorizontal: 8 },
+  titleBox: { flex: 1, alignItems: 'center', marginHorizontal: 8 },
+  title: { textAlign: 'center', fontSize: 18, fontWeight: '700', color: c.text },
+  typing: { fontSize: 12, color: c.accent, marginTop: 1 },
+  typingHidden: { opacity: 0 },
   loader: { marginTop: 32 },
   empty: { marginTop: 32, paddingHorizontal: 24, textAlign: 'center', color: c.textMuted },
   list: { paddingHorizontal: 12, paddingVertical: 8, flexGrow: 1, justifyContent: 'flex-end' },
