@@ -22,6 +22,10 @@ interface PressEventLike {
   features?: Array<{ properties?: { code?: string } | null }>;
 }
 
+// The default hitbox is 44 px: a dot next to a big country would steal the tap, so both are kept tight.
+const HIT_COUNTRY = { top: 1, left: 1, bottom: 1, right: 1 };
+const HIT_DOT = { top: 8, left: 8, bottom: 8, right: 8 };
+
 // Loaded here, not at app start: the file is large and only this view needs it.
 function loadBorders(): { polygons: Collection; points: Collection } | null {
   try {
@@ -87,16 +91,16 @@ export default function WorldMapView({ countries, onOpenCountry }: WorldMapViewP
         logo={false}
         compass={false}
       >
-        <Camera initialViewState={{ center: [10, 20], zoom: 0.6 }} minZoom={0.3} maxZoom={6} />
-        <GeoJSONSource id="world" data={borders.polygons as never} onPress={handlePress}>
+        <Camera initialViewState={{ center: [10, 20], zoom: -0.3 }} minZoom={-1} maxZoom={6} />
+        <GeoJSONSource id="world" data={borders.polygons as never} onPress={handlePress} hitbox={HIT_COUNTRY}>
           <Layer id="world-fill" type="fill" paint={{ 'fill-color': fill as never }} />
           <Layer id="world-border" type="line" paint={{ 'line-color': water, 'line-width': 0.5 }} />
         </GeoJSONSource>
-        <GeoJSONSource id="world-points" data={smallPoints as never} onPress={handlePress}>
+        <GeoJSONSource id="world-points" data={smallPoints as never} onPress={handlePress} hitbox={HIT_DOT}>
           <Layer
             id="world-dots"
             type="circle"
-            paint={{ 'circle-color': fill as never, 'circle-radius': 5, 'circle-stroke-color': c.textMuted, 'circle-stroke-width': 0.5 }}
+            paint={{ 'circle-color': fill as never, 'circle-radius': 3.5, 'circle-stroke-color': c.textMuted, 'circle-stroke-width': 0.5 }}
           />
         </GeoJSONSource>
       </MapLibreMap>
