@@ -34,7 +34,7 @@ import { drainPendingBackgroundPoints, stopBackgroundTracking } from '../service
 import { stopForegroundTracking } from '../services/locationTracker';
 import MapScreen from './MapScreen';
 import NearbyScreen from './NearbyScreen';
-import CollectionScreen from './CollectionScreen';
+import ProfileScreen from './ProfileScreen';
 import CountriesScreen from './CountriesScreen';
 import CountryPlacesScreen from './CountryPlacesScreen';
 import { cellKey, groupPlacesByCountry, type CountryStat } from '../lib/geo/countryStats';
@@ -64,14 +64,14 @@ import type { Key } from '../i18n';
 
 const NO_PLACES: DiscoveredPlace[] = [];
 
-type TabKey = 'map' | 'nearby' | 'feed' | 'chats' | 'menu';
+type TabKey = 'map' | 'nearby' | 'feed' | 'chats' | 'profile';
 
 const TABS: Array<{ key: TabKey; labelKey: Key; icon: TabItem<TabKey>['icon'] }> = [
   { key: 'map', labelKey: 'tab.map', icon: 'map' },
   { key: 'nearby', labelKey: 'tab.nearby', icon: 'compass' },
   { key: 'feed', labelKey: 'tab.feed', icon: 'feed' },
   { key: 'chats', labelKey: 'tab.chats', icon: 'chat' },
-  { key: 'menu', labelKey: 'tab.menu', icon: 'menu' },
+  { key: 'profile', labelKey: 'tab.profile', icon: 'user' },
 ];
 
 export interface MainScreenProps {
@@ -106,7 +106,6 @@ export default function MainScreen({
   const [openPlayer, setOpenPlayer] = useState<{ userId: string; displayName: string } | null>(null);
   const [showFollows, setShowFollows] = useState(false);
   const [showBlocked, setShowBlocked] = useState(false);
-  const [showCollection, setShowCollection] = useState(false);
   const [feedNew, setFeedNew] = useState<number | null>(null);
   const [unreadMessages, setUnreadMessages] = useState<number | null>(null);
   const [openChatWith, setOpenChatWith] = useState<{ userId: string; displayName: string } | null>(null);
@@ -172,7 +171,7 @@ export default function MainScreen({
   }, [offlineMapOn, livePosition, scheme]);
   // The size shown in the menu is read when the menu tab opens.
   useEffect(() => {
-    if (tab !== 'menu' || !offlineMapOn) return;
+    if (tab !== 'profile' || !offlineMapOn) return;
     void offlineMapBytes().then((bytes) => setOfflineMb(bytes > 0 ? Math.max(1, Math.round(bytes / (1024 * 1024))) : null));
   }, [tab, offlineMapOn]);
   // How many finds of followed players are new since the feed was last opened; refreshed when it is left.
@@ -242,7 +241,7 @@ export default function MainScreen({
     () =>
       TABS.map(({ key, labelKey, icon }): TabItem<TabKey> => {
         const tab = { key, label: t(labelKey), icon };
-        return key === 'menu'
+        return key === 'profile'
           ? { ...tab, photoUri: avatarUri }
           : key === 'feed'
             ? { ...tab, badge: feedNew }
@@ -365,8 +364,7 @@ export default function MainScreen({
     });
   }
 
-  function handleCloseCollection() {
-    setShowCollection(false);
+  function closeProfileOverlays() {
     setOpenPlayer(null);
     setShowFollows(false);
     setShowLeaderboard(false);
@@ -461,35 +459,50 @@ export default function MainScreen({
           ) : (
             <ChatsScreen client={client} onOpenChat={setOpenChatWith} />
           ))}
-        {tab === 'menu' && (
-          <AppMenu
-            fogStyle={fogStyle}
-            onFogStyleChange={handleFogStyleChange}
-            fogAnimated={fogAnimated}
-            onFogAnimatedChange={handleFogAnimatedChange}
-            placeNotifications={placeNotifications}
-            onPlaceNotificationsChange={handlePlaceNotificationsChange}
-            weeklySummary={weeklySummaryOn}
-            weatherFog={weatherFogOn}
-            onWeatherFogChange={handleWeatherFogChange}
-            offlineMap={offlineMapOn}
-            offlineMapMb={offlineMb}
-            onOfflineMapChange={handleOfflineMapChange}
-            onWeeklySummaryChange={handleWeeklySummaryChange}
-            backgroundEnabled={backgroundEnabled}
-            onEnableBackground={onEnableBackground}
-            onSignOut={handleSignOut}
-            onDeleteAccount={handleDeleteAccount}
-            onOpenBlocked={() => setShowBlocked(true)}
-            onOpenCollection={() => setShowCollection(true)}
-            email={email}
-            leaderboardVisible={profileSync.profile?.isPublic ?? null}
-            onLeaderboardVisibleChange={profileSync.setVisible}
-            avatarUri={avatarUri}
+        {tab === 'profile' && (
+          <ProfileScreen
             displayName={profileSync.profile?.displayName ?? email}
+            avatarUri={avatarUri}
+            stats={stats}
+            week={week}
+            daily={daily}
+            countries={countryStats.countries}
+            followCounts={followCounts}
+            onOpenCountries={() => setShowCountries(true)}
+            onOpenLeaderboard={() => setShowLeaderboard(true)}
+            onOpenFollows={(followsTabKey) => {
+              setFollowsTab(followsTabKey);
+              setShowFollows(true);
+            }}
             onChangeAvatar={handleChangeAvatar}
             onRemoveAvatar={profileSync.clearAvatar}
-            onSubmitFeedback={handleSubmitFeedback}
+            renderMenu={(close) => (
+              <AppMenu
+                fogStyle={fogStyle}
+                onFogStyleChange={handleFogStyleChange}
+                fogAnimated={fogAnimated}
+                onFogAnimatedChange={handleFogAnimatedChange}
+                placeNotifications={placeNotifications}
+                onPlaceNotificationsChange={handlePlaceNotificationsChange}
+                weeklySummary={weeklySummaryOn}
+                weatherFog={weatherFogOn}
+                onWeatherFogChange={handleWeatherFogChange}
+                offlineMap={offlineMapOn}
+                offlineMapMb={offlineMb}
+                onOfflineMapChange={handleOfflineMapChange}
+                onWeeklySummaryChange={handleWeeklySummaryChange}
+                backgroundEnabled={backgroundEnabled}
+                onEnableBackground={onEnableBackground}
+                onSignOut={handleSignOut}
+                onDeleteAccount={handleDeleteAccount}
+                onOpenBlocked={() => setShowBlocked(true)}
+                email={email}
+                leaderboardVisible={profileSync.profile?.isPublic ?? null}
+                onLeaderboardVisibleChange={profileSync.setVisible}
+                onSubmitFeedback={handleSubmitFeedback}
+                onBack={close}
+              />
+            )}
           />
         )}
         <DiscoveryCard place={greeting} onDismiss={dismissGreeting} onOpen={setDetailPlace} />
@@ -510,7 +523,7 @@ export default function MainScreen({
       <Modal visible={showBlocked} animationType="slide" onRequestClose={() => setShowBlocked(false)}>
         <BlockedScreen client={client} onBack={() => setShowBlocked(false)} />
       </Modal>
-      <Modal visible={showCollection} animationType="slide" onRequestClose={handleCloseCollection}>
+      <Modal visible={showFollows || showLeaderboard || showCountries} animationType="slide" onRequestClose={closeProfileOverlays}>
         {(showLeaderboard || showFollows) && openPlayer ? (
           <View style={{ flex: 1, paddingTop: insets.top }}>
             <PlayerScreen
@@ -541,7 +554,7 @@ export default function MainScreen({
             onBack={() => setOpenCountry(null)}
             onOpenFound={setDetailPlace}
             onSelectHidden={(poi) => {
-              handleCloseCollection();
+              closeProfileOverlays();
               handleSelect(poi);
             }}
           />
@@ -554,22 +567,7 @@ export default function MainScreen({
             onBack={() => setShowCountries(false)}
             onOpenCountry={setOpenCountry}
           />
-        ) : (
-          <CollectionScreen
-            stats={stats}
-            week={week}
-            daily={daily}
-            countries={countryStats.countries}
-            onOpenCountries={() => setShowCountries(true)}
-            onOpenLeaderboard={() => setShowLeaderboard(true)}
-            onOpenFollows={(tab) => {
-              setFollowsTab(tab);
-              setShowFollows(true);
-            }}
-            followCounts={followCounts}
-            onBack={handleCloseCollection}
-          />
-        )}
+        ) : null}
       </Modal>
     </View>
   );
