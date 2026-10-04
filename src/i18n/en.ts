@@ -195,6 +195,7 @@ export const en: Record<Key, Text> = {
   'chats.emptyThread': 'No messages yet. Say hi.',
   'chats.placeholder': 'Message…',
   'chats.send': 'Send',
+  'chats.typing': 'typing…',
   'chats.youPrefix': 'You: {text}',
   'rating.title': 'Ranking',
   'rating.subtitle': 'By places found',
