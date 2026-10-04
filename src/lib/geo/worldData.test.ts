@@ -1,16 +1,10 @@
-import fs from 'fs';
-import path from 'path';
 import { COUNTRY_BY_CODE } from './countries';
-
-const dir = path.join(__dirname, '../../assets');
-const polygonsPath = path.join(dir, 'world.json');
-const pointsPath = path.join(dir, 'world-points.json');
 
 interface Collection {
   features: Array<{ geometry: { type: string }; properties: { code?: string } }>;
 }
-const polygons = JSON.parse(fs.readFileSync(polygonsPath, 'utf8')) as Collection;
-const points = JSON.parse(fs.readFileSync(pointsPath, 'utf8')) as Collection;
+const polygons: Collection = require('../../assets/world.json');
+const points: Collection = require('../../assets/world-points.json');
 const codes = (c: Collection) => c.features.map((f) => f.properties.code);
 
 // Territories Natural Earth draws but our country table does not have: they stay grey and cannot be tapped.
@@ -46,6 +40,6 @@ describe('world border data', () => {
   });
 
   it('stays under 2 MB', () => {
-    expect(fs.statSync(polygonsPath).size).toBeLessThan(2 * 1024 * 1024);
+    expect(JSON.stringify(polygons).length).toBeLessThan(2 * 1024 * 1024);
   });
 });
