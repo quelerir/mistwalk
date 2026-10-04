@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { CountryStat } from '../lib/geo/countryStats';
@@ -6,9 +6,9 @@ import type { Stats } from '../hooks/useStats';
 import type { WeekSummary } from '../lib/stats/weekly';
 import { useStyles } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
-import { CARD_SHADOW, FONT } from '../theme/fonts';
+import { FONT } from '../theme/fonts';
 import { useT } from '../i18n/I18nProvider';
-import type { TFunc } from '../i18n';
+import CollectionContent from './CollectionContent';
 
 export interface CollectionScreenProps {
   stats: Stats;
@@ -22,16 +22,6 @@ export interface CollectionScreenProps {
   followCounts: { followers: number; following: number } | null;
   onBack: () => void;
 }
-
-function delta(t: TFunc, now: number, before: number, digits = 0): string {
-  const diff = Math.round((now - before) * 10 ** digits) / 10 ** digits;
-  if (diff === 0) return t('collection.same');
-  return t('collection.vsLast', { delta: `${diff > 0 ? '+' : '−'}${Math.abs(diff).toFixed(digits)}` });
-}
-
-// Sunday first, like Date.getDay().
-const WEEKDAY_KEYS = ['weekday.0', 'weekday.1', 'weekday.2', 'weekday.3', 'weekday.4', 'weekday.5', 'weekday.6'] as const;
-const BAR_MAX_HEIGHT = 56;
 
 export default function CollectionScreen({
   stats,
@@ -47,17 +37,6 @@ export default function CollectionScreen({
   const t = useT();
   const insets = useSafeAreaInsets();
   const styles = useStyles(makeStyles);
-  const dayLabels = useMemo(() => {
-    const today = new Date();
-    return daily.map((_, i) => t(WEEKDAY_KEYS[new Date(today.getFullYear(), today.getMonth(), today.getDate() - (daily.length - 1 - i)).getDay()]));
-  }, [daily, t]);
-  const maxKm = Math.max(...daily, 0.001);
-  const visitedCountries = useMemo(() => countries.filter((c) => c.percent > 0).length, [countries]);
-
-  const tiles = [
-    { label: t('collection.distance'), value: t('unit.km', { n: stats.distanceKm.toFixed(1) }) },
-    { label: t('collection.placesFound'), value: String(stats.discoveredCount) },
-  ];
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -79,71 +58,14 @@ export default function CollectionScreen({
         </Pressable>
       </View>
 
-      <View style={styles.tiles}>
-        {tiles.map((tile) => (
-          <View key={tile.label} style={styles.tile}>
-            <Text style={styles.tileValue}>{tile.value}</Text>
-            <Text style={styles.tileLabel}>{tile.label}</Text>
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.week}>
-        <Text style={styles.weekTitle}>{t('collection.week')}</Text>
-        <View style={styles.weekRow}>
-          {[
-            { label: t('collection.weekKm'), value: week.km.toFixed(1), note: delta(t, week.km, week.prev.km, 1) },
-            { label: t('collection.weekPlaces'), value: String(week.places), note: delta(t, week.places, week.prev.places) },
-            { label: t('collection.weekDays'), value: String(week.days), note: delta(t, week.days, week.prev.days) },
-          ].map((item) => (
-            <View key={item.label} style={styles.weekCell}>
-              <Text style={styles.weekValue}>{item.value}</Text>
-              <Text style={styles.weekLabel}>{item.label}</Text>
-              <Text style={styles.weekNote}>{item.note}</Text>
-            </View>
-          ))}
-        </View>
-        <View style={styles.bars}>
-          {daily.map((km, i) => (
-            <View key={i} style={styles.barCell}>
-              <View style={styles.barTrack}>
-                <View
-                  style={[
-                    styles.bar,
-                    { height: Math.max(6, (km / maxKm) * BAR_MAX_HEIGHT) },
-                    km > 0 && styles.barOn,
-                  ]}
-                />
-              </View>
-              <Text style={styles.barLabel}>{dayLabels[i]}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      <Pressable
-        style={({ pressed }) => [styles.countriesButton, pressed && styles.pressed]}
-        onPress={onOpenCountries}
-        accessibilityRole="button"
-      >
-        <View style={styles.countriesText}>
-          <Text style={styles.countriesTitle}>{t('collection.countries')}</Text>
-          <Text style={styles.countriesSub}>{t('collection.countriesSub', { visited: visitedCountries, total: countries.length })}</Text>
-        </View>
-        <Text style={styles.chevron}>›</Text>
-      </Pressable>
-
-      <Pressable
-        style={({ pressed }) => [styles.countriesButton, pressed && styles.pressed]}
-        onPress={onOpenLeaderboard}
-        accessibilityRole="button"
-      >
-        <View style={styles.countriesText}>
-          <Text style={styles.countriesTitle}>{t('collection.rating')}</Text>
-          <Text style={styles.countriesSub}>{t('collection.ratingSub')}</Text>
-        </View>
-        <Text style={styles.chevron}>›</Text>
-      </Pressable>
+      <CollectionContent
+        stats={stats}
+        week={week}
+        daily={daily}
+        countries={countries}
+        onOpenCountries={onOpenCountries}
+        onOpenLeaderboard={onOpenLeaderboard}
+      />
     </ScrollView>
   );
 }
@@ -157,36 +79,4 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   followRow: { flexDirection: 'row', gap: 28, marginBottom: 14 },
   followValue: { fontSize: 22, fontFamily: FONT.display, letterSpacing: -0.4, color: c.text },
   followLabel: { fontSize: 13, color: c.textMuted, marginTop: 1 },
-  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  tile: { flex: 1, backgroundColor: c.surface, borderRadius: 24, padding: 16, shadowColor: c.shadow, ...CARD_SHADOW },
-  tileValue: { fontSize: 32, fontFamily: FONT.display, letterSpacing: -0.6, color: c.text },
-  tileLabel: { marginTop: 2, color: c.textMuted },
-  week: { backgroundColor: c.surface, borderRadius: 24, padding: 16, marginTop: 12, shadowColor: c.shadow, ...CARD_SHADOW },
-  weekTitle: { fontSize: 16, fontWeight: '700', color: c.text },
-  weekRow: { flexDirection: 'row', marginTop: 10 },
-  weekCell: { flex: 1 },
-  weekValue: { fontSize: 26, fontFamily: FONT.display, letterSpacing: -0.5, color: c.text },
-  weekLabel: { color: c.text },
-  bars: { flexDirection: 'row', gap: 8, marginTop: 16 },
-  barCell: { flex: 1, alignItems: 'center', gap: 6 },
-  barTrack: { height: BAR_MAX_HEIGHT, justifyContent: 'flex-end', alignSelf: 'stretch' },
-  bar: { borderRadius: 6, backgroundColor: c.surfaceAlt },
-  barOn: { backgroundColor: c.accent },
-  barLabel: { fontSize: 11, color: c.textMuted },
-  weekNote: { marginTop: 2, fontSize: 12, color: c.textMuted },
-  countriesButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: c.surface,
-    borderRadius: 24,
-    padding: 16,
-    marginTop: 12,
-    shadowColor: c.shadow,
-    ...CARD_SHADOW,
-  },
-  pressed: { opacity: 0.6 },
-  countriesText: { flex: 1 },
-  countriesTitle: { fontSize: 16, fontWeight: '700', color: c.text },
-  countriesSub: { marginTop: 2, color: c.textMuted },
-  chevron: { fontSize: 28, color: c.textMuted, marginLeft: 8 },
 });
