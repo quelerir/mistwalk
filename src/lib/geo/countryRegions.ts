@@ -1,5 +1,6 @@
 import type { CityStat } from './cityStats';
 import type { Lang } from '../../i18n/language';
+import { decimal } from '../../i18n/format';
 
 export interface WorldCity {
   ru: string;
@@ -109,4 +110,17 @@ export function buildCountryCities(
     return a.name.localeCompare(b.name, lang);
   });
   return { mode: 'regions', regions };
+}
+
+// "1,2 млн", "143 тыс.", "950": short enough for the right edge of a row.
+export function formatPopulation(lang: Lang, population: number): string {
+  if (population >= 1_000_000) {
+    const millions = decimal(lang, (population / 1_000_000).toFixed(1));
+    return lang === 'ru' ? `${millions} млн` : `${millions}M`;
+  }
+  if (population >= 1000) {
+    const thousands = Math.round(population / 1000);
+    return lang === 'ru' ? `${thousands} тыс.` : `${thousands}k`;
+  }
+  return String(population);
 }

@@ -1,4 +1,4 @@
-import { buildCountryCities, loadWorldCities, normalizeCityName, type WorldCities, type WorldCity } from './countryRegions';
+import { buildCountryCities, formatPopulation, loadWorldCities, normalizeCityName, type WorldCities, type WorldCity } from './countryRegions';
 import type { CityStat } from './cityStats';
 
 const city = (over: Partial<WorldCity> & { en: string }): WorldCity => ({
@@ -150,5 +150,16 @@ describe('loadWorldCities', () => {
     expect(data).not.toBeNull();
     expect(data!.cities.length).toBeGreaterThan(7000);
     expect(loadWorldCities()).toBe(data); // cached
+  });
+});
+
+describe('formatPopulation', () => {
+  it('is short and follows the language', () => {
+    expect(formatPopulation('ru', 1_240_000)).toBe('1,2 млн');
+    expect(formatPopulation('ru', 142_865)).toBe('143 тыс.');
+    expect(formatPopulation('ru', 950)).toBe('950');
+    expect(formatPopulation('en', 1_240_000)).toBe('1.2M');
+    expect(formatPopulation('en', 142_865)).toBe('143k');
+    expect(formatPopulation('en', 0)).toBe('0');
   });
 });

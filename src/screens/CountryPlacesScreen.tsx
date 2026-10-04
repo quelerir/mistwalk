@@ -1,8 +1,15 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { haversineDistanceMeters, type Coordinate } from '../lib/geo/distance';
 import { formatKm2, type CityStat } from '../lib/geo/cityStats';
+import {
+  buildCountryCities,
+  formatPopulation,
+  loadWorldCities,
+  type CityEntry,
+  type RegionEntry,
+} from '../lib/geo/countryRegions';
 import { formatPercent, type CountryPlaces, type CountryStat } from '../lib/geo/countryStats';
 import { kindLabel } from '../lib/poi/greeting';
 import CityBadge from '../components/CityBadge';
@@ -31,6 +38,8 @@ export interface CountryPlacesScreenProps {
 
 type Row =
   | { kind: 'city'; city: CityStat }
+  | { kind: 'region'; region: RegionEntry; expanded: boolean }
+  | { kind: 'regionCity'; city: CityEntry; region: string }
   | { kind: 'found'; place: DiscoveredPlace; icon: PoiKind; date: string }
   | { kind: 'hidden'; poi: Poi; icon: PoiKind; where: string | null };
 
@@ -50,6 +59,9 @@ export default function CountryPlacesScreen({
   const styles = useStyles(makeStyles);
   const { colors: c } = useTheme();
   const crests = useCrests(cities.map((city) => city.wikidata));
+  // The bundled list of cities (not yet visited ones included); null when it cannot be loaded.
+  const worldCities = useMemo(loadWorldCities, []);
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
 
   const sections = useMemo(() => {
     const found: Row[] = (places?.discovered ?? []).map((p) => ({
@@ -68,12 +80,30 @@ export default function CountryPlacesScreen({
         where: origin ? `${formatDistance(t, meters)}, ${kindLabel(t, poi.kind).toLowerCase()}` : kindLabel(t, poi.kind),
       }));
     const cityRows: Row[] = cities.map((city) => ({ kind: 'city', city }));
+    const listed = worldCities ? buildCountryCities(country.code, cities, worldCities, lang) : null;
+    const regionRows: Row[] = [];
+    const unvisitedRows: Row[] = [];
+    if (listed?.mode === 'regions') {
+      for (const region of listed.regions) {
+        const key = region.code ?? 'other';
+        const open = expanded.has(key);
+        regionRows.push({ kind: 'region', region, expanded: open });
+        if (open) for (const city of region.cities) regionRows.push({ kind: 'regionCity', city, region: key });
+      }
+    } else if (listed?.mode === 'flat') {
+      for (const city of listed.unvisited) unvisitedRows.push({ kind: 'regionCity', city, region: 'flat' });
+    }
     return [
       { title: citiesPending ? t('country.citiesDetecting') : t('country.cities', { n: cityRows.length }), data: cityRows },
+      {
+        title: t('country.regions', { n: listed?.mode === 'regions' ? listed.regions.length : 0 }),
+        data: regionRows,
+      },
+      { title: t('country.unvisitedCities', { n: unvisitedRows.length }), data: unvisitedRows },
       { title: t('country.foundPlaces', { n: found.length }), data: found },
       { title: t('country.hiddenPlaces', { n: hidden.length }), data: hidden },
     ].filter((section) => section.data.length > 0);
-  }, [places, cities, citiesPending, origin, t, lang]);
+  }, [places, cities, citiesPending, origin, t, lang, worldCities, country.code, expanded]);
 
   return (
     <View style={styles.container}>
@@ -96,12 +126,55 @@ export default function CountryPlacesScreen({
         <SectionList
           sections={sections}
           keyExtractor={(row) =>
-            row.kind === 'city' ? `city:${row.city.name}` : row.kind === 'found' ? row.place.id : row.poi.id
+            row.kind === 'city'
+              ? `city:${row.city.name}`
+              : row.kind === 'region'
+                ? `region:${row.region.code ?? 'other'}`
+                : row.kind === 'regionCity'
+                  ? `regionCity:${row.region}:${row.city.key}`
+                  : row.kind === 'found'
+                    ? row.place.id
+                    : row.poi.id
           }
           stickySectionHeadersEnabled={false}
           renderSectionHeader={({ section }) => <Text style={styles.sectionTitle}>{section.title}</Text>}
           renderItem={({ item }) =>
-            item.kind === 'city' ? (
+            item.kind === 'region' ? (
+              <Pressable
+                style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+                onPress={() =>
+                  setExpanded((prev) => {
+                    const next = new Set(prev);
+                    const key = item.region.code ?? 'other';
+                    if (next.has(key)) next.delete(key);
+                    else next.add(key);
+                    return next;
+                  })
+                }
+                accessibilityRole="button"
+                accessibilityState={{ expanded: item.expanded }}
+              >
+                <Text style={styles.chevron}>{item.expanded ? '▾' : '▸'}</Text>
+                <View style={styles.hiddenText}>
+                  <Text style={[styles.name, item.region.visitedCount === 0 && styles.muted]} numberOfLines={1}>
+                    {item.region.name}
+                  </Text>
+                  <Text style={styles.where}>
+                    {t('country.regionProgress', { done: item.region.visitedCount, total: item.region.cities.length })}
+                  </Text>
+                </View>
+              </Pressable>
+            ) : item.kind === 'regionCity' ? (
+              <View style={[styles.row, item.region !== 'flat' && styles.regionCityRow]}>
+                <Text testID={item.city.visited ? `city-visited-${item.city.key}` : undefined} style={styles.check}>
+                  {item.city.visited ? '✓' : ''}
+                </Text>
+                <Text style={[styles.name, !item.city.visited && styles.faint]} numberOfLines={1}>
+                  {item.city.name}
+                </Text>
+                <Text style={styles.population}>{formatPopulation(lang, item.city.population)}</Text>
+              </View>
+            ) : item.kind === 'city' ? (
               <View style={styles.row}>
                 <View style={styles.cityBadgeWrap}>
                   <CityBadge name={item.city.name} crestUrl={item.city.wikidata ? crests[item.city.wikidata] : null} />
@@ -188,6 +261,11 @@ const makeStyles = (c: Colors) => StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
+  chevron: { width: 28, fontSize: 18, color: c.textMuted },
+  regionCityRow: { paddingLeft: 44 },
+  check: { width: 24, fontSize: 15, fontWeight: '800', color: c.accent },
+  faint: { color: c.textFaint, fontWeight: '500' },
+  population: { color: c.textMuted, marginLeft: 8 },
   cityPercent: { fontSize: 15, fontWeight: '700', color: c.text, marginLeft: 8 },
   cityLetter: { fontSize: 17, fontWeight: '800', color: c.link },
   badgeHidden: { backgroundColor: c.badgeHiddenBg },
