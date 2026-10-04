@@ -206,6 +206,11 @@ export const ru = {
   'rating.unavailable': 'Рейтинг пока недоступен. Проверьте интернет и попробуйте позже.',
   'rating.empty': 'Пока никого. Станьте первым!',
   'rating.you': ' (вы)',
+  'notifications.title': 'Уведомления',
+  'notifications.follow': 'Новый подписчик: {name}',
+  'notifications.empty': 'Пока ничего нет. Здесь появятся новые подписчики.',
+  'notifications.loadFailed': 'Не удалось загрузить. Проверьте интернет и попробуйте позже.',
+  'profile.notifications': 'Уведомления',
 
   // Menu
   'menu.settings': 'Настройки',
