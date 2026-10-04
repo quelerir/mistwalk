@@ -1,4 +1,5 @@
 import { COUNTRY_BY_CODE } from './countries';
+import { REPUBLIC_BY_CODE, republicAt } from './republics';
 
 interface Data {
   regions: Record<string, { ru: string; en: string }>;
@@ -10,11 +11,25 @@ describe('world cities data', () => {
   it('gives every city a known country, both names and a population', () => {
     for (const city of data.cities) {
       expect(city.c).toMatch(/^[A-Z]{2}$/);
-      expect(COUNTRY_BY_CODE[city.c]).toBeDefined();
+      expect(COUNTRY_BY_CODE[city.c] ?? REPUBLIC_BY_CODE[city.c]).toBeDefined();
       expect(city.ru.length).toBeGreaterThan(0);
       expect(city.en.length).toBeGreaterThan(0);
       expect(city.p).toBeGreaterThanOrEqual(0);
     }
+  });
+
+  it('puts the cities inside a republic border under the republic, not under its host country', () => {
+    const country = (en: string) => data.cities.find((c) => c.en === en)?.c;
+    expect(country('Sukhumi')).toBe('XA');
+    expect(country('Tskhinvali')).toBe('XS');
+    expect(country('Tiraspol')).toBe('XT');
+    expect(country('Hargeisa')).toBe('XL');
+    expect(country('Famagusta')).toBe('XN');
+    for (const code of Object.keys(REPUBLIC_BY_CODE)) {
+      expect(data.cities.filter((c) => c.c === code).length).toBeGreaterThan(0);
+    }
+    const strays = data.cities.filter((c) => !REPUBLIC_BY_CODE[c.c] && republicAt(c.la, c.lo) !== null);
+    expect(strays.map((c) => `${c.c} ${c.en}`)).toEqual([]);
   });
 
   it('only points at regions that exist', () => {

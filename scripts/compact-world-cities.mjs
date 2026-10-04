@@ -12,6 +12,31 @@ const known = new Set(
   [...readFileSync(resolve(root, 'src/lib/geo/countries.ts'), 'utf8').matchAll(/code: "([A-Z]{2})"/g)].map((m) => m[1])
 );
 
+// Republic borders (src/assets/republics.json): a place inside one belongs to the republic, not to the country around it.
+const republics = JSON.parse(readFileSync(resolve(root, 'src/assets/republics.json'), 'utf8')).republics;
+for (const r of republics) known.add(r.code);
+
+function inRing(lat, lng, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    if (yi > lat !== yj > lat && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function republicAt(lat, lng) {
+  for (const r of republics) {
+    for (const rings of r.polygons) {
+      if (inRing(lat, lng, rings[0]) && !rings.slice(1).some((h) => inRing(lat, lng, h))) return r.code;
+    }
+  }
+  return null;
+}
+// Natural Earth gives these two no ISO code; its own country label puts a place on the coast, just outside the coarse
+// border, in the right republic anyway.
+const BY_ADM0 = { CYN: 'XN', SOL: 'XL' };
+
 const features = JSON.parse(readFileSync(input, 'utf8')).features;
 const regionNames = {};
 let cities = [];
@@ -19,7 +44,7 @@ const seen = new Set();
 let dropped = 0;
 
 for (const { properties: p } of features) {
-  const country = p.ISO_A2;
+  const country = republicAt(p.LATITUDE, p.LONGITUDE) ?? BY_ADM0[p.ADM0_A3] ?? p.ISO_A2;
   if (!country || country === '-99' || !known.has(country)) {
     dropped += 1;
     continue;
