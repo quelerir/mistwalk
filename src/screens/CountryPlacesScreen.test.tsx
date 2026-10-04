@@ -66,6 +66,15 @@ describe('CountryPlacesScreen regions', () => {
     expect(queryByText(/Город2|City2/)).toBeNull();
   });
 
+  it('says "1 city", not "1 cities", for a region with a single city', () => {
+    const odd = data(11, ['XX-1']);
+    odd.cities[10].r = 'XX-2';
+    (loadWorldCities as jest.Mock).mockReturnValue(odd);
+    const { getByText } = setup({ cities: [] });
+    expect(getByText(/0 из 1 города|0 of 1 city/)).toBeTruthy();
+    expect(getByText(/0 из 10 городов|0 of 10 cities/)).toBeTruthy();
+  });
+
   it('lists only the unvisited cities in a flat country', () => {
     (loadWorldCities as jest.Mock).mockReturnValue(data(4, ['XX-1']));
     const { getByText, getAllByText, queryByText } = setup();

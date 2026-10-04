@@ -160,7 +160,7 @@ export default function CountryPlacesScreen({
                     {item.region.name}
                   </Text>
                   <Text style={styles.where}>
-                    {t('country.regionProgress', { done: item.region.visitedCount, total: item.region.cities.length })}
+                    {t('country.regionProgress', { done: item.region.visitedCount, n: item.region.cities.length })}
                   </Text>
                 </View>
               </Pressable>

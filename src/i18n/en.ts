@@ -147,7 +147,10 @@ export const en: Record<Key, Text> = {
   'country.hiddenPlaces': 'Not visited · {n}',
   'country.regions': 'Regions · {n}',
   'country.unvisitedCities': 'Cities not visited · {n}',
-  'country.regionProgress': '{done} of {total} cities',
+  'country.regionProgress': {
+    one: '{done} of {n} city',
+    other: '{done} of {n} cities',
+  },
   'country.citiesFailed': 'Could not find out the cities. Check your connection.',
   'country.noPlaces': 'No known places here yet. Walk around the map.',
   'country.areaOf': '{explored} of {total}',
