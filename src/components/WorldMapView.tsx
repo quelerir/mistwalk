@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import { StyleSheet, Text, View, type NativeSyntheticEvent } from 'react-native';
 import { Camera, GeoJSONSource, Layer, Map as MapLibreMap } from '@maplibre/maplibre-react-native';
 import { COUNTRY_BY_CODE } from '../lib/geo/countries';
@@ -63,15 +63,30 @@ export default function WorldMapView({ countries, onOpenCountry }: WorldMapViewP
     };
   }, [borders]);
 
+  // The native source takes text; handing it an object makes the library stringify 600 KB on every render
+  // (each GPS fix re-renders the screen), so the text is made once.
+  const polygonsText = useMemo(() => (borders ? JSON.stringify(borders.polygons) : ''), [borders]);
+  const pointsText = useMemo(() => (smallPoints ? JSON.stringify(smallPoints) : ''), [smallPoints]);
+
+  // Stable across renders: the latest stats and callback are read from refs at press time.
+  const latest = useRef({ byCode, onOpenCountry });
+  latest.current = { byCode, onOpenCountry };
+  const handlePress = useCallback((e: NativeSyntheticEvent<PressEventLike>) => {
+    const code = e.nativeEvent.features?.[0]?.properties?.code;
+    const stat = code ? latest.current.byCode.get(code) : undefined;
+    if (stat) latest.current.onOpenCountry(stat);
+  }, []);
+
+  const fillPaint = useMemo(() => ({ 'fill-color': fill as never }), [fill]);
+  const borderPaint = useMemo(() => ({ 'line-color': water, 'line-width': 0.5 }), [water]);
+  const dotPaint = useMemo(
+    () => ({ 'circle-color': fill as never, 'circle-radius': 3.5, 'circle-stroke-color': c.textMuted, 'circle-stroke-width': 0.5 }),
+    [fill, c.textMuted]
+  );
+
   if (!borders || !smallPoints) {
     return <Text style={[styles.failed, { color: c.textMuted }]}>{t('worldMap.loadFailed')}</Text>;
   }
-
-  const handlePress = (e: NativeSyntheticEvent<PressEventLike>) => {
-    const code = e.nativeEvent.features?.[0]?.properties?.code;
-    const stat = code ? byCode.get(code) : undefined;
-    if (stat) onOpenCountry(stat);
-  };
 
   const legend = [
     { color: palette[0], label: t('worldMap.legend.none') },
@@ -92,16 +107,12 @@ export default function WorldMapView({ countries, onOpenCountry }: WorldMapViewP
         compass={false}
       >
         <Camera initialViewState={{ center: [10, 20], zoom: -0.3 }} minZoom={-1} maxZoom={6} />
-        <GeoJSONSource id="world" data={borders.polygons as never} onPress={handlePress} hitbox={HIT_COUNTRY}>
-          <Layer id="world-fill" type="fill" paint={{ 'fill-color': fill as never }} />
-          <Layer id="world-border" type="line" paint={{ 'line-color': water, 'line-width': 0.5 }} />
+        <GeoJSONSource id="world" data={polygonsText} onPress={handlePress} hitbox={HIT_COUNTRY}>
+          <Layer id="world-fill" type="fill" paint={fillPaint} />
+          <Layer id="world-border" type="line" paint={borderPaint} />
         </GeoJSONSource>
-        <GeoJSONSource id="world-points" data={smallPoints as never} onPress={handlePress} hitbox={HIT_DOT}>
-          <Layer
-            id="world-dots"
-            type="circle"
-            paint={{ 'circle-color': fill as never, 'circle-radius': 3.5, 'circle-stroke-color': c.textMuted, 'circle-stroke-width': 0.5 }}
-          />
+        <GeoJSONSource id="world-points" data={pointsText} onPress={handlePress} hitbox={HIT_DOT}>
+          <Layer id="world-dots" type="circle" paint={dotPaint} />
         </GeoJSONSource>
       </MapLibreMap>
       <View style={[styles.legend, { backgroundColor: c.bg }]}>

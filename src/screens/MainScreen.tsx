@@ -101,6 +101,7 @@ export default function MainScreen({
   const styles = useStyles(makeStyles);
   const [tab, setTab] = useState<TabKey>('map');
   const [showCountries, setShowCountries] = useState(false);
+  const [countriesMode, setCountriesMode] = useState<'list' | 'map'>('list');
   const [openCountry, setOpenCountry] = useState<CountryStat | null>(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [openPlayer, setOpenPlayer] = useState<{ userId: string; displayName: string } | null>(null);
@@ -564,6 +565,8 @@ export default function MainScreen({
             pending={countryStats.pending}
             failed={countryStats.failed}
             placesByCountry={placesByCountry}
+            mode={countriesMode}
+            onModeChange={setCountriesMode}
             onBack={() => setShowCountries(false)}
             onOpenCountry={setOpenCountry}
           />

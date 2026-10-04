@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 import CountriesScreen from './CountriesScreen';
 import type { CountryStat } from '../lib/geo/countryStats';
@@ -21,22 +21,49 @@ jest.mock('../components/WorldMapView', () => {
 const stat = (code: string, name: string, percent: number): CountryStat => ({ code, name, exploredKm2: 0, totalKm2: 1, percent });
 const countries = [stat('AT', 'Австрия', 2), stat('FR', 'Франция', 0)];
 
-function setup() {
-  const onOpenCountry = jest.fn();
-  const utils = render(
+// The mode lives in the parent (MainScreen), so it survives opening a country and coming back.
+function Host({ onOpenCountry, initialMode = 'list' }: { onOpenCountry: (c: CountryStat) => void; initialMode?: 'list' | 'map' }) {
+  const [mode, setMode] = useState<'list' | 'map'>(initialMode);
+  return (
     <CountriesScreen
       countries={countries}
       pending={false}
       failed={false}
       placesByCountry={new Map()}
+      mode={mode}
+      onModeChange={setMode}
       onBack={jest.fn()}
       onOpenCountry={onOpenCountry}
     />
   );
+}
+
+function setup(initialMode: 'list' | 'map' = 'list') {
+  const onOpenCountry = jest.fn();
+  const utils = render(<Host onOpenCountry={onOpenCountry} initialMode={initialMode} />);
   return { onOpenCountry, ...utils };
 }
 
 describe('CountriesScreen list / map switch', () => {
+  it('shows the map when the parent says so and reports a tab press to the parent', () => {
+    const onModeChange = jest.fn();
+    const { getByTestId, getByRole } = render(
+      <CountriesScreen
+        countries={countries}
+        pending={false}
+        failed={false}
+        placesByCountry={new Map()}
+        mode="map"
+        onModeChange={onModeChange}
+        onBack={jest.fn()}
+        onOpenCountry={jest.fn()}
+      />
+    );
+    expect(getByTestId('world-map')).toBeTruthy();
+    fireEvent.press(getByRole('tab', { name: /Список|List/ }));
+    expect(onModeChange).toHaveBeenCalledWith('list');
+  });
+
   it('starts on the list', () => {
     const { getByText, queryByTestId } = setup();
     expect(getByText('Австрия')).toBeTruthy();

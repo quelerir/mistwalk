@@ -74,7 +74,7 @@ describe('WorldMapView', () => {
 
   it('puts dots only on small countries', () => {
     render(<WorldMapView countries={countries} pending={false} onOpenCountry={jest.fn()} />);
-    const dotCodes = smallPoints().data.features.map((f: any) => f.properties.code);
+    const dotCodes = JSON.parse(smallPoints().data).features.map((f: any) => f.properties.code);
     expect(dotCodes).toContain('MT');
     expect(dotCodes).not.toContain('RU');
   });
@@ -86,6 +86,26 @@ describe('WorldMapView', () => {
     rerender(<WorldMapView countries={[stat('AT', 12)]} pending={false} onOpenCountry={jest.fn()} />);
     expect(fill()).toEqual(['match', ['get', 'code'], ['AT'], levelColors('light')[3], levelColors('light')[0]]);
     expect(mockMapMounts).toBe(1);
+  });
+
+  it('hands the native map the border text once and a stable press handler across re-renders', () => {
+    const { rerender } = render(<WorldMapView countries={[stat('AT', 0)]} pending onOpenCountry={jest.fn()} />);
+    const first = { data: polygons().data, dots: smallPoints().data, onPress: polygons().onPress };
+    expect(typeof first.data).toBe('string');
+    expect(typeof first.dots).toBe('string');
+    rerender(<WorldMapView countries={[stat('AT', 12)]} pending={false} onOpenCountry={jest.fn()} />);
+    expect(polygons().data).toBe(first.data);
+    expect(smallPoints().data).toBe(first.dots);
+    expect(polygons().onPress).toBe(first.onPress);
+  });
+
+  it('still opens the latest stat after a re-render', () => {
+    const onOpenCountry = jest.fn();
+    const { rerender } = render(<WorldMapView countries={[stat('AT', 0)]} pending onOpenCountry={onOpenCountry} />);
+    const updated = [stat('AT', 12)];
+    rerender(<WorldMapView countries={updated} pending={false} onOpenCountry={onOpenCountry} />);
+    press(polygons(), [{ properties: { code: 'AT' } }]);
+    expect(onOpenCountry).toHaveBeenCalledWith(updated[0]);
   });
 
   // Last on purpose: the doMock stays in force for the rest of the file.

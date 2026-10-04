@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { flagUrl } from '../lib/geo/countries';
@@ -14,6 +14,9 @@ export interface CountriesScreenProps {
   pending: boolean;
   failed: boolean;
   placesByCountry: ReadonlyMap<string, CountryPlaces>;
+  // Owned by the parent so the chosen view survives opening a country and coming back.
+  mode: 'list' | 'map';
+  onModeChange: (mode: 'list' | 'map') => void;
   onBack: () => void;
   onOpenCountry: (country: CountryStat) => void;
 }
@@ -23,13 +26,14 @@ export default function CountriesScreen({
   pending,
   failed,
   placesByCountry,
+  mode,
+  onModeChange,
   onBack,
   onOpenCountry,
 }: CountriesScreenProps) {
   const { t, lang } = useI18n();
   const insets = useSafeAreaInsets();
   const styles = useStyles(makeStyles);
-  const [mode, setMode] = useState<'list' | 'map'>('list');
   const visited = countries.filter((c) => c.percent > 0).length;
   const status = pending
     ? t('countries.detecting')
@@ -53,7 +57,7 @@ export default function CountriesScreen({
           <Pressable
             key={m}
             style={[styles.tab, mode === m && styles.tabActive]}
-            onPress={() => setMode(m)}
+            onPress={() => onModeChange(m)}
             accessibilityRole="tab"
             accessibilityState={{ selected: mode === m }}
             accessibilityLabel={t(m === 'list' ? 'countries.tabList' : 'countries.tabMap')}
