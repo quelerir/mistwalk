@@ -1,3 +1,9 @@
+import { computeAreaKm2, type TimedPoint } from '../stats/coverage';
+import type { Lang } from '../../i18n/language';
+import type { CityStat } from './cityStats';
+import { normalizeCityName, type WorldCities } from './countryRegions';
+import type { CountryPlaces } from './countryStats';
+
 // Regions of a country (oblasts, states, …) with the share of their area explored. The borders are Natural Earth's, simplified
 // (see src/assets/WORLD_REGIONS.md).
 export interface RegionGeometry {
@@ -161,4 +167,115 @@ export function regionAt(lat: number, lng: number, countryCode: string): string 
     bundledIndex = data ? buildIndex(data) : null;
   }
   return bundledIndex ? regionAtIndex(bundledIndex, lat, lng, countryCode) : null;
+}
+
+const indexes = new WeakMap<RegionsData, RegionIndex>();
+
+function indexFor(regions: RegionsData): RegionIndex {
+  let index = indexes.get(regions);
+  if (!index) {
+    index = buildIndex(regions);
+    indexes.set(regions, index);
+  }
+  return index;
+}
+
+export interface RegionStat {
+  code: string;
+  name: string;
+  // Wikidata id of the region, for its emblem.
+  wikidata: string | null;
+  exploredKm2: number;
+  totalKm2: number;
+  percent: number;
+  // Found places, and found plus still unvisited ones, inside the region.
+  found: number;
+  total: number;
+}
+
+// The regions of a country that have cities in the data, with their explored share, places and Wikidata id; visited ones first,
+// then alphabetical in the language given. `points` are the person's points inside the country.
+export function buildRegionStats(
+  countryCode: string,
+  points: TimedPoint[],
+  places: CountryPlaces | undefined,
+  data: WorldCities,
+  regions: RegionsData,
+  lang: Lang
+): RegionStat[] {
+  const index = indexFor(regions);
+  const codes = new Set(
+    data.cities.filter((c) => c.c === countryCode && c.r !== null).map((c) => c.r as string)
+  );
+
+  const pointsBy = new Map<string, TimedPoint[]>();
+  for (const point of points) {
+    const code = regionAtIndex(index, point.lat, point.lng, countryCode);
+    if (code) pointsBy.set(code, [...(pointsBy.get(code) ?? []), point]);
+  }
+  const found = new Map<string, number>();
+  const known = new Map<string, number>();
+  const count = (map: Map<string, number>, lat: number, lng: number) => {
+    const code = regionAtIndex(index, lat, lng, countryCode);
+    if (code) map.set(code, (map.get(code) ?? 0) + 1);
+  };
+  for (const place of places?.discovered ?? []) {
+    count(found, place.lat, place.lng);
+    count(known, place.lat, place.lng);
+  }
+  for (const poi of places?.hidden ?? []) count(known, poi.lat, poi.lng);
+
+  const stats = [...codes].map((code): RegionStat => {
+    const totalKm2 = regions.regions[code]?.areaKm2 ?? 0;
+    const exploredKm2 = computeAreaKm2(pointsBy.get(code) ?? []);
+    return {
+      code,
+      name: data.regions[code]?.[lang] ?? code,
+      wikidata: regions.regions[code]?.w ?? null,
+      exploredKm2,
+      totalKm2,
+      percent: totalKm2 > 0 ? (exploredKm2 / totalKm2) * 100 : 0,
+      found: found.get(code) ?? 0,
+      total: known.get(code) ?? 0,
+    };
+  });
+  return stats.sort((a, b) => b.percent - a.percent || a.name.localeCompare(b.name, lang));
+}
+
+// The places (found and unvisited) that lie inside the region.
+export function placesOfRegion(
+  regionCode: string,
+  countryCode: string,
+  places: CountryPlaces | undefined,
+  regions: RegionsData
+): CountryPlaces | undefined {
+  if (!places) return undefined;
+  const index = indexFor(regions);
+  const inside = (p: { lat: number; lng: number }) => regionAtIndex(index, p.lat, p.lng, countryCode) === regionCode;
+  return { discovered: places.discovered.filter(inside), hidden: places.hidden.filter(inside) };
+}
+
+// The visited cities that belong to the region: by Wikidata id, else by a name that only one city of the country has.
+export function citiesOfRegion(
+  regionCode: string,
+  countryCode: string,
+  cities: CityStat[],
+  data: WorldCities
+): CityStat[] {
+  const ofCountry = data.cities.filter((c) => c.c === countryCode);
+  const nameCount = new Map<string, number>();
+  const nameRegion = new Map<string, string | null>();
+  for (const c of ofCountry) {
+    for (const name of new Set([normalizeCityName(c.ru), normalizeCityName(c.en)])) {
+      nameCount.set(name, (nameCount.get(name) ?? 0) + 1);
+      nameRegion.set(name, c.r);
+    }
+  }
+  const wikidata = new Set(ofCountry.filter((c) => c.r === regionCode && c.w).map((c) => c.w as string));
+  return cities.filter((v) => {
+    if (v.country !== null && v.country !== countryCode) return false;
+    if (v.wikidata && wikidata.has(v.wikidata)) return true;
+    const name = normalizeCityName(v.name);
+    return nameCount.get(name) === 1 && nameRegion.get(name) === regionCode;
+  });
 }

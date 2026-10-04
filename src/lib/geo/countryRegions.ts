@@ -24,6 +24,8 @@ export interface WorldCities {
 export interface CityEntry {
   key: string;
   name: string;
+  // Wikidata id, for the emblem.
+  w: string | null;
   population: number;
   visited: boolean;
 }
@@ -87,6 +89,7 @@ export function buildCountryCities(
     entry: {
       key: `${c.c}:${c.en}`,
       name: lang === 'ru' ? c.ru : c.en,
+      w: c.w,
       population: c.p,
       visited:
         (c.w !== null && visitedWikidata.has(c.w)) ||
