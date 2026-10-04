@@ -138,6 +138,8 @@ export const ru = {
   'countries.failed': 'Не удалось определить страну. Проверьте интернет.',
   'countries.opened': 'Открыто стран: {visited} из {total}',
   'countries.found': 'Найдено мест: {found} из {total}',
+  'countries.tabList': 'Список',
+  'countries.tabMap': 'Карта',
   'worldMap.legend.none': 'Не был',
   'worldMap.legend.low': '< 1 %',
   'worldMap.legend.mid': '1–10 %',
