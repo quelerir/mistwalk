@@ -34,7 +34,9 @@ export default function NotificationsScreen({ client, onBack, onOpenPlayer, onRe
         // The list keeps what was unread when it was loaded, so the rows stay marked while this screen is open.
         setItems(list);
         setStatus('ready');
-        markNotificationsRead(client)
+        const unreadIds = list.filter((n) => n.readAt === null).map((n) => n.id);
+        if (unreadIds.length === 0) return;
+        markNotificationsRead(client, unreadIds)
           .then(() => {
             if (!cancelled) onRead();
           })

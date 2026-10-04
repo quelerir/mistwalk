@@ -76,6 +76,29 @@ describe('useNotifications', () => {
     expect(warn).toHaveBeenCalled();
   });
 
+  it('ignores a slow answer that arrives after the list was read (or after a newer answer)', async () => {
+    let resolveSlow: (n: number) => void = () => undefined;
+    (fetchUnreadNotificationCount as jest.Mock)
+      .mockReset()
+      .mockImplementationOnce(() => new Promise<number>((r) => (resolveSlow = r)));
+    const { result } = setup();
+    act(() => result.current.clearUnread()); // the list was opened and read while the first count was still in flight
+    await act(async () => resolveSlow(5));
+    expect(result.current.unread).toBe(0);
+  });
+
+  it('keeps the newest answer when two requests overlap', async () => {
+    const resolvers: Array<(n: number) => void> = [];
+    (fetchUnreadNotificationCount as jest.Mock)
+      .mockReset()
+      .mockImplementation(() => new Promise<number>((r) => resolvers.push(r)));
+    const { result } = setup();
+    await act(async () => onInsert()); // second request
+    await act(async () => resolvers[1](2));
+    await act(async () => resolvers[0](9)); // the first, older one arrives last
+    expect(result.current.unread).toBe(2);
+  });
+
   it('removes the channel and the app-state listener on unmount', async () => {
     const { unmount } = setup();
     await waitFor(() => expect(fetchUnreadNotificationCount).toHaveBeenCalled());

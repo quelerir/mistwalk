@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { fetchUnreadNotificationCount, subscribeToNotifications } from '../lib/social/notifications';
@@ -7,10 +7,14 @@ import { fetchUnreadNotificationCount, subscribeToNotifications } from '../lib/s
 // actors; on a failure the last number stays.
 export function useNotifications(client: SupabaseClient, myId: string) {
   const [unread, setUnread] = useState(0);
+  // Only the answer to the newest request counts: a slow, older one must not bring back a badge that was just cleared.
+  const latest = useRef(0);
 
   const refresh = useCallback(async () => {
+    const request = ++latest.current;
     try {
-      setUnread(await fetchUnreadNotificationCount(client));
+      const count = await fetchUnreadNotificationCount(client);
+      if (request === latest.current) setUnread(count);
     } catch (err) {
       console.warn('[notifications] count failed', err);
     }
@@ -28,7 +32,10 @@ export function useNotifications(client: SupabaseClient, myId: string) {
     };
   }, [client, myId, refresh]);
 
-  const clearUnread = useCallback(() => setUnread(0), []);
+  const clearUnread = useCallback(() => {
+    latest.current += 1;
+    setUnread(0);
+  }, []);
 
   return { unread, refresh, clearUnread };
 }

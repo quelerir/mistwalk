@@ -46,7 +46,9 @@ describe('NotificationsScreen', () => {
 
   it('marks unread rows, and keeps them marked after the list is marked read on the server', async () => {
     const { getByTestId, queryByTestId, onRead } = await setup([note(), note({ id: 'n2', readAt: 1 })]);
+    // only the rows that were shown as unread are marked, by id: one that arrives meanwhile stays unread
     expect(markNotificationsRead).toHaveBeenCalledTimes(1);
+    expect(markNotificationsRead).toHaveBeenCalledWith(client, ['n1']);
     expect(onRead).toHaveBeenCalledTimes(1);
     expect(getByTestId('notification-unread-n1')).toBeTruthy();
     expect(queryByTestId('notification-unread-n2')).toBeNull();
@@ -56,6 +58,12 @@ describe('NotificationsScreen', () => {
     const { getByText, onOpenPlayer } = await setup([note()]);
     fireEvent.press(getByText(/Новый подписчик: Аня|Аня started following you/));
     expect(onOpenPlayer).toHaveBeenCalledWith({ userId: 'u2', displayName: 'Аня' });
+  });
+
+  it('does not call the server when there is nothing unread to mark', async () => {
+    const { onRead } = await setup([note({ readAt: 1 })]);
+    expect(markNotificationsRead).not.toHaveBeenCalled();
+    expect(onRead).not.toHaveBeenCalled();
   });
 
   it('shows the empty state', async () => {

@@ -65,9 +65,9 @@ describe('fetchUnreadNotificationCount', () => {
 describe('markNotificationsRead', () => {
   it('calls the RPC and throws on error', async () => {
     const ok = clientWith({});
-    await markNotificationsRead(ok);
-    expect(ok.rpc).toHaveBeenCalledWith('mark_notifications_read');
-    await expect(markNotificationsRead(clientWith({ error: new Error('boom') }))).rejects.toThrow('boom');
+    await markNotificationsRead(ok, ['n1', 'n2']);
+    expect(ok.rpc).toHaveBeenCalledWith('mark_notifications_read', { ids: ['n1', 'n2'] });
+    await expect(markNotificationsRead(clientWith({ error: new Error('boom') }), ['n1'])).rejects.toThrow('boom');
   });
 });
 

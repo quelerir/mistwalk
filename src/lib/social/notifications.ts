@@ -49,8 +49,9 @@ export async function fetchUnreadNotificationCount(client: SupabaseClient): Prom
   return Number(data ?? 0);
 }
 
-export async function markNotificationsRead(client: SupabaseClient): Promise<void> {
-  const { error } = await client.rpc('mark_notifications_read');
+// Marks exactly these notifications, the ones the person was shown: one that arrives meanwhile stays unread.
+export async function markNotificationsRead(client: SupabaseClient, ids: string[]): Promise<void> {
+  const { error } = await client.rpc('mark_notifications_read', { ids });
   if (error) throw error;
 }
 

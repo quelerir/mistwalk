@@ -17,9 +17,10 @@ create index if not exists notifications_user_idx on public.notifications (user_
 alter table public.notifications enable row level security;
 
 -- Own rows only; needed so Realtime delivers my own inserts. No insert/update/delete policy.
+drop policy if exists notifications_select on public.notifications;
 create policy notifications_select on public.notifications
   for select to authenticated
-  using (user_id = auth.uid());
+  using (user_id = auth.uid() and not public.blocked_between(user_id, actor_id));
 
 revoke all on public.notifications from public, anon;
 grant select on public.notifications to authenticated;
@@ -103,17 +104,21 @@ $$;
 revoke all on function public.unread_notification_count() from public, anon;
 grant execute on function public.unread_notification_count() to authenticated;
 
-create or replace function public.mark_notifications_read()
+-- Marks exactly the given notifications (the ones the person was shown), not everything: one that arrived while the list
+-- was open stays unread.
+create or replace function public.mark_notifications_read(ids uuid[])
 returns void
 language sql
 security definer
 set search_path = public
 as $$
-  update public.notifications set read_at = now() where user_id = auth.uid() and read_at is null;
+  update public.notifications
+  set read_at = now()
+  where user_id = auth.uid() and read_at is null and id = any(ids);
 $$;
 
-revoke all on function public.mark_notifications_read() from public, anon;
-grant execute on function public.mark_notifications_read() to authenticated;
+revoke all on function public.mark_notifications_read(uuid[]) from public, anon;
+grant execute on function public.mark_notifications_read(uuid[]) to authenticated;
 
 -- Required for the client to subscribe to INSERT events on this table.
 do $$
@@ -126,11 +131,19 @@ begin
   end if;
 end $$;
 
-/* Checks to run by hand after applying (as the SQL editor's postgres role):
-   -- anon must not execute any of the three RPCs (all three rows false)
+/* Checks to run by hand after applying (in the SQL editor, as the postgres role):
+   -- 1. anon must not execute any of the three RPCs (all three false)
    select has_function_privilege('anon', 'public.my_notifications(integer)', 'execute'),
           has_function_privilege('anon', 'public.unread_notification_count()', 'execute'),
-          has_function_privilege('anon', 'public.mark_notifications_read()', 'execute');
-   -- one row per (recipient, actor) however many times someone follows again
-   select user_id, actor_id, count(*) from public.notifications group by 1, 2 having count(*) > 1;  -- expect 0 rows
+          has_function_privilege('anon', 'public.mark_notifications_read(uuid[])', 'execute');
+   -- 2. one row per (recipient, actor) however many times someone follows again (expect 0 rows)
+   select user_id, actor_id, count(*) from public.notifications group by 1, 2 having count(*) > 1;
+   -- 3. with a test pair A (recipient) and B (actor), acting as A:
+   --      set local role authenticated; set local request.jwt.claims = '{"sub":"<A>"}';
+   --    a) B follows A: select * from public.my_notifications();          -- one row for B
+   --    b) block between A and B: the same query and unread_notification_count() -- no row, count 0
+   --    c) B's profile private (is_public = false): the same                -- no row, count 0
+   --    d) select * from public.notifications where user_id = '<other user>';  -- 0 rows (RLS)
+   --    e) select public.mark_notifications_read(array['<id of B>']::uuid[]); -- only that row gets read_at
+   -- Clean up the test rows afterwards.
 */

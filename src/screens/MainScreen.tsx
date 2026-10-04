@@ -109,6 +109,10 @@ export default function MainScreen({
   const [showFollows, setShowFollows] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const notifications = useNotifications(client, userId);
+  // Realtime may miss an insert; opening the profile tab is the fallback.
+  useEffect(() => {
+    if (tab === 'profile') void notifications.refresh();
+  }, [tab, notifications.refresh]);
   const [showBlocked, setShowBlocked] = useState(false);
   const [feedNew, setFeedNew] = useState<number | null>(null);
   const [unreadMessages, setUnreadMessages] = useState<number | null>(null);
@@ -550,7 +554,11 @@ export default function MainScreen({
             client={client}
             onBack={() => setShowNotifications(false)}
             onOpenPlayer={setOpenPlayer}
-            onRead={notifications.clearUnread}
+            onRead={() => {
+              // Cleared at once; then asked again, in case something new came in while the list was open.
+              notifications.clearUnread();
+              void notifications.refresh();
+            }}
           />
         ) : showFollows ? (
           <FollowsScreen client={client} initialTab={followsTab} onBack={() => setShowFollows(false)} onOpenPlayer={setOpenPlayer} />
