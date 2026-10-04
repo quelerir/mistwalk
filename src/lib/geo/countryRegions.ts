@@ -73,6 +73,15 @@ export function buildCountryCities(
   const visitedNames = new Set(mine.map((v) => normalizeCityName(v.name)));
 
   const cities = data.cities.filter((c) => c.c === countryCode);
+  // How many cities of this country carry each name: a name shared by several (Springfield, Киров) is not enough to
+  // tell which one was visited, so it only counts when the name is unique; Wikidata ids settle the rest.
+  const nameCount = new Map<string, number>();
+  for (const c of cities) {
+    for (const name of new Set([normalizeCityName(c.ru), normalizeCityName(c.en)])) {
+      nameCount.set(name, (nameCount.get(name) ?? 0) + 1);
+    }
+  }
+  const uniqueVisitedName = (name: string) => visitedNames.has(name) && nameCount.get(name) === 1;
   const entries = cities.map((c) => ({
     region: c.r,
     entry: {
@@ -81,8 +90,8 @@ export function buildCountryCities(
       population: c.p,
       visited:
         (c.w !== null && visitedWikidata.has(c.w)) ||
-        visitedNames.has(normalizeCityName(c.ru)) ||
-        visitedNames.has(normalizeCityName(c.en)),
+        uniqueVisitedName(normalizeCityName(c.ru)) ||
+        uniqueVisitedName(normalizeCityName(c.en)),
     } as CityEntry,
   }));
   const byPopulation = (a: CityEntry, b: CityEntry) => b.population - a.population;

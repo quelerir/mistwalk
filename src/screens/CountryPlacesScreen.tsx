@@ -62,6 +62,11 @@ export default function CountryPlacesScreen({
   // The bundled list of cities (not yet visited ones included); null when it cannot be loaded.
   const worldCities = useMemo(loadWorldCities, []);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  // Built once per country and language, not on every expand or collapse.
+  const listed = useMemo(
+    () => (worldCities ? buildCountryCities(country.code, cities, worldCities, lang) : null),
+    [worldCities, country.code, cities, lang]
+  );
 
   const sections = useMemo(() => {
     const found: Row[] = (places?.discovered ?? []).map((p) => ({
@@ -80,7 +85,6 @@ export default function CountryPlacesScreen({
         where: origin ? `${formatDistance(t, meters)}, ${kindLabel(t, poi.kind).toLowerCase()}` : kindLabel(t, poi.kind),
       }));
     const cityRows: Row[] = cities.map((city) => ({ kind: 'city', city }));
-    const listed = worldCities ? buildCountryCities(country.code, cities, worldCities, lang) : null;
     const regionRows: Row[] = [];
     const unvisitedRows: Row[] = [];
     if (listed?.mode === 'regions') {
@@ -103,7 +107,7 @@ export default function CountryPlacesScreen({
       { title: t('country.foundPlaces', { n: found.length }), data: found },
       { title: t('country.hiddenPlaces', { n: hidden.length }), data: hidden },
     ].filter((section) => section.data.length > 0);
-  }, [places, cities, citiesPending, origin, t, lang, worldCities, country.code, expanded]);
+  }, [places, cities, citiesPending, origin, t, lang, listed, expanded]);
 
   return (
     <View style={styles.container}>

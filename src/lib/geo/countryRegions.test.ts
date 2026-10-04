@@ -86,6 +86,27 @@ describe('buildCountryCities visited', () => {
     expect(out.regions.flatMap((r) => r.cities).filter((c) => c.visited)).toHaveLength(2);
   });
 
+  it('does not tick a same-named city when the Wikidata ids tell them apart', () => {
+    const data = make(12, ['XX-1', 'XX-2']);
+    data.cities[0].ru = 'Киров';
+    data.cities[0].w = 'Q1';
+    data.cities[1].ru = 'Киров';
+    data.cities[1].w = 'Q2';
+    const out = buildCountryCities('XX', [visitedCity({ name: 'Киров', wikidata: 'Q1' })], data, 'ru');
+    if (out.mode !== 'regions') throw new Error('expected regions');
+    const ticked = out.regions.flatMap((r) => r.cities).filter((c) => c.visited);
+    expect(ticked.map((c) => c.key)).toEqual(['XX:City0']);
+  });
+
+  it('marks nothing when a visited city has only a name that two cities share', () => {
+    const data = make(12, ['XX-1', 'XX-2']);
+    data.cities[0].ru = 'Киров';
+    data.cities[1].ru = 'Киров';
+    const out = buildCountryCities('XX', [visitedCity({ name: 'Киров' })], data, 'ru');
+    if (out.mode !== 'regions') throw new Error('expected regions');
+    expect(out.regions.flatMap((r) => r.cities).some((c) => c.visited)).toBe(false);
+  });
+
   it('does not count a visited city of another country', () => {
     const data = make(11, ['XX-1', 'XX-2']);
     const out = buildCountryCities('XX', [visitedCity({ name: 'City0', country: 'YY' })], data, 'ru');

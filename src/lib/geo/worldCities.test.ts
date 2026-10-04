@@ -44,7 +44,37 @@ describe('world cities data', () => {
     }
   });
 
-  it('stays under 1 MB', () => {
-    expect(JSON.stringify(data).length).toBeLessThan(1024 * 1024);
+  it('stays under 1 MB on disk (bytes, not characters: Cyrillic takes two)', () => {
+    expect(new TextEncoder().encode(JSON.stringify(data)).length).toBeLessThan(1024 * 1024);
+  });
+
+  const norm = (s: string) => s.toLowerCase().replace(/ё/g, 'е').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+
+  it('has no unlabelled twin of a city that has a Wikidata id (Natural Earth mislabels a few)', () => {
+    const withWikidata = new Set(data.cities.filter((c) => c.w).map((c) => `${c.c}:${norm(c.ru)}`));
+    const phantoms = data.cities.filter((c) => !c.w && withWikidata.has(`${c.c}:${norm(c.ru)}`));
+    expect(phantoms.map((c) => `${c.c} ${c.ru}`)).toEqual([]);
+  });
+
+  it('never gives two regions of one country the same name', () => {
+    for (const lang of ['ru', 'en'] as const) {
+      const seen = new Map<string, string>();
+      for (const code of new Set(data.cities.map((c) => c.r).filter((r): r is string => r !== null))) {
+        const country = data.cities.find((c) => c.r === code)!.c;
+        const key = `${country}:${data.regions[code][lang]}`;
+        expect([key, seen.get(key)]).toEqual([key, undefined]);
+        seen.set(key, code);
+      }
+    }
+  });
+
+  it('keeps every region inside one country', () => {
+    const countryOf = new Map<string, string>();
+    for (const city of data.cities) {
+      if (!city.r) continue;
+      const known = countryOf.get(city.r);
+      expect([city.r, known ?? city.c]).toEqual([city.r, city.c]);
+      countryOf.set(city.r, city.c);
+    }
   });
 });

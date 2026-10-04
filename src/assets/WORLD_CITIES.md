@@ -12,6 +12,8 @@ r (region key or null), p (population), la, lo } ] }`. About 970 KB on disk.
   Oblast with the codes swapped, and a few other codes shared by several areas.
 - 18 places fall in no polygon (`r: null`); places in countries the app does not know (`src/lib/geo/countries.ts`) and
   a repeated Wikidata id within a country are dropped (80 rows).
-- Borders and region membership are Natural Earth's, including for disputed areas. Some historical regions remain
-  (for example "Ust-Orda Buryat", "Koryak"). A city near a border can land in the neighbour (Podolsk is placed in the
-  "Москва" polygon).
+- Cleanup in the compaction step: 5 unlabelled twins of a real city are dropped (a second "Натал" in Amazonas); a place
+  whose region lies in another country loses its region (Mukusso); two regions of a country with the same name are told
+  apart by their biggest city (the Altai Krai is labelled "Республика Алтай" by Natural Earth).
+- Borders, country and region membership are Natural Earth's, including for disputed areas (Sukhumi and Tskhinvali are
+  listed under Georgia). A city near a border can land in the neighbour (Podolsk is placed in the "Москва" polygon).
