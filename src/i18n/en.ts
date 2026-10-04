@@ -40,7 +40,6 @@ export const en: Record<Key, Text> = {
   'tab.nearby': 'Nearby',
   'tab.feed': 'Feed',
   'tab.chats': 'Chats',
-  'tab.menu': 'Menu',
   'tab.profile': 'Profile',
   'profile.menu': 'Menu',
   'profile.photoTitle': 'Profile photo',
@@ -111,7 +110,6 @@ export const en: Record<Key, Text> = {
   'nearby.empty.allFound': 'Everything within a kilometre is found. Walk a bit further!',
 
   // Collection
-  'collection.title': 'Collection',
   'collection.followers': 'followers',
   'collection.following': 'following',
   'collection.followersLabel': 'Followers',

@@ -40,7 +40,6 @@ export const ru = {
   'tab.nearby': 'Рядом',
   'tab.feed': 'Лента',
   'tab.chats': 'Чаты',
-  'tab.menu': 'Меню',
   'tab.profile': 'Профиль',
   'profile.menu': 'Меню',
   'profile.photoTitle': 'Фото профиля',
@@ -116,7 +115,6 @@ export const ru = {
   'nearby.empty.allFound': 'В радиусе километра всё открыто. Пройдитесь дальше!',
 
   // Collection
-  'collection.title': 'Коллекция',
   'collection.followers': 'подписчиков',
   'collection.following': 'подписок',
   'collection.followersLabel': 'Подписчики',
