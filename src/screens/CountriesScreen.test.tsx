@@ -22,11 +22,22 @@ const stat = (code: string, name: string, percent: number): CountryStat => ({ co
 const countries = [stat('AT', 'Австрия', 2), stat('FR', 'Франция', 0)];
 
 // The mode lives in the parent (MainScreen), so it survives opening a country and coming back.
-function Host({ onOpenCountry, initialMode = 'list' }: { onOpenCountry: (c: CountryStat) => void; initialMode?: 'list' | 'map' }) {
+const republic = (code: string, name: string, percent = 0): CountryStat => ({ code, name, exploredKm2: 0, totalKm2: 8000, percent });
+
+function Host({
+  onOpenCountry,
+  initialMode = 'list',
+  republics = [],
+}: {
+  onOpenCountry: (c: CountryStat) => void;
+  initialMode?: 'list' | 'map';
+  republics?: CountryStat[];
+}) {
   const [mode, setMode] = useState<'list' | 'map'>(initialMode);
   return (
     <CountriesScreen
       countries={countries}
+      republics={republics}
       pending={false}
       failed={false}
       placesByCountry={new Map()}
@@ -38,9 +49,9 @@ function Host({ onOpenCountry, initialMode = 'list' }: { onOpenCountry: (c: Coun
   );
 }
 
-function setup(initialMode: 'list' | 'map' = 'list') {
+function setup(initialMode: 'list' | 'map' = 'list', republics: CountryStat[] = []) {
   const onOpenCountry = jest.fn();
-  const utils = render(<Host onOpenCountry={onOpenCountry} initialMode={initialMode} />);
+  const utils = render(<Host onOpenCountry={onOpenCountry} initialMode={initialMode} republics={republics} />);
   return { onOpenCountry, ...utils };
 }
 
@@ -50,6 +61,7 @@ describe('CountriesScreen list / map switch', () => {
     const { getByTestId, getByRole } = render(
       <CountriesScreen
         countries={countries}
+        republics={[]}
         pending={false}
         failed={false}
         placesByCountry={new Map()}
@@ -93,5 +105,32 @@ describe('CountriesScreen list / map switch', () => {
     fireEvent.press(getByRole('tab', { name: /Список|List/ }));
     expect(getByText('Австрия')).toBeTruthy();
     expect(queryByTestId('world-map')).toBeNull();
+  });
+});
+
+describe('CountriesScreen republics', () => {
+  const republics = [republic('XA', 'Абхазия', 1), republic('XS', 'Южная Осетия')];
+
+  it('shows a Republics header and one row per republic after the countries', () => {
+    const { getByText } = setup('list', republics);
+    expect(getByText(/Республики|Republics/)).toBeTruthy();
+    expect(getByText('Абхазия')).toBeTruthy();
+    expect(getByText('Южная Осетия')).toBeTruthy();
+  });
+
+  it('opens the republic like a country', () => {
+    const { getByText, onOpenCountry } = setup('list', republics);
+    fireEvent.press(getByText('Абхазия'));
+    expect(onOpenCountry).toHaveBeenCalledWith(republics[0]);
+  });
+
+  it('does not count republics in the "opened countries" line', () => {
+    const { getByText } = setup('list', republics);
+    expect(getByText(/Открыто стран: 1 из 2|Countries explored: 1 of 2/)).toBeTruthy();
+  });
+
+  it('shows no header without republics', () => {
+    const { queryByText } = setup('list', []);
+    expect(queryByText(/Республики|Republics/)).toBeNull();
   });
 });

@@ -135,6 +135,7 @@ export const en: Record<Key, Text> = {
   'countries.found': 'Places found: {found} of {total}',
   'countries.tabList': 'List',
   'countries.tabMap': 'Map',
+  'countries.republics': 'Republics',
   'worldMap.legend.none': 'Not visited',
   'worldMap.legend.low': '< 1 %',
   'worldMap.legend.mid': '1–10 %',
