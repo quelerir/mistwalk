@@ -21,7 +21,7 @@ Agreed with the user:
 `CountriesScreen` gets a "Список / Карта" switch at the top. The list is unchanged. A tap on a country polygon or marker calls the same `onOpenCountry(CountryStat)` as a list row.
 
 ### Border data
-- `scripts/build-world-geojson.*` downloads Natural Earth `ne_50m_admin_0_countries`, keeps only the ISO code and simplified geometry, and writes `src/assets/world.geojson` (target 1–2 MB). The result is committed, so builds do not depend on the network. The script and the file's licence note (public domain) live in the repo.
+- `scripts/build-world-geojson.*` downloads Natural Earth `ne_50m_admin_0_countries`, keeps only the ISO code and simplified geometry, and writes `src/assets/world.json` (target 1–2 MB). The result is committed, so builds do not depend on the network. The script and the file's licence note (public domain) live in the repo.
 - The ISO code comes from `ISO_A2_EH` (plain `ISO_A2` is `-99` for France and Norway). Codes are matched to `COUNTRIES`; features with no match (disputed territories) stay neutral and are not tappable. Kosovo (`XK`) and Taiwan (`TW`) are in `COUNTRIES` and must match.
 - The file is loaded lazily with `require` inside the map screen, so app start is not slowed.
 
@@ -47,7 +47,7 @@ Four items under the map with the same colours, strings in `ru` and `en`.
 - Stats failure: the same message the list shows.
 
 ## Testing
-- Jest: a pure function "stats → colour per ISO code" (thresholds, zero, unknown codes); a check that every ISO code in `world.geojson` exists in `COUNTRIES` or is explicitly ignored; a screen test for the switch and the tap.
+- Jest: a pure function "stats → colour per ISO code" (thresholds, zero, unknown codes); a check that every ISO code in `world.json` exists in `COUNTRIES` or is explicitly ignored; a screen test for the switch and the tap.
 - Simulator: open the map, tap a country, check the dark theme.
 
 ## Out of scope

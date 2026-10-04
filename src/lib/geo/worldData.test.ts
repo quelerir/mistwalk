@@ -3,8 +3,8 @@ import path from 'path';
 import { COUNTRY_BY_CODE } from './countries';
 
 const dir = path.join(__dirname, '../../assets');
-const polygonsPath = path.join(dir, 'world.geojson');
-const pointsPath = path.join(dir, 'world-points.geojson');
+const polygonsPath = path.join(dir, 'world.json');
+const pointsPath = path.join(dir, 'world-points.json');
 
 interface Collection {
   features: Array<{ geometry: { type: string }; properties: { code?: string } }>;
@@ -24,7 +24,7 @@ describe('world border data', () => {
     for (const code of codes(polygons)) expect(code).toMatch(/^[A-Z]{2}$/);
   });
 
-  it('has polygons only in world.geojson and points only in world-points.geojson', () => {
+  it('has polygons only in world.json and points only in world-points.json', () => {
     for (const f of polygons.features) expect(f.geometry.type).toMatch(/^(Multi)?Polygon$/);
     for (const f of points.features) expect(f.geometry.type).toBe('Point');
   });

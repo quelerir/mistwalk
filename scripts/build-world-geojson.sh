@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds src/assets/world.geojson (country polygons) and world-points.geojson (one point per country)
+# Builds src/assets/world.json (country polygons) and world-points.json (one point per country)
 # from Natural Earth 1:50m admin_0_countries (public domain). Needs network and node (mapshaper runs through npx).
 # Usage: scripts/build-world-geojson.sh [simplify-percent]   (default 40%)
 set -euo pipefail
@@ -19,7 +19,7 @@ npx --yes mapshaper "$TMP/ne.geojson" \
   -filter-fields code \
   -dissolve code \
   -simplify "$SIMPLIFY" keep-shapes \
-  -o "$ROOT/src/assets/world.geojson" format=geojson precision=0.01 force
+  -o "$ROOT/src/assets/world.json" format=geojson precision=0.01 force
 
 npx --yes mapshaper "$TMP/ne.geojson" \
   -filter 'ISO_A2_EH != "-99"' \
@@ -27,6 +27,6 @@ npx --yes mapshaper "$TMP/ne.geojson" \
   -filter-fields code \
   -dissolve code \
   -points inner \
-  -o "$ROOT/src/assets/world-points.geojson" format=geojson precision=0.01 force
+  -o "$ROOT/src/assets/world-points.json" format=geojson precision=0.01 force
 
-ls -l "$ROOT/src/assets/world.geojson" "$ROOT/src/assets/world-points.geojson"
+ls -l "$ROOT/src/assets/world.json" "$ROOT/src/assets/world-points.json"
