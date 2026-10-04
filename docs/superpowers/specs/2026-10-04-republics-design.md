@@ -17,7 +17,7 @@ Codes `XA`, `XS`, `XT`, `XN`, `XL` are ISO 3166 user-assigned codes, not real co
 
 `scripts/build-republics.sh` (needs network, node, npx mapshaper) writes `src/assets/republics.json`:
 `{ republics: [ { code, ru, en, host (ISO of the country it lies in), w (Wikidata), areaKm2, polygons: number[][][][] } ] }`
-where `polygons` is a list of polygons, each a list of rings of `[lng, lat]`, simplified (mapshaper `keep-shapes`) and rounded to 3 decimals. `areaKm2` is computed with the same flat-earth formula as `geometryAreaKm2` in `cityStats.ts`. Short names: Абхазия / Abkhazia, Южная Осетия / South Ossetia, Приднестровье / Transnistria, Северный Кипр / Northern Cyprus, Сомалиленд / Somaliland.
+where `polygons` is a list of polygons, each a list of rings of `[lng, lat]`, rounded to 3 decimals; the Natural Earth borders are already low resolution, so they are not simplified further (about 19 KB). `areaKm2` is computed with the same flat-earth formula as `geometryAreaKm2` in `cityStats.ts`. Short names: Абхазия / Abkhazia, Южная Осетия / South Ossetia, Приднестровье / Transnistria, Северный Кипр / Northern Cyprus, Сомалиленд / Somaliland.
 
 `scripts/build-republic-flags.sh` downloads 80 px-wide PNG thumbnails of the five flags from Commons (via the API, `iiurlwidth=80`) into `assets/flags/xa.png` and so on; `assets/flags/README.md` records each file, its Commons page and licence (all five are public domain on Commons).
 
@@ -56,6 +56,6 @@ Republics on the world map (their areas stay coloured as part of the host countr
 
 ## Risks and notes
 
-- Borders are simplified: a point within 1–3 km of a border can land on the wrong side.
+- Natural Earth's borders are coarse: a point within 1–3 km of a border (or on a coast, like Kyrenia's harbour) can land on the wrong side.
 - Natural Earth's border for Somaliland (~166,000 km²) and others is its own; areas are computed from it, not from official figures.
 - This changes Georgia's, Moldova's, Cyprus's and Somalia's percentages (smaller denominator, fewer points).
