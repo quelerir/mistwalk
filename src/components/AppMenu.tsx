@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import Avatar from './Avatar';
 import MenuScreen, { type MenuItem } from './MenuScreen';
 import { useStyles, useTheme } from '../theme/ThemeProvider';
 import { nextThemePreference } from '../theme/palettes';
@@ -39,15 +38,12 @@ export interface AppMenuProps {
   onSignOut: () => Promise<void>;
   onDeleteAccount: () => Promise<void>;
   onOpenBlocked: () => void;
-  onOpenCollection: () => void;
   email: string;
   leaderboardVisible: boolean | null;
   onLeaderboardVisibleChange: (next: boolean) => Promise<void>;
-  avatarUri: string | null;
-  displayName: string;
-  onChangeAvatar: () => Promise<string | null>;
-  onRemoveAvatar: () => Promise<void>;
   onSubmitFeedback: (message: string) => Promise<void>;
+  // When given, the main page starts with a "Back" row (the menu is a page opened from the profile).
+  onBack?: () => void;
 }
 
 export default function AppMenu({
@@ -69,22 +65,18 @@ export default function AppMenu({
   onSignOut,
   onDeleteAccount,
   onOpenBlocked,
-  onOpenCollection,
   email,
   leaderboardVisible,
   onLeaderboardVisibleChange,
-  avatarUri,
-  displayName,
-  onChangeAvatar,
-  onRemoveAvatar,
   onSubmitFeedback,
+  onBack,
 }: AppMenuProps) {
   const [accuracy, setAccuracy] = useState<AccuracyProfile>('battery-saver');
   const { preference, setPreference, colors: c } = useTheme();
   const styles = useStyles(makeStyles);
   const [note, setNote] = useState<string | null>(null);
   const [deletingAccount, setDeletingAccount] = useState(false);
-  const [page, setPage] = useState<'main' | 'settings' | 'account' | 'language' | 'feedback'>('main');
+  const [page, setPage] = useState<'main' | 'settings' | 'language' | 'feedback'>('main');
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const { t, setting, setSetting } = useI18n();
@@ -149,66 +141,27 @@ export default function AppMenu({
     }
   }
 
+  const ratingItem: MenuItem =
+    leaderboardVisible === null
+      ? { key: 'rating', icon: 'award', label: t('menu.inRating'), value: '…', onPress: () => {} }
+      : {
+          key: 'rating',
+          icon: 'award',
+          label: t('menu.inRating'),
+          on: leaderboardVisible,
+          onPress: () => void onLeaderboardVisibleChange(!leaderboardVisible),
+        };
+
   const mainItems: MenuItem[] = [
-    { key: 'account', icon: 'user', label: t('menu.account'), onPress: () => setPage('account') },
-    { key: 'collection', icon: 'award', label: t('menu.collection'), onPress: leaveThen(onOpenCollection) },
+    ...(onBack ? [{ key: 'back', icon: 'back' as const, label: t('common.back'), onPress: onBack }] : []),
+    { key: 'email', icon: 'user', label: email || t('menu.noEmail'), onPress: () => {} },
     { key: 'settings', icon: 'settings', label: t('menu.settings'), onPress: () => setPage('settings') },
     { key: 'feedback', icon: 'mail', label: t('menu.feedback'), onPress: openFeedback },
+    ratingItem,
+    { key: 'blocked', icon: 'flag', label: t('menu.blocked'), onPress: leaveThen(onOpenBlocked) },
     { key: 'privacyPolicy', icon: 'book', label: t('menu.privacyPolicy'), onPress: () => void Linking.openURL(PRIVACY_POLICY_URL) },
     { key: 'termsOfUse', icon: 'book', label: t('menu.termsOfUse'), onPress: () => void Linking.openURL(TERMS_OF_USE_URL) },
-  ];
-
-  const feedbackItems: MenuItem[] = [
-    { key: 'back', icon: 'back', label: t('common.back'), onPress: () => setPage('main') },
-  ];
-
-  const accountItems: MenuItem[] = [
-    { key: 'back', icon: 'back', label: t('common.back'), onPress: () => setPage('main') },
-    { key: 'email', icon: 'user', label: email || t('menu.noEmail'), onPress: () => {} },
-    {
-      key: 'photo',
-      icon: 'user',
-      label: avatarUri ? t('menu.changePhoto') : t('menu.addPhoto'),
-      onPress: () => {
-        setNote(null);
-        void onChangeAvatar().then((message) => setNote(message));
-      },
-    },
-    ...(avatarUri
-      ? [
-          {
-            key: 'photo-remove',
-            icon: 'logout' as const,
-            label: t('menu.removePhoto'),
-            onPress: () => {
-              setNote(null);
-              void onRemoveAvatar().catch(() => setNote(t('menu.removePhotoFailed')));
-            },
-          },
-        ]
-      : []),
-    {
-      key: 'visibility',
-      icon: 'award',
-      label: t('menu.inRating'),
-      value: leaderboardVisible === null ? '…' : leaderboardVisible ? t('common.yes') : t('common.no'),
-      onPress: () => {
-        if (leaderboardVisible !== null) void onLeaderboardVisibleChange(!leaderboardVisible);
-      },
-    },
-    {
-      key: 'blocked',
-      icon: 'flag',
-      label: t('menu.blocked'),
-      onPress: leaveThen(onOpenBlocked),
-    },
-    {
-      key: 'signout',
-      icon: 'logout',
-      label: t('menu.signOut'),
-      destructive: true,
-      onPress: leaveThen(() => void onSignOut()),
-    },
+    { key: 'signout', icon: 'logout', label: t('menu.signOut'), destructive: true, onPress: leaveThen(() => void onSignOut()) },
     {
       key: 'deleteAccount',
       icon: 'logout',
@@ -217,6 +170,10 @@ export default function AppMenu({
       destructive: true,
       onPress: confirmDeleteAccount,
     },
+  ];
+
+  const feedbackItems: MenuItem[] = [
+    { key: 'back', icon: 'back', label: t('common.back'), onPress: () => setPage('main') },
   ];
 
   const settingsItems: MenuItem[] = [
@@ -344,17 +301,11 @@ export default function AppMenu({
         ? settingsItems
         : page === 'language'
           ? languageItems
-          : page === 'feedback'
-            ? feedbackItems
-            : accountItems;
+          : feedbackItems;
 
   const header =
-    page === 'account' ? (
-      <View style={{ alignItems: 'center', paddingVertical: 14 }}>
-        <Avatar uri={avatarUri} name={displayName} size={88} />
-        <Text style={{ color: c.text, fontWeight: '700', fontSize: 17, marginTop: 10 }}>{displayName}</Text>
-        {note && <Text style={{ color: c.textMuted, marginTop: 4 }}>{note}</Text>}
-      </View>
+    page === 'main' && note ? (
+      <Text style={{ color: c.textMuted, paddingHorizontal: 18, paddingVertical: 10 }}>{note}</Text>
     ) : page === 'feedback' ? (
       <View style={styles.feedback}>
         <Text style={styles.feedbackTitle}>{t('menu.feedback')}</Text>
@@ -396,7 +347,7 @@ export default function AppMenu({
   const footer =
     page === 'main' ? <Text style={styles.version}>{t('menu.version', { version: APP_VERSION })}</Text> : undefined;
 
-  return <MenuScreen items={items} title={page === 'main' ? t('tab.menu') : undefined} header={header} footer={footer} />;
+  return <MenuScreen items={items} title={page === 'main' ? t('profile.menu') : undefined} header={header} footer={footer} />;
 }
 
 const makeStyles = (c: Colors) =>

@@ -481,14 +481,9 @@ export default function MainScreen({
             onSignOut={handleSignOut}
             onDeleteAccount={handleDeleteAccount}
             onOpenBlocked={() => setShowBlocked(true)}
-            onOpenCollection={() => setShowCollection(true)}
             email={email}
             leaderboardVisible={profileSync.profile?.isPublic ?? null}
             onLeaderboardVisibleChange={profileSync.setVisible}
-            avatarUri={avatarUri}
-            displayName={profileSync.profile?.displayName ?? email}
-            onChangeAvatar={handleChangeAvatar}
-            onRemoveAvatar={profileSync.clearAvatar}
             onSubmitFeedback={handleSubmitFeedback}
           />
         )}

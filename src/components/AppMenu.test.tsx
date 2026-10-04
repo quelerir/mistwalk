@@ -10,7 +10,7 @@ jest.mock('react-native-safe-area-context', () => require('react-native-safe-are
 
 const asyncVoid = () => jest.fn().mockResolvedValue(undefined);
 
-function props(): AppMenuProps {
+function props(over: Partial<AppMenuProps> = {}): AppMenuProps {
   return {
     fogStyle: 'auto',
     onFogStyleChange: jest.fn(),
@@ -30,21 +30,23 @@ function props(): AppMenuProps {
     onSignOut: asyncVoid(),
     onDeleteAccount: asyncVoid(),
     onOpenBlocked: jest.fn(),
-    onOpenCollection: jest.fn(),
     email: 'a@b.co',
     leaderboardVisible: true,
     onLeaderboardVisibleChange: asyncVoid(),
-    avatarUri: null,
-    displayName: 'Anna',
-    onChangeAvatar: jest.fn().mockResolvedValue(null),
-    onRemoveAvatar: asyncVoid(),
     onSubmitFeedback: asyncVoid(),
+    ...over,
   } as AppMenuProps;
 }
 
-const ACCOUNT = /^(Account|Аккаунт)$/;
+const SETTINGS = /^(Settings|Настройки)$/;
+const FEEDBACK = /^(Feedback|Обратная связь)$/;
+const RATING = /Visible in the ranking|Виден в рейтинге/;
+const BLOCKED = /^(Blocked|Заблокированные)$/;
 const PRIVACY = /Privacy Policy|Политика конфиденциальности/;
 const TERMS = /Terms of Use|Условия использования/;
+const SIGN_OUT = /^(Sign out|Выйти)$/;
+const DELETE = /^(Delete account|Удалить аккаунт)$/;
+const BACK = /^(Back|Назад)$/;
 
 describe('AppMenu main page', () => {
   beforeEach(() => {
@@ -52,13 +54,19 @@ describe('AppMenu main page', () => {
   });
   afterEach(() => jest.restoreAllMocks());
 
-  it('lists account, collection, settings, feedback, privacy policy and terms of use, in that order', () => {
-    const { getAllByRole } = render(<AppMenu {...props()} />);
-    const labels = getAllByRole('button').map((row) => String(row.props.accessibilityLabel));
-    const order = [ACCOUNT, /Collection|Коллекция/, /Settings|Настройки/, /Feedback|Обратная связь/, PRIVACY, TERMS];
-    const positions = order.map((pattern) => labels.findIndex((label) => pattern.test(label)));
-    expect(positions.every((p) => p >= 0)).toBe(true);
-    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+  it('lists the email, settings, feedback, rating, blocked, privacy, terms, sign out and delete account, in that order', () => {
+    const { getAllByLabelText } = render(<AppMenu {...props()} />);
+    const onScreen = getAllByLabelText(/./).map((el) => String(el.props.accessibilityLabel));
+    const order = [/^a@b\.co$/, SETTINGS, FEEDBACK, RATING, BLOCKED, PRIVACY, TERMS, SIGN_OUT, DELETE];
+    const found = order.map((pattern) => onScreen.findIndex((label) => pattern.test(label)));
+    expect(found.every((i) => i >= 0)).toBe(true);
+    expect(found).toEqual([...found].sort((a, b) => a - b));
+  });
+
+  it('has no Account and no Collection item', () => {
+    const { queryByLabelText } = render(<AppMenu {...props()} />);
+    expect(queryByLabelText(/^(Account|Аккаунт)$/)).toBeNull();
+    expect(queryByLabelText(/^(Collection|Коллекция)$/)).toBeNull();
   });
 
   it('opens the privacy policy and the terms of use in the browser', () => {
@@ -69,10 +77,43 @@ describe('AppMenu main page', () => {
     expect(Linking.openURL).toHaveBeenCalledWith('https://quelerir.github.io/mistwalk-legal/terms.html');
   });
 
-  it('no longer lists them on the account page', () => {
-    const { getByLabelText, queryByLabelText } = render(<AppMenu {...props()} />);
-    fireEvent.press(getByLabelText(ACCOUNT));
-    expect(queryByLabelText(PRIVACY)).toBeNull();
-    expect(queryByLabelText(TERMS)).toBeNull();
+  it('the rating row is a switch and pressing it passes the opposite value', () => {
+    const onLeaderboardVisibleChange = asyncVoid();
+    const { getByLabelText } = render(<AppMenu {...props({ leaderboardVisible: true, onLeaderboardVisibleChange })} />);
+    const row = getByLabelText(RATING);
+    expect(row.props.accessibilityRole).toBe('switch');
+    expect(row.props.accessibilityState).toEqual({ checked: true });
+    fireEvent.press(row);
+    expect(onLeaderboardVisibleChange).toHaveBeenCalledWith(false);
+  });
+
+  it('while the rating is unknown it shows … and pressing does nothing', () => {
+    const onLeaderboardVisibleChange = asyncVoid();
+    const { getByLabelText, getByText } = render(<AppMenu {...props({ leaderboardVisible: null, onLeaderboardVisibleChange })} />);
+    expect(getByText('…')).toBeTruthy();
+    fireEvent.press(getByLabelText(RATING));
+    expect(onLeaderboardVisibleChange).not.toHaveBeenCalled();
+  });
+
+  it('a Back row appears only when onBack is given, and it calls onBack', () => {
+    const none = render(<AppMenu {...props()} />);
+    expect(none.queryByLabelText(BACK)).toBeNull();
+    none.unmount();
+    const onBack = jest.fn();
+    const { getByLabelText } = render(<AppMenu {...props({ onBack })} />);
+    fireEvent.press(getByLabelText(BACK));
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('Blocked calls onOpenBlocked', () => {
+    const onOpenBlocked = jest.fn();
+    const { getByLabelText } = render(<AppMenu {...props({ onOpenBlocked })} />);
+    fireEvent.press(getByLabelText(BLOCKED));
+    expect(onOpenBlocked).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows "No email" when there is no email', () => {
+    const { getByLabelText } = render(<AppMenu {...props({ email: '' })} />);
+    expect(getByLabelText(/^(No email|Без почты)$/)).toBeTruthy();
   });
 });

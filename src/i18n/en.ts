@@ -205,9 +205,7 @@ export const en: Record<Key, Text> = {
   'rating.you': ' (you)',
 
   // Menu
-  'menu.collection': 'Collection',
   'menu.settings': 'Settings',
-  'menu.account': 'Account',
   'menu.feedback': 'Feedback',
   'menu.feedbackHint': "Tell us what you liked or what to fix. We read every message.",
   'menu.feedbackPlaceholder': 'Write here…',
@@ -216,8 +214,6 @@ export const en: Record<Key, Text> = {
   'menu.feedbackFailed': 'Could not send it. Check your internet and try again.',
   'menu.version': 'Mistwalk {version}',
   'menu.noEmail': 'No email',
-  'menu.addPhoto': 'Add photo',
-  'menu.changePhoto': 'Change photo',
   'menu.removePhoto': 'Remove photo',
   'menu.removePhotoFailed': 'Could not remove the photo',
   'menu.inRating': 'Visible in the ranking',
