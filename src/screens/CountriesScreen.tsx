@@ -7,12 +7,16 @@ import { useStyles } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import { FONT } from '../theme/fonts';
 import { useI18n } from '../i18n/I18nProvider';
+import WorldMapView from '../components/WorldMapView';
 
 export interface CountriesScreenProps {
   countries: CountryStat[];
   pending: boolean;
   failed: boolean;
   placesByCountry: ReadonlyMap<string, CountryPlaces>;
+  // Owned by the parent so the chosen view survives opening a country and coming back.
+  mode: 'list' | 'map';
+  onModeChange: (mode: 'list' | 'map') => void;
   onBack: () => void;
   onOpenCountry: (country: CountryStat) => void;
 }
@@ -22,6 +26,8 @@ export default function CountriesScreen({
   pending,
   failed,
   placesByCountry,
+  mode,
+  onModeChange,
   onBack,
   onOpenCountry,
 }: CountriesScreenProps) {
@@ -46,35 +52,55 @@ export default function CountriesScreen({
           <Text style={styles.subtitle}>{status}</Text>
         </View>
       </View>
-      <FlatList
-        data={countries}
-        keyExtractor={(item) => item.code}
-        initialNumToRender={20}
-        renderItem={({ item }) => {
-          const places = placesByCountry.get(item.code);
-          const found = places?.discovered.length ?? 0;
-          const total = found + (places?.hidden.length ?? 0);
-          return (
-            <Pressable
-              style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-              onPress={() => onOpenCountry(item)}
-              accessibilityRole="button"
-            >
-              <Image source={{ uri: flagUrl(item.code), cache: 'force-cache' }} style={styles.flag} resizeMode="contain" />
-              <View style={styles.nameWrap}>
-                <Text style={[styles.name, item.percent === 0 && styles.muted]} numberOfLines={1}>
-                  {item.name}
+      <View style={styles.tabs} accessibilityRole="tablist">
+        {(['list', 'map'] as const).map((m) => (
+          <Pressable
+            key={m}
+            style={[styles.tab, mode === m && styles.tabActive]}
+            onPress={() => onModeChange(m)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: mode === m }}
+            accessibilityLabel={t(m === 'list' ? 'countries.tabList' : 'countries.tabMap')}
+          >
+            <Text style={[styles.tabText, mode === m && styles.tabTextActive]}>
+              {t(m === 'list' ? 'countries.tabList' : 'countries.tabMap')}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+      {mode === 'map' ? (
+        <WorldMapView countries={countries} pending={pending} onOpenCountry={onOpenCountry} />
+      ) : (
+        <FlatList
+          data={countries}
+          keyExtractor={(item) => item.code}
+          initialNumToRender={20}
+          renderItem={({ item }) => {
+            const places = placesByCountry.get(item.code);
+            const found = places?.discovered.length ?? 0;
+            const total = found + (places?.hidden.length ?? 0);
+            return (
+              <Pressable
+                style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+                onPress={() => onOpenCountry(item)}
+                accessibilityRole="button"
+              >
+                <Image source={{ uri: flagUrl(item.code), cache: 'force-cache' }} style={styles.flag} resizeMode="contain" />
+                <View style={styles.nameWrap}>
+                  <Text style={[styles.name, item.percent === 0 && styles.muted]} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  {total > 0 && <Text style={styles.places}>{t('countries.found', { found, total })}</Text>}
+                </View>
+                <Text style={[styles.percent, item.percent === 0 && styles.muted]}>
+                  {formatPercent(lang, item.percent)}
                 </Text>
-                {total > 0 && <Text style={styles.places}>{t('countries.found', { found, total })}</Text>}
-              </View>
-              <Text style={[styles.percent, item.percent === 0 && styles.muted]}>
-                {formatPercent(lang, item.percent)}
-              </Text>
-              <Text style={styles.chevron}>›</Text>
-            </Pressable>
-          );
-        }}
-      />
+                <Text style={styles.chevron}>›</Text>
+              </Pressable>
+            );
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -86,6 +112,18 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   headerText: { flex: 1 },
   title: { fontSize: 26, fontFamily: FONT.display, letterSpacing: -0.8, color: c.text },
   subtitle: { marginTop: 2, color: c.textMuted },
+  tabs: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    padding: 3,
+    borderRadius: 10,
+    backgroundColor: c.surfaceAlt,
+  },
+  tab: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 8 },
+  tabActive: { backgroundColor: c.card },
+  tabText: { fontSize: 14, fontWeight: '600', color: c.textMuted },
+  tabTextActive: { color: c.text },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
