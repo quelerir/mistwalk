@@ -1,6 +1,7 @@
 import { computeAreaKm2, type TimedPoint } from '../stats/coverage';
 import type { DiscoveredPlace, Poi } from '../poi/types';
 import { COUNTRIES, COUNTRY_BY_CODE, countryName } from './countries';
+import { countryCodeAt, hostAreaAdjustment, REPUBLIC_BY_CODE, REPUBLICS, republicName } from './republics';
 import { decimal } from '../../i18n/format';
 import type { Lang } from '../../i18n/language';
 
@@ -42,13 +43,25 @@ export async function fetchCountryAt(
   return code && name ? { code, name } : null;
 }
 
+// The country (or republic) of a place: a republic border wins over the geocoder's cell.
+function refAt(
+  lat: number,
+  lng: number,
+  cellCountries: Readonly<Record<string, CountryRef | null>>
+): CountryRef | null {
+  const code = countryCodeAt(lat, lng, (la, lo) => cellCountries[cellKey(la, lo)]?.code);
+  if (!code) return null;
+  if (REPUBLIC_BY_CODE[code]) return { code, name: republicName(code, 'ru') };
+  return cellCountries[cellKey(lat, lng)] ?? null;
+}
+
 export function groupPointsByCountry(
   points: TimedPoint[],
   cellCountries: Readonly<Record<string, CountryRef | null>>
 ): Map<string, { country: CountryRef; points: TimedPoint[] }> {
   const groups = new Map<string, { country: CountryRef; points: TimedPoint[] }>();
   for (const point of points) {
-    const country = cellCountries[cellKey(point.lat, point.lng)];
+    const country = refAt(point.lat, point.lng, cellCountries);
     if (!country) continue;
     const group = groups.get(country.code) ?? { country, points: [] };
     group.points.push(point);
@@ -71,7 +84,7 @@ export function groupPlacesByCountry(
 ): Map<string, CountryPlaces> {
   const result = new Map<string, CountryPlaces>();
   const entry = (lat: number, lng: number): CountryPlaces | null => {
-    const country = cellCountries[cellKey(lat, lng)];
+    const country = refAt(lat, lng, cellCountries);
     if (!country) return null;
     const existing = result.get(country.code) ?? { discovered: [], hidden: [] };
     result.set(country.code, existing);
@@ -95,12 +108,35 @@ export function buildCountryList(
   const list = COUNTRIES.map((country) => {
     const group = groups.get(country.code);
     const exploredKm2 = group ? computeAreaKm2(group.points) : 0;
+    // A republic inside the country is counted on its own, so its area is not part of the country's total.
+    const totalKm2 = country.areaKm2 - hostAreaAdjustment(country.code);
     return {
       code: country.code,
       name: countryName(country.code, lang),
       exploredKm2,
-      totalKm2: country.areaKm2,
-      percent: (exploredKm2 / country.areaKm2) * 100,
+      totalKm2,
+      percent: (exploredKm2 / totalKm2) * 100,
+    };
+  });
+  return list.sort((a, b) => b.percent - a.percent || a.name.localeCompare(b.name, lang));
+}
+
+// The republics with their explored share, visited ones first, then alphabetical in the language given.
+export function buildRepublicList(
+  points: TimedPoint[],
+  cellCountries: Readonly<Record<string, CountryRef | null>>,
+  lang: Lang = 'ru'
+): CountryStat[] {
+  const groups = groupPointsByCountry(points, cellCountries);
+  const list = REPUBLICS.map((republic) => {
+    const group = groups.get(republic.code);
+    const exploredKm2 = group ? computeAreaKm2(group.points) : 0;
+    return {
+      code: republic.code,
+      name: republicName(republic.code, lang),
+      exploredKm2,
+      totalKm2: republic.areaKm2,
+      percent: (exploredKm2 / republic.areaKm2) * 100,
     };
   });
   return list.sort((a, b) => b.percent - a.percent || a.name.localeCompare(b.name, lang));
