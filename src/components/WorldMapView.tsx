@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useRef } from 'react';
 import { StyleSheet, Text, View, type NativeSyntheticEvent } from 'react-native';
 import { Camera, GeoJSONSource, Layer, Map as MapLibreMap } from '@maplibre/maplibre-react-native';
 import type { CountryStat } from '../lib/geo/countryStats';
-import { fillColorExpression, levelColors, waterColor } from '../lib/geo/worldMapColors';
+import { fillColorExpression, waterColor } from '../lib/geo/worldMapColors';
 import { useTheme } from '../theme/ThemeProvider';
 import { useI18n } from '../i18n/I18nProvider';
 
@@ -40,7 +40,6 @@ export default function WorldMapView({ countries, onOpenCountry }: WorldMapViewP
   const borders = useMemo(loadBorders, []);
   const byCode = useMemo(() => new Map(countries.map((s) => [s.code, s])), [countries]);
   const fill = useMemo(() => fillColorExpression(countries, scheme), [countries, scheme]);
-  const palette = levelColors(scheme);
   const water = waterColor(scheme);
   const mapStyle = useMemo(
     () => ({
@@ -71,13 +70,6 @@ export default function WorldMapView({ countries, onOpenCountry }: WorldMapViewP
     return <Text style={[styles.failed, { color: c.textMuted }]}>{t('worldMap.loadFailed')}</Text>;
   }
 
-  const legend = [
-    { color: palette[0], label: t('worldMap.legend.none') },
-    { color: palette[1], label: t('worldMap.legend.low') },
-    { color: palette[2], label: t('worldMap.legend.mid') },
-    { color: palette[3], label: t('worldMap.legend.high') },
-  ];
-
   return (
     <View style={styles.container}>
       <MapLibreMap
@@ -95,14 +87,6 @@ export default function WorldMapView({ countries, onOpenCountry }: WorldMapViewP
           <Layer id="world-border" type="line" paint={borderPaint} />
         </GeoJSONSource>
       </MapLibreMap>
-      <View style={[styles.legend, { backgroundColor: c.bg }]}>
-        {legend.map((item) => (
-          <View key={item.label} style={styles.legendItem}>
-            <View style={[styles.swatch, { backgroundColor: item.color, borderColor: c.borderStrong }]} />
-            <Text style={[styles.legendText, { color: c.textMuted }]}>{item.label}</Text>
-          </View>
-        ))}
-      </View>
     </View>
   );
 }
@@ -111,8 +95,4 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
   failed: { marginTop: 24, paddingHorizontal: 16, textAlign: 'center' },
-  legend: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 12, paddingHorizontal: 8 },
-  legendItem: { flexDirection: 'row', alignItems: 'center' },
-  swatch: { width: 14, height: 14, borderRadius: 3, borderWidth: StyleSheet.hairlineWidth, marginRight: 6 },
-  legendText: { fontSize: 13 },
 });
