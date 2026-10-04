@@ -1,3 +1,4 @@
+import { publicCountryCode } from '../geo/republics';
 import { tNow } from '../../i18n';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CityStat } from '../geo/cityStats';
@@ -66,12 +67,15 @@ export function buildSnapshot(
       .map((c) => ({ code: c.code, name: c.name, percent: c.percent })),
     cities: cities.slice(0, MAX_CITIES).map((c) => ({
       name: c.name,
-      country: c.country,
+      country: publicCountryCode(c.country),
       wikidata: c.wikidata,
       percent: c.percent,
       exploredKm2: c.exploredKm2,
     })),
-    placeRegions,
+    // Friends' pages group places by country: a place in a republic is shown under the country around it.
+    placeRegions: Object.fromEntries(
+      Object.entries(placeRegions).map(([id, region]) => [id, { ...region, c: publicCountryCode(region.c) ?? region.c }])
+    ),
   };
 }
 

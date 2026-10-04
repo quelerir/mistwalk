@@ -19,7 +19,7 @@ Codes `XA`, `XS`, `XT`, `XN`, `XL` are ISO 3166 user-assigned codes, not real co
 `{ republics: [ { code, ru, en, host (ISO of the country it lies in), w (Wikidata), areaKm2, polygons: number[][][][] } ] }`
 where `polygons` is a list of polygons, each a list of rings of `[lng, lat]`, rounded to 3 decimals; the Natural Earth borders are already low resolution, so they are not simplified further (about 19 KB). `areaKm2` is computed with the same flat-earth formula as `geometryAreaKm2` in `cityStats.ts`. Short names: Абхазия / Abkhazia, Южная Осетия / South Ossetia, Приднестровье / Transnistria, Северный Кипр / Northern Cyprus, Сомалиленд / Somaliland.
 
-`scripts/build-republic-flags.sh` downloads 80 px-wide PNG thumbnails of the five flags from Commons (via the API, `iiurlwidth=80`) into `assets/flags/xa.png` and so on; `assets/flags/README.md` records each file, its Commons page and licence (all five are public domain on Commons).
+`scripts/build-republic-flags.sh` downloads small PNG thumbnails (about 120 px wide) of the five flags from Commons (via the API, `iiurlwidth=80`) into `assets/flags/xa.png` and so on; `assets/flags/README.md` records each file, its Commons page and licence (all five are public domain on Commons).
 
 `scripts/compact-world-cities.mjs` also assigns each place to a republic when its coordinates fall inside a republic polygon (the place's `c` becomes the republic code), and keeps such places even where Natural Earth has no ISO code for them (Kyrenia, Famagusta, Hargeisa). Sukhumi and Tskhinvali therefore leave Georgia.
 
@@ -35,7 +35,7 @@ where `polygons` is a list of polygons, each a list of rings of `[lng, lat]`, ro
 
 `MainScreen`: the three places that read `countryStats.cells[cellKey(...)]` use `countryCodeAt` (open-country points, `countryAt` for city stats, places by country); `republics` is passed to `CountriesScreen`.
 
-The profile snapshot sent to friends is built from `countries` only, so republics are not published (older apps do not know the codes).
+Friends and older apps know only countries: `buildSnapshot` publishes a republic as the country it lies in (`publicCountryCode`) for the places and the cities, and the shared list of countries has no republics.
 
 ## Screens
 

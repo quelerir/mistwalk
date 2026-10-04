@@ -93,3 +93,18 @@ describe('CountryPlacesScreen regions', () => {
     expect(queryByText(/Регионы|Regions|Не посещённые города|Cities not visited/)).toBeNull();
   });
 });
+
+describe('CountryPlacesScreen for a republic', () => {
+  it('opens for a republic with no points, no places and no cities, and lists its city as not visited', () => {
+    const real = jest.requireActual('../lib/geo/countryRegions') as typeof import('../lib/geo/countryRegions');
+    (loadWorldCities as jest.Mock).mockReturnValue(real.loadWorldCities());
+    const { getByText } = setup({
+      country: { code: 'XA', name: 'Абхазия', exploredKm2: 0, totalKm2: 8569, percent: 0 },
+      places: undefined,
+      cities: [],
+    });
+    expect(getByText('Абхазия')).toBeTruthy();
+    expect(getByText(/Не посещённые города|Cities not visited/)).toBeTruthy();
+    expect(getByText(/Сухум|Sukhumi/)).toBeTruthy();
+  });
+});

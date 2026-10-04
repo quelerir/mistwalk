@@ -118,6 +118,15 @@ describe('CountriesScreen republics', () => {
     expect(getByText('Южная Осетия')).toBeTruthy();
   });
 
+  it('puts the Republics header after the last country and before the first republic', () => {
+    const { getAllByText } = setup('list', republics);
+    // The rendered texts, in screen order (not toJSON: it also carries the list's data prop).
+    const order = getAllByText(/Франция|Республики|Republics|Абхазия/).map((node) => String(node.props.children));
+    expect(order[0]).toBe('Франция');
+    expect(order[1]).toMatch(/Республики|Republics/);
+    expect(order[2]).toBe('Абхазия');
+  });
+
   it('opens the republic like a country', () => {
     const { getByText, onOpenCountry } = setup('list', republics);
     fireEvent.press(getByText('Абхазия'));

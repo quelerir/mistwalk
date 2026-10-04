@@ -83,3 +83,9 @@ export function countryCodeAt(
 export function hostAreaAdjustment(countryCode: string): number {
   return REPUBLICS.filter((r) => r.host === countryCode).reduce((sum, r) => sum + r.areaKm2, 0);
 }
+
+// What other people's apps may be told: they know countries, not republics, so a republic is the country it lies in.
+export function publicCountryCode(code: string | null): string | null {
+  if (code === null) return null;
+  return REPUBLIC_BY_CODE[code]?.host ?? code;
+}

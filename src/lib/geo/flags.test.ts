@@ -10,6 +10,7 @@ describe('flagSource', () => {
     expect(flagSource('XA')).toBe(require('../../../assets/flags/xa.png'));
     expect(flagSource('XS')).toBe(require('../../../assets/flags/xs.png'));
     expect(flagSource('XA')).not.toBe(flagSource('XS'));
-    for (const code of ['XT', 'XN', 'XL']) expect(typeof flagSource(code)).not.toBe('undefined');
+    // not the service fallback ({ uri }): a bundled image has no `uri`
+    for (const code of ['XT', 'XN', 'XL']) expect(flagSource(code)).not.toHaveProperty('uri');
   });
 });

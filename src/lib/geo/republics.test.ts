@@ -1,4 +1,4 @@
-import { countryCodeAt, hostAreaAdjustment, REPUBLIC_BY_CODE, REPUBLICS, republicAt, republicName } from './republics';
+import { countryCodeAt, hostAreaAdjustment, publicCountryCode, REPUBLIC_BY_CODE, REPUBLICS, republicAt, republicName } from './republics';
 
 describe('republicAt', () => {
   it.each([
@@ -19,6 +19,16 @@ describe('republicAt', () => {
     ['Paris', 48.85, 2.35],
   ])('leaves %s outside every republic', (_name, lat, lng) => {
     expect(republicAt(lat, lng)).toBeNull();
+  });
+
+  it('is null on the top edge of the bounding box away from the outline', () => {
+    const points = REPUBLIC_BY_CODE.XA.polygons.flat(2);
+    const top = Math.max(...points.map((p) => p[1]));
+    const vertexLngs = new Set(points.filter((p) => p[1] === top).map((p) => p[0]));
+    const lngs = points.map((p) => p[0]);
+    // A longitude inside the box that is not the vertex at the top: the polygon does not reach this point.
+    const lng = [Math.min(...lngs) + 0.3, Math.max(...lngs) - 0.3].find((x) => !vertexLngs.has(x))!;
+    expect(republicAt(top, lng)).toBeNull();
   });
 
   it('is null just outside the bounding box of a republic', () => {
@@ -60,5 +70,17 @@ describe('republic names', () => {
   });
   it('lists the five republics', () => {
     expect(REPUBLICS.map((r) => r.code).sort()).toEqual(['XA', 'XL', 'XN', 'XS', 'XT']);
+  });
+});
+
+describe('publicCountryCode', () => {
+  it('maps a republic to the country it lies in and leaves everything else alone', () => {
+    expect(publicCountryCode('XA')).toBe('GE');
+    expect(publicCountryCode('XS')).toBe('GE');
+    expect(publicCountryCode('XT')).toBe('MD');
+    expect(publicCountryCode('XN')).toBe('CY');
+    expect(publicCountryCode('XL')).toBe('SO');
+    expect(publicCountryCode('GE')).toBe('GE');
+    expect(publicCountryCode(null)).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 # Republic flags
 
-80 px wide PNG thumbnails from Wikimedia Commons, made by `scripts/build-republic-flags.sh`.
+PNG thumbnails (about 120 px wide; Commons picks the size) from Wikimedia Commons, made by `scripts/build-republic-flags.sh`.
 
 - `xa.png`: https://commons.wikimedia.org/wiki/File%3AFlag_of_Abkhazia.svg (Public domain)
 - `xs.png`: https://commons.wikimedia.org/wiki/File%3AFlag_of_South_Ossetia.svg (Public domain)

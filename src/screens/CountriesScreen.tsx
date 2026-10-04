@@ -89,7 +89,11 @@ export default function CountriesScreen({
           keyExtractor={(row) => (row.kind === 'header' ? 'header:republics' : row.item.code)}
           initialNumToRender={20}
           renderItem={({ item: row }) => {
-            if (row.kind === 'header') return <Text style={styles.sectionTitle}>{t('countries.republics')}</Text>;
+            if (row.kind === 'header') return (
+                <Text style={styles.sectionTitle} accessibilityRole="header">
+                  {t('countries.republics')}
+                </Text>
+              );
             const item = row.item;
             const places = placesByCountry.get(item.code);
             const found = places?.discovered.length ?? 0;
