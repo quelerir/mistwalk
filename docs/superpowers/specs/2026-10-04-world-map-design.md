@@ -21,7 +21,7 @@ Agreed with the user:
 `CountriesScreen` gets a "Список / Карта" switch at the top. The list is unchanged. A tap on a country polygon or marker calls the same `onOpenCountry(CountryStat)` as a list row.
 
 ### Border data
-- `scripts/build-world-geojson.*` downloads Natural Earth `ne_50m_admin_0_countries`, keeps only the ISO code and simplified geometry, and writes `src/assets/world.json` (target 1–2 MB). The result is committed, so builds do not depend on the network. The script and the file's licence note (public domain) live in the repo.
+- `scripts/build-world-geojson.*` downloads Natural Earth `ne_50m_admin_0_countries`, keeps only the ISO code and simplified geometry, and writes `src/assets/world.json` (target 1–2 MB; the first build is about 620 KB). The result is committed, so builds do not depend on the network. The script and the file's licence note (public domain) live in the repo.
 - The ISO code comes from `ISO_A2_EH` (plain `ISO_A2` is `-99` for France and Norway). Codes are matched to `COUNTRIES`; features with no match (disputed territories) stay neutral and are not tappable. Kosovo (`XK`) and Taiwan (`TW`) are in `COUNTRIES` and must match.
 - The file is loaded lazily with `require` inside the map screen, so app start is not slowed.
 
@@ -36,7 +36,7 @@ Agreed with the user:
 - Camera: whole world, zoom clamped, rotation and pitch off.
 
 ### Small countries
-Countries too small to see at world zoom (Malta, Singapore and the like; chosen by a pixel-area or area-km² threshold computed at build time) get a circle marker in their colour at the feature's centroid. Taps work the same.
+No markers (decided 2026-10-04, after seeing the dots on the simulator): countries too small to see at world zoom stay invisible on the map and are reachable from the list.
 
 ### Legend
 Four items under the map with the same colours, strings in `ru` and `en`.

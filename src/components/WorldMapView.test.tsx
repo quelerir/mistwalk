@@ -34,8 +34,7 @@ jest.mock('../theme/fonts', () => ({ FONT: { display: 'display' }, CARD_SHADOW: 
 const stat = (code: string, percent: number): CountryStat => ({ code, name: code, exploredKm2: 0, totalKm2: 1, percent });
 const countries = [stat('AT', 12), stat('FR', 0.5), stat('MT', 0), stat('RU', 0)];
 
-const polygons = () => mockSources[mockSources.length - 2];
-const smallPoints = () => mockSources[mockSources.length - 1];
+const polygons = () => mockSources[mockSources.length - 1];
 const press = (src: { onPress?: (e: any) => void }, features: any[]) => src.onPress?.({ nativeEvent: { features } });
 
 describe('WorldMapView', () => {
@@ -58,8 +57,6 @@ describe('WorldMapView', () => {
     render(<WorldMapView countries={countries} pending={false} onOpenCountry={onOpenCountry} />);
     press(polygons(), [{ properties: { code: 'AT' } }]);
     expect(onOpenCountry).toHaveBeenCalledWith(countries[0]);
-    press(smallPoints(), [{ properties: { code: 'MT' } }]);
-    expect(onOpenCountry).toHaveBeenLastCalledWith(countries[2]);
   });
 
   it('ignores a code with no stat, a missing code and an empty press', () => {
@@ -72,11 +69,10 @@ describe('WorldMapView', () => {
     expect(onOpenCountry).not.toHaveBeenCalled();
   });
 
-  it('puts dots only on small countries', () => {
+  it('draws only the country polygons: one source, no dot layer', () => {
     render(<WorldMapView countries={countries} pending={false} onOpenCountry={jest.fn()} />);
-    const dotCodes = JSON.parse(smallPoints().data).features.map((f: any) => f.properties.code);
-    expect(dotCodes).toContain('MT');
-    expect(dotCodes).not.toContain('RU');
+    expect(new Set(mockSources.map((src) => src.id))).toEqual(new Set(['world']));
+    expect(mockLayers.some((l) => l.type === 'circle')).toBe(false);
   });
 
   it('recolours without remounting the map when stats arrive', () => {
@@ -90,12 +86,10 @@ describe('WorldMapView', () => {
 
   it('hands the native map the border text once and a stable press handler across re-renders', () => {
     const { rerender } = render(<WorldMapView countries={[stat('AT', 0)]} pending onOpenCountry={jest.fn()} />);
-    const first = { data: polygons().data, dots: smallPoints().data, onPress: polygons().onPress };
+    const first = { data: polygons().data, onPress: polygons().onPress };
     expect(typeof first.data).toBe('string');
-    expect(typeof first.dots).toBe('string');
     rerender(<WorldMapView countries={[stat('AT', 12)]} pending={false} onOpenCountry={jest.fn()} />);
     expect(polygons().data).toBe(first.data);
-    expect(smallPoints().data).toBe(first.dots);
     expect(polygons().onPress).toBe(first.onPress);
   });
 

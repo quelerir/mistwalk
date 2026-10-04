@@ -1,9 +1,8 @@
 import React, { useCallback, useMemo, useRef } from 'react';
 import { StyleSheet, Text, View, type NativeSyntheticEvent } from 'react-native';
 import { Camera, GeoJSONSource, Layer, Map as MapLibreMap } from '@maplibre/maplibre-react-native';
-import { COUNTRY_BY_CODE } from '../lib/geo/countries';
 import type { CountryStat } from '../lib/geo/countryStats';
-import { fillColorExpression, levelColors, SMALL_COUNTRY_KM2, waterColor } from '../lib/geo/worldMapColors';
+import { fillColorExpression, levelColors, waterColor } from '../lib/geo/worldMapColors';
 import { useTheme } from '../theme/ThemeProvider';
 import { useI18n } from '../i18n/I18nProvider';
 
@@ -22,14 +21,13 @@ interface PressEventLike {
   features?: Array<{ properties?: { code?: string } | null }>;
 }
 
-// The default hitbox is 44 px: a dot next to a big country would steal the tap, so both are kept tight.
+// The default hitbox is 44 px, which would pick a neighbour at a border: keep it tight.
 const HIT_COUNTRY = { top: 1, left: 1, bottom: 1, right: 1 };
-const HIT_DOT = { top: 8, left: 8, bottom: 8, right: 8 };
 
 // Loaded here, not at app start: the file is large and only this view needs it.
-function loadBorders(): { polygons: Collection; points: Collection } | null {
+function loadBorders(): Collection | null {
   try {
-    return { polygons: require('../assets/world.json'), points: require('../assets/world-points.json') };
+    return require('../assets/world.json');
   } catch (err) {
     console.warn('[world-map] border data failed to load', err);
     return null;
@@ -52,21 +50,10 @@ export default function WorldMapView({ countries, onOpenCountry }: WorldMapViewP
     }),
     [water]
   );
-  const smallPoints = useMemo(() => {
-    if (!borders) return null;
-    return {
-      ...borders.points,
-      features: borders.points.features.filter((f) => {
-        const area = COUNTRY_BY_CODE[f.properties.code]?.areaKm2;
-        return area !== undefined && area < SMALL_COUNTRY_KM2;
-      }),
-    };
-  }, [borders]);
 
   // The native source takes text; handing it an object makes the library stringify 600 KB on every render
   // (each GPS fix re-renders the screen), so the text is made once.
-  const polygonsText = useMemo(() => (borders ? JSON.stringify(borders.polygons) : ''), [borders]);
-  const pointsText = useMemo(() => (smallPoints ? JSON.stringify(smallPoints) : ''), [smallPoints]);
+  const polygonsText = useMemo(() => (borders ? JSON.stringify(borders) : ''), [borders]);
 
   // Stable across renders: the latest stats and callback are read from refs at press time.
   const latest = useRef({ byCode, onOpenCountry });
@@ -79,12 +66,8 @@ export default function WorldMapView({ countries, onOpenCountry }: WorldMapViewP
 
   const fillPaint = useMemo(() => ({ 'fill-color': fill as never }), [fill]);
   const borderPaint = useMemo(() => ({ 'line-color': water, 'line-width': 0.5 }), [water]);
-  const dotPaint = useMemo(
-    () => ({ 'circle-color': fill as never, 'circle-radius': 3.5, 'circle-stroke-color': c.textMuted, 'circle-stroke-width': 0.5 }),
-    [fill, c.textMuted]
-  );
 
-  if (!borders || !smallPoints) {
+  if (!borders) {
     return <Text style={[styles.failed, { color: c.textMuted }]}>{t('worldMap.loadFailed')}</Text>;
   }
 
@@ -110,9 +93,6 @@ export default function WorldMapView({ countries, onOpenCountry }: WorldMapViewP
         <GeoJSONSource id="world" data={polygonsText} onPress={handlePress} hitbox={HIT_COUNTRY}>
           <Layer id="world-fill" type="fill" paint={fillPaint} />
           <Layer id="world-border" type="line" paint={borderPaint} />
-        </GeoJSONSource>
-        <GeoJSONSource id="world-points" data={pointsText} onPress={handlePress} hitbox={HIT_DOT}>
-          <Layer id="world-dots" type="circle" paint={dotPaint} />
         </GeoJSONSource>
       </MapLibreMap>
       <View style={[styles.legend, { backgroundColor: c.bg }]}>

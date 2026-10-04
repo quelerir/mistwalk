@@ -1,4 +1,4 @@
-import { fillColorExpression, levelColors, levelFor, SMALL_COUNTRY_KM2, waterColor } from './worldMapColors';
+import { fillColorExpression, levelColors, levelFor, waterColor } from './worldMapColors';
 import type { CountryStat } from './countryStats';
 
 const stat = (code: string, percent: number): CountryStat => ({
@@ -48,8 +48,4 @@ describe('fillColorExpression', () => {
   it('is just the neutral colour when nothing is visited', () => {
     expect(fillColorExpression([stat('DE', 0)], 'dark')).toBe(levelColors('dark')[0]);
   });
-});
-
-it('treats countries under 3000 km2 as small', () => {
-  expect(SMALL_COUNTRY_KM2).toBe(3000);
 });

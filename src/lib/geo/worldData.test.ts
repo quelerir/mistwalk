@@ -4,7 +4,6 @@ interface Collection {
   features: Array<{ geometry: { type: string }; properties: { code?: string } }>;
 }
 const polygons: Collection = require('../../assets/world.json');
-const points: Collection = require('../../assets/world-points.json');
 const codes = (c: Collection) => c.features.map((f) => f.properties.code);
 
 // Territories Natural Earth draws but our country table does not have: they stay grey and cannot be tapped.
@@ -18,9 +17,8 @@ describe('world border data', () => {
     for (const code of codes(polygons)) expect(code).toMatch(/^[A-Z]{2}$/);
   });
 
-  it('has polygons only in world.json and points only in world-points.json', () => {
+  it('has polygons only', () => {
     for (const f of polygons.features) expect(f.geometry.type).toMatch(/^(Multi)?Polygon$/);
-    for (const f of points.features) expect(f.geometry.type).toBe('Point');
   });
 
   it('has each country once (merged), and the hard cases are present', () => {
@@ -33,10 +31,6 @@ describe('world border data', () => {
     for (const code of codes(polygons)) {
       if (!COUNTRY_BY_CODE[code!]) expect(IGNORED_CODES.has(code!)).toBe(true);
     }
-  });
-
-  it('has the same codes in both files', () => {
-    expect([...codes(points)].sort()).toEqual([...codes(polygons)].sort());
   });
 
   it('stays under 2 MB', () => {

@@ -4,9 +4,6 @@ import type { CountryStat } from './countryStats';
 // 0 = never been, 1 = under 1 %, 2 = 1-10 %, 3 = over 10 % of the country's area.
 export type Level = 0 | 1 | 2 | 3;
 
-// Countries below this area are too small to see on a world map and get a dot instead.
-export const SMALL_COUNTRY_KM2 = 3000;
-
 export function levelFor(percent: number): Level {
   if (!Number.isFinite(percent) || percent <= 0) return 0;
   if (percent < 1) return 1;
