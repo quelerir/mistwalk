@@ -1,9 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import Avatar from '../components/Avatar';
-import { avatarUrl, fetchLeaderboard, type LeaderboardEntry } from '../lib/social/profiles';
+import {
+  avatarUrl,
+  fetchLeaderboard,
+  searchPlayers,
+  SEARCH_MIN_LENGTH,
+  type LeaderboardEntry,
+  type PlayerSearchResult,
+} from '../lib/social/profiles';
 import { useStyles } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import { FONT } from '../theme/fonts';
@@ -13,8 +20,10 @@ export interface LeaderboardScreenProps {
   client: SupabaseClient;
   userId: string;
   onBack: () => void;
-  onOpenPlayer: (entry: LeaderboardEntry) => void;
+  onOpenPlayer: (player: { userId: string; displayName: string }) => void;
 }
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 export default function LeaderboardScreen({ client, userId, onBack, onOpenPlayer }: LeaderboardScreenProps) {
   const t = useT();
@@ -22,6 +31,10 @@ export default function LeaderboardScreen({ client, userId, onBack, onOpenPlayer
   const styles = useStyles(makeStyles);
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<PlayerSearchResult[]>([]);
+  const [searchStatus, setSearchStatus] = useState<'loading' | 'ready' | 'error'>('ready');
+  const searching = query.trim().length >= SEARCH_MIN_LENGTH;
 
   useEffect(() => {
     let cancelled = false;
@@ -40,6 +53,44 @@ export default function LeaderboardScreen({ client, userId, onBack, onOpenPlayer
     };
   }, [client]);
 
+  // Search after a pause in typing; a response for an older query is dropped.
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < SEARCH_MIN_LENGTH) return;
+    let cancelled = false;
+    setSearchStatus('loading');
+    const timer = setTimeout(() => {
+      searchPlayers(client, q)
+        .then((list) => {
+          if (cancelled) return;
+          setResults(list);
+          setSearchStatus('ready');
+        })
+        .catch((err) => {
+          console.warn('[search] failed', err);
+          if (!cancelled) setSearchStatus('error');
+        });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [client, query]);
+
+  const searchBox = (
+    <TextInput
+      testID="search-input"
+      style={styles.search}
+      value={query}
+      onChangeText={setQuery}
+      placeholder={t('rating.searchPlaceholder')}
+      autoCapitalize="none"
+      autoCorrect={false}
+      clearButtonMode="while-editing"
+      returnKeyType="search"
+    />
+  );
+
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
@@ -51,7 +102,37 @@ export default function LeaderboardScreen({ client, userId, onBack, onOpenPlayer
           <Text style={styles.subtitle}>{t('rating.subtitle')}</Text>
         </View>
       </View>
-      {status === 'loading' ? (
+      {searchBox}
+      {searching ? (
+        searchStatus === 'loading' ? (
+          <ActivityIndicator style={styles.loader} />
+        ) : searchStatus === 'error' ? (
+          <Text style={styles.empty}>{t('rating.searchError')}</Text>
+        ) : (
+          <FlatList
+            data={results}
+            keyboardShouldPersistTaps="handled"
+            keyExtractor={(item) => item.userId}
+            ListEmptyComponent={<Text style={styles.empty}>{t('rating.searchEmpty')}</Text>}
+            renderItem={({ item }) => (
+              <Pressable
+                style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+                onPress={() => onOpenPlayer(item)}
+                accessibilityRole="button"
+              >
+                <View style={styles.avatar}>
+                  <Avatar uri={avatarUrl(client, item.avatarPath)} name={item.displayName} size={36} />
+                </View>
+                <Text style={styles.name} numberOfLines={1}>
+                  {item.displayName}
+                </Text>
+                {item.iFollow ? <Text style={styles.following}>{t('rating.following')}</Text> : null}
+                <Text style={styles.chevron}>›</Text>
+              </Pressable>
+            )}
+          />
+        )
+      ) : status === 'loading' ? (
         <ActivityIndicator style={styles.loader} />
       ) : status === 'error' ? (
         <Text style={styles.empty}>{t('rating.unavailable')}</Text>
@@ -92,6 +173,18 @@ const makeStyles = (c: Colors) =>
     headerText: { flex: 1 },
     title: { fontSize: 26, fontFamily: FONT.display, letterSpacing: -0.8, color: c.text },
     subtitle: { marginTop: 2, color: c.textMuted },
+    search: {
+      marginHorizontal: 16,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: c.borderStrong,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      color: c.text,
+      fontSize: 16,
+    },
+    following: { fontSize: 13, color: c.textMuted, marginLeft: 8 },
     loader: { marginTop: 32 },
     empty: { marginTop: 24, paddingHorizontal: 16, textAlign: 'center', color: c.textMuted },
     card: { margin: 16, marginBottom: 8, padding: 14, borderRadius: 14, backgroundColor: c.surface },

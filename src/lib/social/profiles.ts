@@ -144,6 +144,35 @@ export async function fetchLeaderboard(client: SupabaseClient): Promise<Leaderbo
   }));
 }
 
+export interface PlayerSearchResult {
+  userId: string;
+  displayName: string;
+  avatarPath: string | null;
+  iFollow: boolean;
+}
+
+interface SearchRow {
+  user_id: string;
+  display_name: string;
+  avatar_path: string | null;
+  i_follow: boolean;
+}
+
+export const SEARCH_MIN_LENGTH = 2;
+
+export async function searchPlayers(client: SupabaseClient, query: string): Promise<PlayerSearchResult[]> {
+  const q = query.trim();
+  if (q.length < SEARCH_MIN_LENGTH) return [];
+  const { data, error } = await client.rpc('search_players', { q, max_rows: 20 });
+  if (error) throw error;
+  return ((data ?? []) as SearchRow[]).map((row) => ({
+    userId: row.user_id,
+    displayName: row.display_name,
+    avatarPath: row.avatar_path ?? null,
+    iFollow: row.i_follow,
+  }));
+}
+
 interface PlayerRow {
   user_id: string;
   display_name: string;

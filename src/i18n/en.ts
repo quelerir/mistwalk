@@ -201,6 +201,10 @@ export const en: Record<Key, Text> = {
   'rating.unavailable': 'The ranking is not available right now. Check your connection and try again later.',
   'rating.empty': 'Nobody yet. Be the first!',
   'rating.you': ' (you)',
+  'rating.searchPlaceholder': 'Search by login',
+  'rating.searchEmpty': 'Nobody found',
+  'rating.searchError': 'Search is not available. Check your connection and try again later.',
+  'rating.following': 'Following',
 
   // Menu
   'menu.settings': 'Settings',
