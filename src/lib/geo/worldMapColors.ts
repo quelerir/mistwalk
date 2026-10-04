@@ -1,4 +1,3 @@
-import type { ExpressionSpecification } from '@maplibre/maplibre-react-native';
 import type { ColorScheme } from '../../theme/palettes';
 import type { CountryStat } from './countryStats';
 
@@ -26,11 +25,14 @@ export function waterColor(scheme: ColorScheme): string {
   return scheme === 'dark' ? '#14171C' : '#E9F0F5';
 }
 
+// A colour, or a MapLibre expression (the library does not export its expression type, so it is a plain array).
+export type ColorExpression = string | unknown[];
+
 // A MapLibre `match` on the country code; `match` needs a pair, so with no visited country it is the plain colour.
 export function fillColorExpression(
   countries: CountryStat[],
   scheme: ColorScheme
-): ExpressionSpecification | string {
+): ColorExpression {
   const colors = levelColors(scheme);
   const byLevel: Record<Level, string[]> = { 0: [], 1: [], 2: [], 3: [] };
   for (const c of countries) byLevel[levelFor(c.percent)].push(c.code);
@@ -39,5 +41,5 @@ export function fillColorExpression(
     if (byLevel[level].length > 0) pairs.push(byLevel[level], colors[level]);
   }
   if (pairs.length === 0) return colors[0];
-  return ['match', ['get', 'code'], ...pairs, colors[0]] as ExpressionSpecification;
+  return ['match', ['get', 'code'], ...pairs, colors[0]];
 }
