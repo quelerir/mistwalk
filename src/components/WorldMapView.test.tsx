@@ -44,12 +44,12 @@ describe('WorldMapView', () => {
     mockMapMounts = 0;
   });
 
-  it('shows the four legend items', () => {
-    const { getByText } = render(<WorldMapView countries={countries} pending={false} onOpenCountry={jest.fn()} />);
-    expect(getByText(/Не был|Not visited/)).toBeTruthy();
-    expect(getByText('< 1 %')).toBeTruthy();
-    expect(getByText('1–10 %')).toBeTruthy();
-    expect(getByText('> 10 %')).toBeTruthy();
+  it('shows only the map, with no legend under it', () => {
+    const { queryByText, getByTestId } = render(<WorldMapView countries={countries} pending={false} onOpenCountry={jest.fn()} />);
+    expect(getByTestId('map')).toBeTruthy();
+    expect(queryByText(/Не был|Not visited/)).toBeNull();
+    expect(queryByText('< 1 %')).toBeNull();
+    expect(queryByText('> 10 %')).toBeNull();
   });
 
   it('opens the country that was pressed', () => {
