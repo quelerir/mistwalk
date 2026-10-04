@@ -23,6 +23,9 @@ export interface ProfileScreenProps {
   onOpenCountries: () => void;
   onOpenLeaderboard: () => void;
   onOpenFollows: (tab: 'followers' | 'following') => void;
+  // The bell in the top bar: how many notifications are unread, and the page that lists them.
+  unreadNotifications: number;
+  onOpenNotifications: () => void;
   // Picks a new photo; resolves to a message to show, or null when there is nothing to say.
   onChangeAvatar: () => Promise<string | null>;
   onRemoveAvatar: () => Promise<void>;
@@ -43,6 +46,8 @@ export default function ProfileScreen({
   onOpenCountries,
   onOpenLeaderboard,
   onOpenFollows,
+  unreadNotifications,
+  onOpenNotifications,
   onChangeAvatar,
   onRemoveAvatar,
   renderMenu,
@@ -75,6 +80,21 @@ export default function ProfileScreen({
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.topBar}>
+        <Pressable
+          testID="profile-bell"
+          onPress={onOpenNotifications}
+          hitSlop={12}
+          style={styles.bell}
+          accessibilityRole="button"
+          accessibilityLabel={t('profile.notifications')}
+        >
+          <SvgIcon name="bell" size={26} />
+          {unreadNotifications > 0 && (
+            <View testID="profile-bell-badge" style={styles.bellBadge}>
+              <Text style={styles.bellBadgeText}>{unreadNotifications > 99 ? '99+' : unreadNotifications}</Text>
+            </View>
+          )}
+        </Pressable>
         <Pressable
           testID="profile-burger"
           onPress={() => setMenuOpen(true)}
@@ -135,7 +155,21 @@ export default function ProfileScreen({
 const makeStyles = (c: Colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: c.bg },
   content: { paddingHorizontal: 16, paddingBottom: 32 },
-  topBar: { flexDirection: 'row', justifyContent: 'flex-end', paddingTop: 12, paddingBottom: 4 },
+  topBar: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 18, paddingTop: 12, paddingBottom: 4 },
+  bell: { padding: 1 },
+  bellBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -8,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 5,
+    backgroundColor: c.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellBadgeText: { fontSize: 10, fontWeight: '700', color: c.bg },
   header: { flexDirection: 'row', alignItems: 'center', gap: 18, marginBottom: 8 },
   headerText: { flex: 1 },
   name: { fontSize: 26, fontFamily: FONT.display, letterSpacing: -0.6, color: c.text },

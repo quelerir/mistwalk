@@ -14,6 +14,8 @@ export interface TabItem<K extends string> {
   photoUri?: string | null;
   // A small number in the corner, e.g. how many things are new; hidden when 0 or missing.
   badge?: number | null;
+  // A small dot in the corner for "something new" with no number; ignored when there is a badge.
+  dot?: boolean;
 }
 
 export interface TabBarProps<K extends string> {
@@ -54,6 +56,8 @@ export default function TabBar<K extends string>({ tabs, active, onChange }: Tab
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{tab.badge > 99 ? '99+' : tab.badge}</Text>
                 </View>
+              ) : tab.dot ? (
+                <View testID={`tab-dot-${tab.key}`} style={styles.dot} />
               ) : null}
             </View>
             <Text style={[styles.label, on && styles.labelActive]} numberOfLines={1}>
@@ -92,6 +96,7 @@ const makeStyles = (c: Colors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  dot: { position: 'absolute', top: -2, right: 8, width: 10, height: 10, borderRadius: 5, backgroundColor: c.accent },
   badgeText: { fontSize: 10, fontWeight: '700', color: c.bg },
   photo: { width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, backgroundColor: c.surfaceAlt },
 });

@@ -36,6 +36,8 @@ import MapScreen from './MapScreen';
 import NearbyScreen from './NearbyScreen';
 import ProfileScreen from './ProfileScreen';
 import CountriesScreen from './CountriesScreen';
+import NotificationsScreen from './NotificationsScreen';
+import { useNotifications } from '../hooks/useNotifications';
 import CountryPlacesScreen from './CountryPlacesScreen';
 import { cellKey, groupPlacesByCountry, type CountryStat } from '../lib/geo/countryStats';
 import { useRoute } from '../hooks/useRoute';
@@ -106,6 +108,12 @@ export default function MainScreen({
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [openPlayer, setOpenPlayer] = useState<{ userId: string; displayName: string } | null>(null);
   const [showFollows, setShowFollows] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notifications = useNotifications(client, userId);
+  // Realtime may miss an insert; opening the profile tab is the fallback.
+  useEffect(() => {
+    if (tab === 'profile') void notifications.refresh();
+  }, [tab, notifications.refresh]);
   const [showBlocked, setShowBlocked] = useState(false);
   const [feedNew, setFeedNew] = useState<number | null>(null);
   const [unreadMessages, setUnreadMessages] = useState<number | null>(null);
@@ -243,14 +251,14 @@ export default function MainScreen({
       TABS.map(({ key, labelKey, icon }): TabItem<TabKey> => {
         const tab = { key, label: t(labelKey), icon };
         return key === 'profile'
-          ? { ...tab, photoUri: avatarUri }
+          ? { ...tab, photoUri: avatarUri, dot: notifications.unread > 0 }
           : key === 'feed'
             ? { ...tab, badge: feedNew }
             : key === 'chats'
               ? { ...tab, badge: unreadMessages }
               : tab;
       }),
-    [avatarUri, feedNew, unreadMessages, t]
+    [avatarUri, feedNew, unreadMessages, notifications.unread, t]
   );
 
   function handleOpenChat(other: { userId: string; displayName: string }) {
@@ -368,6 +376,7 @@ export default function MainScreen({
   function closeProfileOverlays() {
     setOpenPlayer(null);
     setShowFollows(false);
+    setShowNotifications(false);
     setShowLeaderboard(false);
     setShowCountries(false);
     setOpenCountry(null);
@@ -471,6 +480,8 @@ export default function MainScreen({
             followCounts={followCounts}
             onOpenCountries={() => setShowCountries(true)}
             onOpenLeaderboard={() => setShowLeaderboard(true)}
+            unreadNotifications={notifications.unread}
+            onOpenNotifications={() => setShowNotifications(true)}
             onOpenFollows={(followsTabKey) => {
               setFollowsTab(followsTabKey);
               setShowFollows(true);
@@ -524,8 +535,12 @@ export default function MainScreen({
       <Modal visible={showBlocked} animationType="slide" onRequestClose={() => setShowBlocked(false)}>
         <BlockedScreen client={client} onBack={() => setShowBlocked(false)} />
       </Modal>
-      <Modal visible={showFollows || showLeaderboard || showCountries} animationType="slide" onRequestClose={closeProfileOverlays}>
-        {(showLeaderboard || showFollows) && openPlayer ? (
+      <Modal
+        visible={showFollows || showLeaderboard || showCountries || showNotifications}
+        animationType="slide"
+        onRequestClose={closeProfileOverlays}
+      >
+        {(showLeaderboard || showFollows || showNotifications) && openPlayer ? (
           <View style={{ flex: 1, paddingTop: insets.top }}>
             <PlayerScreen
               client={client}
@@ -535,6 +550,17 @@ export default function MainScreen({
               isMe={openPlayer.userId === userId}
             />
           </View>
+        ) : showNotifications ? (
+          <NotificationsScreen
+            client={client}
+            onBack={() => setShowNotifications(false)}
+            onOpenPlayer={setOpenPlayer}
+            onRead={() => {
+              // Cleared at once; then asked again, in case something new came in while the list was open.
+              notifications.clearUnread();
+              void notifications.refresh();
+            }}
+          />
         ) : showFollows ? (
           <FollowsScreen client={client} initialTab={followsTab} onBack={() => setShowFollows(false)} onOpenPlayer={setOpenPlayer} />
         ) : showLeaderboard ? (

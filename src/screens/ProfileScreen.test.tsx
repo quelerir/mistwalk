@@ -17,6 +17,8 @@ function setup(over: Partial<ProfileScreenProps> = {}) {
     daily: [0, 1, 0, 2, 0, 0, 3],
     countries: [],
     followCounts: { followers: 3, following: 5 },
+    unreadNotifications: 0,
+    onOpenNotifications: jest.fn(),
     onOpenCountries: jest.fn(),
     onOpenLeaderboard: jest.fn(),
     onOpenFollows: jest.fn(),
@@ -37,6 +39,22 @@ function alertButtons() {
   const calls = (Alert.alert as jest.Mock).mock.calls;
   return calls[calls.length - 1][2] as Array<{ text: string; onPress?: () => void }>;
 }
+
+describe('ProfileScreen notification bell', () => {
+  it('shows the unread count on the bell and opens the notifications', () => {
+    const { getByTestId, getByText, props } = setup({ unreadNotifications: 8 });
+    expect(getByText('8')).toBeTruthy();
+    fireEvent.press(getByTestId('profile-bell'));
+    expect(props.onOpenNotifications).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows 99+ above 99 and no badge at 0', () => {
+    expect(setup({ unreadNotifications: 150 }).getByText('99+')).toBeTruthy();
+    const none = setup({ unreadNotifications: 0 });
+    expect(none.queryByTestId('profile-bell-badge')).toBeNull();
+    expect(none.getByTestId('profile-bell')).toBeTruthy();
+  });
+});
 
 describe('ProfileScreen', () => {
   beforeEach(() => {
