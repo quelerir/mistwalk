@@ -200,6 +200,7 @@ export const ru = {
   'chats.emptyThread': 'Пока нет сообщений. Напишите первым.',
   'chats.placeholder': 'Сообщение…',
   'chats.send': 'Отправить',
+  'chats.typing': 'печатает…',
   'chats.youPrefix': 'Вы: {text}',
   'rating.title': 'Рейтинг',
   'rating.subtitle': 'По найденным местам',
