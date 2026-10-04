@@ -206,6 +206,10 @@ export const ru = {
   'rating.unavailable': 'Рейтинг пока недоступен. Проверьте интернет и попробуйте позже.',
   'rating.empty': 'Пока никого. Станьте первым!',
   'rating.you': ' (вы)',
+  'rating.searchPlaceholder': 'Поиск по логину',
+  'rating.searchEmpty': 'Никого не найдено',
+  'rating.searchError': 'Поиск недоступен. Проверьте интернет и попробуйте позже.',
+  'rating.following': 'Вы подписаны',
 
   // Menu
   'menu.settings': 'Настройки',
