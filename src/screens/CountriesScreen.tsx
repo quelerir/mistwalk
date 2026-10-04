@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { flagUrl } from '../lib/geo/countries';
+import { flagSource } from '../lib/geo/flags';
 import { formatPercent, type CountryPlaces, type CountryStat } from '../lib/geo/countryStats';
 import { useStyles } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
@@ -11,6 +11,8 @@ import WorldMapView from '../components/WorldMapView';
 
 export interface CountriesScreenProps {
   countries: CountryStat[];
+  // Self-declared republics, shown in a section of their own after the countries; they are not counted as countries.
+  republics: CountryStat[];
   pending: boolean;
   failed: boolean;
   placesByCountry: ReadonlyMap<string, CountryPlaces>;
@@ -21,8 +23,11 @@ export interface CountriesScreenProps {
   onOpenCountry: (country: CountryStat) => void;
 }
 
+type ListRow = { kind: 'country'; item: CountryStat } | { kind: 'header' };
+
 export default function CountriesScreen({
   countries,
+  republics,
   pending,
   failed,
   placesByCountry,
@@ -34,6 +39,14 @@ export default function CountriesScreen({
   const { t, lang } = useI18n();
   const insets = useSafeAreaInsets();
   const styles = useStyles(makeStyles);
+  const rows = useMemo<ListRow[]>(
+    () => [
+      ...countries.map((item): ListRow => ({ kind: 'country', item })),
+      ...(republics.length > 0 ? [{ kind: 'header' } as ListRow] : []),
+      ...republics.map((item): ListRow => ({ kind: 'country', item })),
+    ],
+    [countries, republics]
+  );
   const visited = countries.filter((c) => c.percent > 0).length;
   const status = pending
     ? t('countries.detecting')
@@ -72,10 +85,16 @@ export default function CountriesScreen({
         <WorldMapView countries={countries} pending={pending} onOpenCountry={onOpenCountry} />
       ) : (
         <FlatList
-          data={countries}
-          keyExtractor={(item) => item.code}
+          data={rows}
+          keyExtractor={(row) => (row.kind === 'header' ? 'header:republics' : row.item.code)}
           initialNumToRender={20}
-          renderItem={({ item }) => {
+          renderItem={({ item: row }) => {
+            if (row.kind === 'header') return (
+                <Text style={styles.sectionTitle} accessibilityRole="header">
+                  {t('countries.republics')}
+                </Text>
+              );
+            const item = row.item;
             const places = placesByCountry.get(item.code);
             const found = places?.discovered.length ?? 0;
             const total = found + (places?.hidden.length ?? 0);
@@ -85,7 +104,7 @@ export default function CountriesScreen({
                 onPress={() => onOpenCountry(item)}
                 accessibilityRole="button"
               >
-                <Image source={{ uri: flagUrl(item.code), cache: 'force-cache' }} style={styles.flag} resizeMode="contain" />
+                <Image source={flagSource(item.code)} style={styles.flag} resizeMode="contain" />
                 <View style={styles.nameWrap}>
                   <Text style={[styles.name, item.percent === 0 && styles.muted]} numberOfLines={1}>
                     {item.name}
@@ -124,6 +143,7 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   tabActive: { backgroundColor: c.card },
   tabText: { fontSize: 14, fontWeight: '600', color: c.textMuted },
   tabTextActive: { color: c.text },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: c.text, paddingHorizontal: 16, paddingTop: 20, paddingBottom: 6 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -14,6 +14,25 @@ import {
 
 const snapshot = { distanceKm: 3.4, countries: [], cities: [], placeRegions: {} };
 
+describe('buildSnapshot and republics', () => {
+  it('publishes a republic as the country it lies in: older apps and friends know only countries', () => {
+    const city = {
+      name: 'Сухум',
+      country: 'XA',
+      wikidata: 'Q1',
+      exploredKm2: 1,
+      totalKm2: 10,
+      percent: 10,
+      found: 0,
+    };
+    const placeRegions = { a: { c: 'XA', t: 'Сухум' }, b: { c: 'GE', t: null } };
+    const s = buildSnapshot(1, [], [city, { ...city, name: 'Нигде', country: null }], placeRegions);
+    expect(s.placeRegions).toEqual({ a: { c: 'GE', t: 'Сухум' }, b: { c: 'GE', t: null } });
+    expect(s.cities.map((c) => c.country)).toEqual(['GE', null]);
+    expect(placeRegions.a.c).toBe('XA'); // the input is left alone
+  });
+});
+
 describe('buildSnapshot', () => {
   it('keeps only visited countries and rounds the distance', () => {
     const s = buildSnapshot(

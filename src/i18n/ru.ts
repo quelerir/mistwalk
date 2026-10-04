@@ -140,6 +140,7 @@ export const ru = {
   'countries.found': 'Найдено мест: {found} из {total}',
   'countries.tabList': 'Список',
   'countries.tabMap': 'Карта',
+  'countries.republics': 'Республики',
   'worldMap.loadFailed': 'Не удалось загрузить карту.',
   'country.opened': 'Открыто {percent}',
   'country.citiesDetecting': 'Города · определяем…',

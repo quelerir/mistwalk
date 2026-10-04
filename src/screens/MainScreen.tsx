@@ -40,6 +40,7 @@ import NotificationsScreen from './NotificationsScreen';
 import { useNotifications } from '../hooks/useNotifications';
 import CountryPlacesScreen from './CountryPlacesScreen';
 import { cellKey, groupPlacesByCountry, type CountryStat } from '../lib/geo/countryStats';
+import { countryCodeAt } from '../lib/geo/republics';
 import { useRoute } from '../hooks/useRoute';
 import type { DiscoveredPlace, Poi, PoiKind } from '../lib/poi/types';
 import { getHiddenKinds, setHiddenKinds } from '../lib/poi/kindFilter';
@@ -209,13 +210,19 @@ export default function MainScreen({
     return loaded ? { ...detailPlace, wikipedia: loaded.wikipedia, wikidata: loaded.wikidata } : detailPlace;
   }, [detailPlace, pois]);
 
+  // The country, or the republic, a place belongs to: a republic border wins over the geocoder's cell.
+  const countryAt = useCallback(
+    (lat: number, lng: number) => countryCodeAt(lat, lng, (la, lo) => countryStats.cells[cellKey(la, lo)]?.code),
+    [countryStats.cells]
+  );
+
   const openCountryCode = openCountry?.code ?? null;
   const openCountryPoints = useMemo(
     () =>
       openCountryCode
-        ? points.filter((p) => countryStats.cells[cellKey(p.lat, p.lng)]?.code === openCountryCode)
+        ? points.filter((p) => countryAt(p.lat, p.lng) === openCountryCode)
         : [],
-    [points, countryStats.cells, openCountryCode]
+    [points, countryAt, openCountryCode]
   );
   const placesByCountry = useMemo(
     () => groupPlacesByCountry(discovered, pois, discoveredIds, countryStats.cells),
@@ -223,10 +230,6 @@ export default function MainScreen({
   );
 
   // The public profile needs every city, so resolve them all in the background.
-  const countryAt = useCallback(
-    (lat: number, lng: number) => countryStats.cells[cellKey(lat, lng)]?.code ?? null,
-    [countryStats.cells]
-  );
   const allCityStats = useCityStats(points, discovered, true, countryAt);
   const placeRegions = useMemo(() => {
     const regions: Record<string, PlaceRegion> = {};
@@ -588,6 +591,7 @@ export default function MainScreen({
         ) : showCountries ? (
           <CountriesScreen
             countries={countryStats.countries}
+            republics={countryStats.republics}
             pending={countryStats.pending}
             failed={countryStats.failed}
             placesByCountry={placesByCountry}

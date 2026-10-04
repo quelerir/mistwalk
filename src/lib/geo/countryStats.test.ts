@@ -1,11 +1,14 @@
 import {
   buildCountryList,
+  buildRepublicList,
   cellKey,
   fetchCountryAt,
   formatPercent,
   groupPlacesByCountry,
   groupPointsByCountry,
 } from './countryStats';
+import { COUNTRY_BY_CODE } from './countries';
+import { hostAreaAdjustment } from './republics';
 
 const AT = { code: 'AT', name: 'Австрия' };
 const point = (lat: number, lng: number, ts = 1) => ({ lat, lng, ts });
@@ -88,5 +91,56 @@ describe('groupPlacesByCountry', () => {
     expect(at?.discovered.map((p) => p.id)).toEqual(['b', 'a']);
     expect(at?.hidden.map((p) => p.id)).toEqual(['c']);
     expect(groups.size).toBe(1);
+  });
+});
+
+describe('republics', () => {
+  const GE = { code: 'GE', name: 'Грузия' };
+  // A short walk in Sukhumi (inside Abkhazia) and one in Tbilisi (Georgia proper); the geocoder says Georgia for both.
+  const sukhumi = [point(43.0, 41.02), point(43.001, 41.02), point(43.002, 41.02)];
+  const tbilisi = [point(41.72, 44.79), point(41.721, 44.79), point(41.722, 44.79)];
+  const cells = {
+    [cellKey(43.0, 41.02)]: GE,
+    [cellKey(41.72, 44.79)]: GE,
+  };
+  const byCode = <T extends { code: string }>(list: T[], code: string): T => list.find((c) => c.code === code)!;
+
+  it('counts a point inside Abkhazia for the republic and not for Georgia', () => {
+    const georgia = byCode(buildCountryList([...sukhumi, ...tbilisi], cells), 'GE');
+    const georgiaAlone = byCode(buildCountryList(tbilisi, cells), 'GE');
+    expect(georgia.exploredKm2).toBeGreaterThan(0);
+    expect(georgia.exploredKm2).toBe(georgiaAlone.exploredKm2);
+    const abkhazia = byCode(buildRepublicList([...sukhumi, ...tbilisi], cells), 'XA');
+    expect(abkhazia.exploredKm2).toBeGreaterThan(0);
+    expect(byCode(buildRepublicList(tbilisi, cells), 'XA').exploredKm2).toBe(0);
+  });
+
+  it('still counts a point outside every republic for the country of its cell', () => {
+    expect(byCode(buildCountryList(tbilisi, cells), 'GE').percent).toBeGreaterThan(0);
+  });
+
+  it('takes the area of the republics off the total of the country they lie in', () => {
+    const countries = buildCountryList([], cells);
+    expect(byCode(countries, 'GE').totalKm2).toBe(69700 - hostAreaAdjustment('GE'));
+    for (const host of ['GE', 'MD', 'CY', 'SO']) expect(byCode(countries, host).totalKm2).toBeGreaterThan(0);
+    expect(byCode(countries, 'FR').totalKm2).toBe(COUNTRY_BY_CODE.FR.areaKm2);
+    expect(countries.length).toBeGreaterThan(200);
+    expect(countries.some((c) => c.code.startsWith('X') && c.code !== 'XK')).toBe(false);
+  });
+
+  it('lists the five republics, the visited one first, in the language asked', () => {
+    const ru = buildRepublicList(sukhumi, cells, 'ru');
+    expect(ru).toHaveLength(5);
+    expect(ru[0]).toMatchObject({ code: 'XA', name: 'Абхазия' });
+    expect(ru[0].percent).toBeGreaterThan(0);
+    expect(ru.slice(1).every((r) => r.percent === 0)).toBe(true);
+    expect(buildRepublicList(sukhumi, cells, 'en')[0].name).toBe('Abkhazia');
+  });
+
+  it('puts a place in Sukhumi under the republic, not under Georgia', () => {
+    const place = { id: 'p', name: 'p', kind: 'monument' as const, lat: 43.0, lng: 41.02, discoveredAt: 1 };
+    const groups = groupPlacesByCountry([place], [], new Set(['p']), cells);
+    expect(groups.get('XA')?.discovered.map((x) => x.id)).toEqual(['p']);
+    expect(groups.get('GE')).toBeUndefined();
   });
 });

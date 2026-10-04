@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   buildCountryList,
+  buildRepublicList,
   cellKey,
   fetchCountryAt,
   toCountryRef,
@@ -93,7 +94,11 @@ export function useCountryStats(points: VisitedPoint[], enabled: boolean) {
     () => (ready ? buildCountryList(points, cells, lang) : []),
     [points, cells, ready, lang]
   );
+  const republics: CountryStat[] = useMemo(
+    () => (ready ? buildRepublicList(points, cells, lang) : []),
+    [points, cells, ready, lang]
+  );
 
   const pending = enabled && (!ready || unresolved.length > 0) && !failed;
-  return { countries, cells, pending, failed };
+  return { countries, republics, cells, pending, failed };
 }
