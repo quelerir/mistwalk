@@ -41,6 +41,11 @@ export const ru = {
   'tab.feed': 'Лента',
   'tab.chats': 'Чаты',
   'tab.menu': 'Меню',
+  'tab.profile': 'Профиль',
+  'profile.menu': 'Меню',
+  'profile.photoTitle': 'Фото профиля',
+  'profile.choosePhoto': 'Выбрать фото',
+  'profile.removePhoto': 'Удалить фото',
 
   // Kinds of places
   'kind.viewpoint': 'Смотровая площадка',

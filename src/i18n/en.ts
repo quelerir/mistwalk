@@ -41,6 +41,11 @@ export const en: Record<Key, Text> = {
   'tab.feed': 'Feed',
   'tab.chats': 'Chats',
   'tab.menu': 'Menu',
+  'tab.profile': 'Profile',
+  'profile.menu': 'Menu',
+  'profile.photoTitle': 'Profile photo',
+  'profile.choosePhoto': 'Choose photo',
+  'profile.removePhoto': 'Remove photo',
 
   // Kinds of places
   'kind.viewpoint': 'Viewpoint',
