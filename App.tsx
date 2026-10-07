@@ -26,7 +26,6 @@ import {
 import { useLocationPermissions } from './src/hooks/useLocationPermissions';
 import RootNavigator from './src/navigation/RootNavigator';
 import MainScreen from './src/screens/MainScreen';
-import BackgroundPermissionPrompt from './src/components/BackgroundPermissionPrompt';
 import OfflineBanner from './src/components/OfflineBanner';
 import LocationPermissionBanner from './src/components/LocationPermissionBanner';
 import LocationIntroPrompt from './src/components/LocationIntroPrompt';
@@ -42,7 +41,6 @@ try {
 
 const LIVE_POSITION_INTERVAL_METERS = 5;
 const BACKGROUND_PERMISSION_POLLS = 12;
-const BACKGROUND_PROMPT_DISMISSED_KEY = 'permissions.backgroundPrompt.dismissed.v1';
 
 export default function App() {
   const [fontsLoaded, fontError] = useFonts(FONT_ASSETS);
@@ -79,7 +77,6 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
   const subscriptionRef = useRef<LocationSubscription | null>(null);
   const startBackgroundRef = useRef<(() => Promise<void>) | null>(null);
   const [backgroundEnabled, setBackgroundEnabled] = useState(false);
-  const [showBackgroundPrompt, setShowBackgroundPrompt] = useState(false);
 
   // iOS resolves the "Always" upgrade prompt asynchronously, so the status right
   // after requestBackground() can still be stale; re-check for a few seconds.
@@ -105,16 +102,6 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
     // iOS shows the system prompt only once; afterwards the user must use Settings.
     if (!granted) await Linking.openSettings();
     return granted;
-  }
-
-  async function handleAcceptPrompt() {
-    setShowBackgroundPrompt(false);
-    await activateBackground();
-  }
-
-  function handleDeclinePrompt() {
-    setShowBackgroundPrompt(false);
-    void AsyncStorage.setItem(BACKGROUND_PROMPT_DISMISSED_KEY, '1');
   }
 
   useEffect(() => {
@@ -220,13 +207,12 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
           })().catch((err) => console.warn('[App] failed to apply accuracy change', err));
         });
 
+        // Background tracking resumes when it was allowed before. It is not offered on the first launch: one explanation
+        // and one system prompt are enough there; the person can turn it on later in the profile.
         const existing = await Location.getBackgroundPermissionsAsync();
         if (existing.status === 'granted') {
           await startBackgroundRef.current();
           if (!cancelled) setBackgroundEnabled(true);
-        } else {
-          const dismissed = await AsyncStorage.getItem(BACKGROUND_PROMPT_DISMISSED_KEY);
-          if (!cancelled && !dismissed) setShowBackgroundPrompt(true);
         }
       }
     })();
@@ -263,11 +249,6 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
         <OfflineBanner />
         <LocationPermissionBanner stage={stage} onRequestForeground={requestForeground} />
         <LocationIntroPrompt visible={introVisible} onContinue={continueIntro} />
-        <BackgroundPermissionPrompt
-          visible={showBackgroundPrompt}
-          onAccept={() => void handleAcceptPrompt()}
-          onDecline={handleDeclinePrompt}
-        />
         <MainScreen
           backgroundEnabled={backgroundEnabled}
           onEnableBackground={enableBackground}
