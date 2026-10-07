@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import SignInScreen from './SignInScreen';
 
@@ -8,13 +8,14 @@ jest.mock('react-native-safe-area-context', () => require('react-native-safe-are
 // What sign-up returns while email confirmation is off: a session at once.
 const WITH_SESSION = { data: { user: { id: 'u1' }, session: { access_token: 't' } }, error: null };
 
-function makeClient(overrides: { signUp?: jest.Mock; signIn?: jest.Mock; rpc?: jest.Mock; resend?: jest.Mock } = {}) {
+function makeClient(overrides: { signUp?: jest.Mock; signIn?: jest.Mock; rpc?: jest.Mock; resend?: jest.Mock; signInWithOtp?: jest.Mock } = {}) {
   return {
     rpc: overrides.rpc ?? jest.fn().mockResolvedValue({ data: true, error: null }),
     auth: {
       signUp: overrides.signUp ?? jest.fn().mockResolvedValue(WITH_SESSION),
       resend: overrides.resend ?? jest.fn().mockResolvedValue({ data: {}, error: null }),
       verifyOtp: jest.fn().mockResolvedValue({ data: { session: { access_token: 't' } }, error: null }),
+      signInWithOtp: overrides.signInWithOtp ?? jest.fn().mockResolvedValue({ data: {}, error: null }),
       signInWithPassword: overrides.signIn ?? jest.fn().mockResolvedValue({ data: { user: { id: 'u1' } }, error: null }),
     },
   } as unknown as SupabaseClient;
@@ -118,6 +119,75 @@ describe('SignInScreen', () => {
     expect(queryByText(/Fill in this field|Заполните поле/)).toBeNull();
     fireEvent(getByTestId('signin-password'), 'submitEditing');
     expect(getAllByText(/Fill in this field|Заполните поле/).length).toBeGreaterThan(0);
+  });
+
+  describe('sign-in by a code from the email', () => {
+    function openCodeMode(client = makeClient()) {
+      const utils = render(<SignInScreen client={client} onSignedIn={jest.fn()} />);
+      fireEvent.press(utils.getByTestId('signin-code-link'));
+      return { ...utils, client };
+    }
+
+    it('shows a link to code mode on the sign-in tab and not on the sign-up tab', () => {
+      const { getByTestId, queryByTestId } = render(<SignInScreen client={makeClient()} onSignedIn={jest.fn()} />);
+      expect(getByTestId('signin-code-link')).toBeTruthy();
+      fireEvent.press(getByTestId('signin-tab-up'));
+      expect(queryByTestId('signin-code-link')).toBeNull();
+    });
+
+    it('code mode shows only the email field and the send button', () => {
+      const { getByTestId, queryByTestId } = openCodeMode();
+      expect(getByTestId('signin-email')).toBeTruthy();
+      expect(getByTestId('signin-code-send')).toBeTruthy();
+      expect(queryByTestId('signin-password')).toBeNull();
+      expect(queryByTestId('signin-submit')).toBeNull();
+    });
+
+    it('an empty or malformed email is not sent and shows the email error', () => {
+      const { getByTestId, getByText, client } = openCodeMode();
+      fireEvent.press(getByTestId('signin-code-send'));
+      expect(client.auth.signInWithOtp).not.toHaveBeenCalled();
+      fireEvent.changeText(getByTestId('signin-email'), 'not-an-email');
+      fireEvent.press(getByTestId('signin-code-send'));
+      expect(client.auth.signInWithOtp).not.toHaveBeenCalled();
+      expect(getByText(/Enter the full email|Введите email полностью/)).toBeTruthy();
+    });
+
+    it('a valid email sends the code and opens the code screen for that address', async () => {
+      const { getByTestId, client } = openCodeMode();
+      fireEvent.changeText(getByTestId('signin-email'), ' a@b.co ');
+      fireEvent.press(getByTestId('signin-code-send'));
+      await waitFor(() => expect(getByTestId('verify-code')).toBeTruthy());
+      expect(client.auth.signInWithOtp).toHaveBeenCalledWith({ email: 'a@b.co', options: { shouldCreateUser: true } });
+    });
+
+    it('a second tap while the request is pending sends only one', async () => {
+      let resolve!: (v: unknown) => void;
+      const signInWithOtp = jest.fn().mockReturnValue(new Promise((r) => (resolve = r)));
+      const { getByTestId } = openCodeMode(makeClient({ signInWithOtp }));
+      fireEvent.changeText(getByTestId('signin-email'), 'a@b.co');
+      fireEvent.press(getByTestId('signin-code-send'));
+      fireEvent.press(getByTestId('signin-code-send'));
+      expect(signInWithOtp).toHaveBeenCalledTimes(1);
+      await act(async () => resolve({ data: {}, error: null }));
+    });
+
+    it('a failed send shows the mapped error and stays in code mode', async () => {
+      const signInWithOtp = jest.fn().mockResolvedValue({ data: null, error: { message: 'x', code: 'over_email_send_rate_limit' } });
+      const { getByTestId, findByText } = openCodeMode(makeClient({ signInWithOtp }));
+      fireEvent.changeText(getByTestId('signin-email'), 'a@b.co');
+      fireEvent.press(getByTestId('signin-code-send'));
+      expect(await findByText(/Too many attempts|Слишком много попыток/)).toBeTruthy();
+      expect(getByTestId('signin-code-send')).toBeTruthy();
+    });
+
+    it('the back link returns to the password form with the typed email kept', () => {
+      const { getByTestId } = openCodeMode();
+      fireEvent.changeText(getByTestId('signin-email'), 'a@b.co');
+      fireEvent.press(getByTestId('signin-code-back'));
+      expect(getByTestId('signin-password')).toBeTruthy();
+      expect(getByTestId('signin-email').props.value).toBe('a@b.co');
+    });
   });
 
   describe('email confirmation', () => {

@@ -17,13 +17,14 @@ import { useLoginAvailability } from '../hooks/useLoginAvailability';
 import {
   mapAuthError,
   normalizeLogin,
+  validateEmail,
   validateSignIn,
   validateSignUp,
   type ErrorCode,
   type Field,
 } from '../lib/auth/validation';
 import { ERROR_KEYS } from '../lib/auth/errorKeys';
-import { resendCode, signIn, signUp } from '../lib/supabase/auth';
+import { resendCode, sendLoginCode, signIn, signUp } from '../lib/supabase/auth';
 import VerifyEmailScreen from './VerifyEmailScreen';
 import { useStyles } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
@@ -49,6 +50,11 @@ export default function SignInScreen({ client, onSignedIn }: SignInScreenProps) 
   const [busy, setBusy] = useState(false);
   // Set while a code from the email is awaited; the form's values stay as they were.
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  // What the awaited code is for, and whether the form asks for the email alone to send a sign-in code.
+  const [pendingPurpose, setPendingPurpose] = useState<'signup' | 'login'>('signup');
+  const [codeMode, setCodeMode] = useState(false);
+  // A ref as well as the state: two quick taps run before the state has redrawn.
+  const sending = useRef(false);
   // What the server said: on a field, or about the form as a whole.
   const [serverError, setServerError] = useState<{ field: Field | null; code: ErrorCode } | null>(null);
 
@@ -72,6 +78,7 @@ export default function SignInScreen({ client, onSignedIn }: SignInScreenProps) 
 
   function switchMode(next: Mode) {
     setMode(next);
+    setCodeMode(false);
     setTouched({});
     setServerError(null);
   }
@@ -143,8 +150,41 @@ export default function SignInScreen({ client, onSignedIn }: SignInScreenProps) 
             ? { text: t('signin.err.loginFormat'), tone: 'bad' as const }
             : { text: t('signin.loginHint'), tone: 'muted' as const };
 
+  async function sendCode() {
+    if (sending.current) return;
+    if (validateEmail(values.email) !== null) {
+      touch('email');
+      return;
+    }
+    sending.current = true;
+    setBusy(true);
+    setServerError(null);
+    const email = values.email.trim();
+    try {
+      await sendLoginCode(client, email);
+      setPendingPurpose('login');
+      setPendingEmail(email);
+    } catch (err) {
+      setServerError(mapAuthError(err));
+    } finally {
+      sending.current = false;
+      setBusy(false);
+    }
+  }
+
   if (pendingEmail) {
-    return <VerifyEmailScreen client={client} email={pendingEmail} onVerified={onSignedIn} onBack={() => setPendingEmail(null)} />;
+    return (
+      <VerifyEmailScreen
+        client={client}
+        email={pendingEmail}
+        purpose={pendingPurpose}
+        onVerified={onSignedIn}
+        onBack={() => {
+          setPendingEmail(null);
+          setPendingPurpose('signup');
+        }}
+      />
+    );
   }
 
   return (
@@ -247,6 +287,7 @@ export default function SignInScreen({ client, onSignedIn }: SignInScreenProps) 
               returnKeyType="next"
               onSubmitEditing={() => passwordRef.current?.focus()}
             />
+            {!codeMode && (
             <AuthField
               ref={passwordRef}
               testID="signin-password"
@@ -267,21 +308,47 @@ export default function SignInScreen({ client, onSignedIn }: SignInScreenProps) 
                 </Pressable>
               }
             />
+            )}
 
             {serverError && serverError.field === null && (
               <Text style={styles.formError}>{t(ERROR_KEYS[serverError.code])}</Text>
             )}
 
-            <Pressable
-              testID="signin-submit"
-              style={[styles.submit, !canSubmit && styles.submitOff]}
-              onPress={() => void submit()}
-              disabled={!canSubmit}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: !canSubmit, busy }}
-            >
-              <Text style={styles.submitText}>{t(up ? 'signin.signUp' : 'signin.signIn')}</Text>
-            </Pressable>
+            {codeMode ? (
+              <>
+                <Pressable
+                  testID="signin-code-send"
+                  style={[styles.submit, busy && styles.submitOff]}
+                  onPress={() => void sendCode()}
+                  disabled={busy}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: busy, busy }}
+                >
+                  <Text style={styles.submitText}>{t('signin.codeSend')}</Text>
+                </Pressable>
+                <Pressable testID="signin-code-back" onPress={() => setCodeMode(false)} style={styles.link} accessibilityRole="button">
+                  <Text style={styles.linkText}>{t('signin.codeBack')}</Text>
+                </Pressable>
+              </>
+            ) : (
+              <>
+                <Pressable
+                  testID="signin-submit"
+                  style={[styles.submit, !canSubmit && styles.submitOff]}
+                  onPress={() => void submit()}
+                  disabled={!canSubmit}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: !canSubmit, busy }}
+                >
+                  <Text style={styles.submitText}>{t(up ? 'signin.signUp' : 'signin.signIn')}</Text>
+                </Pressable>
+                {!up && (
+                  <Pressable testID="signin-code-link" onPress={() => setCodeMode(true)} style={styles.link} accessibilityRole="button">
+                    <Text style={styles.linkText}>{t('signin.codeLink')}</Text>
+                  </Pressable>
+                )}
+              </>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -319,4 +386,6 @@ const makeStyles = (c: Colors) =>
     submit: { backgroundColor: c.buttonBg, borderRadius: 14, minHeight: 52, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
     submitOff: { opacity: 0.5 },
     submitText: { color: c.buttonText, fontSize: 17, fontWeight: '700' },
+    link: { alignItems: 'center', paddingVertical: 6 },
+    linkText: { color: c.link, fontSize: 14, fontWeight: '600' },
   });

@@ -105,6 +105,8 @@ export function mapAuthError(err: unknown): { field: Field | null; code: ErrorCo
   if (code === 'user_already_exists' || /already (been )?registered/i.test(message)) return { field: 'email', code: 'emailTaken' };
   // A taken login makes the sign-up trigger fail, which Supabase reports only in general terms.
   if (/database error saving new user/i.test(message)) return { field: 'login', code: 'loginTaken' };
+  // set_login raises this when the login was taken after the live check.
+  if (/login_taken/.test(message)) return { field: 'login', code: 'loginTaken' };
   if (code === 'weak_password' || /password should be|weak password/i.test(message)) return { field: 'password', code: 'passwordWeak' };
   // Supabase answers a wrong and an expired code alike.
   if (code === 'otp_expired' || /expired or is invalid/i.test(message)) return { field: null, code: 'codeInvalid' };

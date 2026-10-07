@@ -97,6 +97,7 @@ describe('mapAuthError', () => {
     [{ message: 'User already registered' }, 'email', 'emailTaken'],
     [{ message: 'x', code: 'user_already_exists' }, 'email', 'emailTaken'],
     [{ message: 'Database error saving new user' }, 'login', 'loginTaken'],
+    [{ message: 'login_taken' }, 'login', 'loginTaken'],
     [{ message: 'Password should be at least 6 characters.' }, 'password', 'passwordWeak'],
     [{ message: 'x', code: 'weak_password' }, 'password', 'passwordWeak'],
     [{ message: 'Network request failed' }, null, 'network'],

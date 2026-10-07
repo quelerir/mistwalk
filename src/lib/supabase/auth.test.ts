@@ -1,4 +1,4 @@
-import { verifyEmail, resendCode, signUp, signIn, signOut, signOutLocal, getSession, checkLoginAvailable, deleteAccount } from './auth';
+import { sendLoginCode, setLogin, verifyEmail, resendCode, signUp, signIn, signOut, signOutLocal, getSession, checkLoginAvailable, deleteAccount } from './auth';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 function makeFakeClient(
@@ -15,6 +15,7 @@ function makeFakeClient(
       signOut: jest.fn().mockResolvedValue({ error: null }),
       verifyOtp: jest.fn().mockResolvedValue({ data: { session: { access_token: 't' }, user: { id: 'u1' } }, error: null }),
       resend: jest.fn().mockResolvedValue({ data: {}, error: null }),
+      signInWithOtp: jest.fn().mockResolvedValue({ data: {}, error: null }),
       getSession: jest.fn().mockResolvedValue({ data: { session: { user: { id: 'u1' } } }, error: null }),
       ...overrides,
     },
@@ -120,5 +121,28 @@ describe('auth wrappers', () => {
     const functionsInvoke = jest.fn().mockResolvedValue({ data: null, error: new Error('unreachable') });
     const client = makeFakeClient({}, undefined, functionsInvoke);
     await expect(deleteAccount(client)).rejects.toThrow('unreachable');
+  });
+  it('sendLoginCode calls signInWithOtp with the email and shouldCreateUser true', async () => {
+    const client = makeFakeClient();
+    await sendLoginCode(client, 'a@b.com');
+    expect(client.auth.signInWithOtp).toHaveBeenCalledWith({ email: 'a@b.com', options: { shouldCreateUser: true } });
+  });
+
+  it('sendLoginCode throws the error signInWithOtp returns', async () => {
+    const client = makeFakeClient({ signInWithOtp: jest.fn().mockResolvedValue({ data: null, error: new Error('rate limit') }) });
+    await expect(sendLoginCode(client, 'a@b.com')).rejects.toThrow('rate limit');
+  });
+
+  it('setLogin calls rpc set_login with the candidate', async () => {
+    const rpc = jest.fn().mockResolvedValue({ data: null, error: null });
+    const client = makeFakeClient({}, rpc);
+    await setLogin(client, 'anna_k');
+    expect(rpc).toHaveBeenCalledWith('set_login', { candidate: 'anna_k' });
+  });
+
+  it('setLogin throws the error rpc returns', async () => {
+    const rpc = jest.fn().mockResolvedValue({ data: null, error: new Error('login_taken') });
+    const client = makeFakeClient({}, rpc);
+    await expect(setLogin(client, 'anna_k')).rejects.toThrow('login_taken');
   });
 });

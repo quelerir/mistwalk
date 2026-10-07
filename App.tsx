@@ -11,7 +11,8 @@ import { ThemeProvider, useTheme } from './src/theme/ThemeProvider';
 import { I18nProvider } from './src/i18n/I18nProvider';
 import { tNow } from './src/i18n';
 import { getEnvSupabaseClient } from './src/lib/supabase/client';
-import { getSession } from './src/lib/supabase/auth';
+import { getSession, signOut, signOutLocal } from './src/lib/supabase/auth';
+import { performSignOut } from './src/lib/session/signOutFlow';
 import { getAccuracyProfile, onAccuracyProfileChange, DISTANCE_INTERVAL_METERS } from './src/lib/settings/accuracyProfile';
 import { createProgressStore } from './src/store/progressStore';
 import { startForegroundTracking, stopForegroundTracking } from './src/services/locationTracker';
@@ -238,12 +239,25 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
+  // Signing out from the choose-login screen: the location trackers already started with the session, so they stop here
+  // exactly as they do when MainScreen signs out.
+  function handleChooseLoginSignOut() {
+    return performSignOut({
+      stopForeground: () => stopForegroundTracking(subscriptionRef.current),
+      stopBackground: stopBackgroundTracking,
+      signOutRemote: () => signOut(client),
+      signOutLocal: () => signOutLocal(client),
+      onSignedOut: () => setSession(null),
+      onWarn: (message, err) => console.warn('[sign-out]', message, err),
+    });
+  }
+
   // Signed in, MainScreen handles the top inset itself so the map can run under the status bar.
   return (
     <SafeAreaProvider>
     <StatusBar barStyle={!session || scheme === 'dark' ? 'light-content' : 'dark-content'} />
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={[]}>
-      <RootNavigator client={client} session={session} onSignedIn={() => getSession(client).then(setSession)}>
+      <RootNavigator client={client} session={session} onSignedIn={() => getSession(client).then(setSession)} onSignOut={handleChooseLoginSignOut}>
         <OfflineBanner />
         <LocationPermissionBanner stage={stage} onRequestForeground={requestForeground} />
         <BackgroundPermissionPrompt

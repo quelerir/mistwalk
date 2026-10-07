@@ -5,21 +5,22 @@ import VerifyEmailScreen from './VerifyEmailScreen';
 
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 
-function makeClient(overrides: { verifyOtp?: jest.Mock; resend?: jest.Mock } = {}) {
+function makeClient(overrides: { verifyOtp?: jest.Mock; resend?: jest.Mock; signInWithOtp?: jest.Mock } = {}) {
   return {
     auth: {
       verifyOtp: overrides.verifyOtp ?? jest.fn().mockResolvedValue({ data: { session: { access_token: 't' } }, error: null }),
       resend: overrides.resend ?? jest.fn().mockResolvedValue({ data: {}, error: null }),
+      signInWithOtp: overrides.signInWithOtp ?? jest.fn().mockResolvedValue({ data: {}, error: null }),
     },
   } as unknown as SupabaseClient;
 }
 
-function setup(props: { client?: SupabaseClient; initialCooldown?: number } = {}) {
+function setup(props: { client?: SupabaseClient; initialCooldown?: number; purpose?: 'signup' | 'login' } = {}) {
   const onVerified = jest.fn();
   const onBack = jest.fn();
   const client = props.client ?? makeClient();
   const utils = render(
-    <VerifyEmailScreen client={client} email="a@b.co" onVerified={onVerified} onBack={onBack} initialCooldown={props.initialCooldown} />,
+    <VerifyEmailScreen client={client} email="a@b.co" onVerified={onVerified} onBack={onBack} initialCooldown={props.initialCooldown} purpose={props.purpose} />,
   );
   return { ...utils, client, onVerified, onBack };
 }
@@ -85,6 +86,16 @@ describe('VerifyEmailScreen', () => {
     await waitFor(() => expect(disabled(getByTestId('verify-submit'))).toBe(false));
   });
 
+  it('with purpose "login" a wrong code shows the codeInvalid message and the buttons work again', async () => {
+    const verifyOtp = jest.fn().mockResolvedValue({ data: null, error: { message: 'Token has expired or is invalid', code: 'otp_expired' } });
+    const { getByTestId, findByText, onVerified } = setup({ client: makeClient({ verifyOtp }), purpose: 'login' });
+    fireEvent.changeText(getByTestId('verify-code'), '000000');
+    fireEvent.press(getByTestId('verify-submit'));
+    expect(await findByText(/Wrong or expired code|Неверный код/)).toBeTruthy();
+    expect(onVerified).not.toHaveBeenCalled();
+    await waitFor(() => expect(disabled(getByTestId('verify-submit'))).toBe(false));
+  });
+
   it('"use another email" calls onBack', () => {
     const { getByTestId, onBack } = setup();
     fireEvent.press(getByTestId('verify-back'));
@@ -107,6 +118,30 @@ describe('VerifyEmailScreen', () => {
       await act(async () => { fireEvent.press(getByTestId('verify-resend')); });
       expect(client.auth.resend).toHaveBeenCalledWith({ type: 'signup', email: 'a@b.co' });
       expect(disabled(getByTestId('verify-resend'))).toBe(true);
+    });
+
+    it('with purpose "login" send again calls signInWithOtp and not resend', async () => {
+      const { getByTestId, client } = setup({ initialCooldown: 0, purpose: 'login' });
+      await act(async () => { fireEvent.press(getByTestId('verify-resend')); });
+      expect(client.auth.signInWithOtp).toHaveBeenCalledWith({ email: 'a@b.co', options: { shouldCreateUser: true } });
+      expect(client.auth.resend).not.toHaveBeenCalled();
+    });
+
+    it('with the default purpose send again calls resend and not signInWithOtp', async () => {
+      const { getByTestId, client } = setup({ initialCooldown: 0 });
+      await act(async () => { fireEvent.press(getByTestId('verify-resend')); });
+      expect(client.auth.resend).toHaveBeenCalledWith({ type: 'signup', email: 'a@b.co' });
+      expect(client.auth.signInWithOtp).not.toHaveBeenCalled();
+    });
+
+    it('a second tap on send again while the first request is pending sends only one', async () => {
+      let resolve!: (v: unknown) => void;
+      const signInWithOtp = jest.fn().mockReturnValue(new Promise((r) => (resolve = r)));
+      const { getByTestId } = setup({ client: makeClient({ signInWithOtp }), initialCooldown: 0, purpose: 'login' });
+      fireEvent.press(getByTestId('verify-resend'));
+      fireEvent.press(getByTestId('verify-resend'));
+      expect(signInWithOtp).toHaveBeenCalledTimes(1);
+      await act(async () => resolve({ data: {}, error: null }));
     });
 
     it('a rate-limit error from resend shows the tooManyRequests message', async () => {
