@@ -5,7 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import AuthField from '../components/AuthField';
 import { ERROR_KEYS } from '../lib/auth/errorKeys';
 import { mapAuthError, normalizeCode, validateCode, type ErrorCode } from '../lib/auth/validation';
-import { resendCode, verifyEmail } from '../lib/supabase/auth';
+import { resendCode, sendLoginCode, verifyEmail } from '../lib/supabase/auth';
 import { useStyles } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import { useT } from '../i18n/I18nProvider';
@@ -15,14 +15,16 @@ export interface VerifyEmailScreenProps {
   email: string;
   onVerified: () => void;
   onBack: () => void;
+  // What the code is for: it decides how "send again" sends it.
+  purpose?: 'signup' | 'login';
   // Seconds before the first "send again"; a prop so tests need not wait a minute.
   initialCooldown?: number;
 }
 
 const RESEND_SECONDS = 60;
 
-// The second step of a sign-up: the person types the 6-digit code that came to their email.
-export default function VerifyEmailScreen({ client, email, onVerified, onBack, initialCooldown = RESEND_SECONDS }: VerifyEmailScreenProps) {
+// The second step of a sign-up or a sign-in by code: the person types the 6-digit code that came to their email.
+export default function VerifyEmailScreen({ client, email, onVerified, onBack, initialCooldown = RESEND_SECONDS, purpose = 'signup' }: VerifyEmailScreenProps) {
   const t = useT();
   const insets = useSafeAreaInsets();
   const styles = useStyles(makeStyles);
@@ -67,7 +69,7 @@ export default function VerifyEmailScreen({ client, email, onVerified, onBack, i
   const resend = () => {
     if (cooldown > 0) return;
     void run(async () => {
-      await resendCode(client, email);
+      await (purpose === 'login' ? sendLoginCode(client, email) : resendCode(client, email));
       setCooldown(RESEND_SECONDS);
     });
   };
