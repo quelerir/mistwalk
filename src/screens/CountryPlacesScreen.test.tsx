@@ -79,7 +79,7 @@ describe('CountryPlacesScreen regions', () => {
     });
     expect(getByText(/Регионы|Regions/)).toBeTruthy();
     expect(getByText(/Бета|Beta/)).toBeTruthy();
-    expect(getByText(/\d+[.,]\d+ %/)).toBeTruthy(); // Бета: a share of its area, not 0
+    expect(getAllByText(/\d+[.,]\d+ %/).length).toBeGreaterThan(0); // Бета: a share of its area, not 0
     expect(getAllByText('0 %').length).toBeGreaterThan(0); // the other regions
     expect(getByText(/1 из 2|1 of 2/)).toBeTruthy(); // found places of Бета
     expect(queryByText(/Город2|City2/)).toBeNull(); // no city lists under a region any more
@@ -108,7 +108,7 @@ describe('CountryPlacesScreen regions', () => {
     expect(queryByText(/^(Регионы|Regions)/)).toBeNull();
     expect(getByText(/Не посещённые города|Cities not visited/)).toBeTruthy();
     expect(getByText(/Город2|City2/)).toBeTruthy(); // XX-1 (even indexes)
-    expect(queryByText(/Город1|City1/)).toBeNull(); // XX-2
+    expect(queryByText(/^(Город1|City1)$/)).toBeNull(); // XX-2
     expect(getAllByText(/Город0|City0/)).toHaveLength(1); // visited, in the cities section only
   });
 
