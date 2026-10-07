@@ -183,7 +183,7 @@ export default function CountryPlacesScreen({
                   />
                 </View>
                 <View style={styles.hiddenText}>
-                  <Text style={[styles.name, item.region.percent === 0 && styles.muted]} numberOfLines={1}>
+                  <Text style={[styles.name, styles.regionName, item.region.percent === 0 && styles.muted]} numberOfLines={1}>
                     {item.region.name}
                   </Text>
                   {item.region.total > 0 && (
@@ -306,6 +306,8 @@ const makeStyles = (c: Colors) => StyleSheet.create({
   name: { flex: 1, fontSize: 15, fontWeight: '600', color: c.text },
   muted: { color: c.textMuted, fontWeight: '500' },
   hiddenText: { flex: 1 },
+  // `name` fills the row; inside a column it must only take its own height, or it sticks to the top.
+  regionName: { flex: 0 },
   where: { marginTop: 2, color: c.textFaint },
   date: { color: c.textMuted, marginLeft: 8 },
 });
