@@ -31,6 +31,18 @@ export async function resendCode(client: SupabaseClient, email: string): Promise
   if (error) throw error;
 }
 
+// Sends a 6-digit sign-in code to the address. Someone new gets an account; their login is chosen afterwards.
+export async function sendLoginCode(client: SupabaseClient, email: string): Promise<void> {
+  const { error } = await client.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+  if (error) throw error;
+}
+
+// Sets the signed-in player's login; the server raises invalid_login, login_taken or no_profile.
+export async function setLogin(client: SupabaseClient, login: string): Promise<void> {
+  const { error } = await client.rpc('set_login', { candidate: login });
+  if (error) throw error;
+}
+
 export async function checkLoginAvailable(client: SupabaseClient, login: string): Promise<boolean> {
   const { data, error } = await client.rpc('login_available', { candidate: login });
   if (error) throw error;

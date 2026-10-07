@@ -1,55 +1,55 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { ImageBackground, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import AuthField from '../components/AuthField';
+import { useLoginAvailability } from '../hooks/useLoginAvailability';
 import { ERROR_KEYS } from '../lib/auth/errorKeys';
-import { mapAuthError, normalizeCode, validateCode, type ErrorCode } from '../lib/auth/validation';
-import { resendCode, sendLoginCode, verifyEmail } from '../lib/supabase/auth';
+import { mapAuthError, normalizeLogin, type ErrorCode } from '../lib/auth/validation';
+import { setLogin } from '../lib/supabase/auth';
 import { useStyles } from '../theme/ThemeProvider';
 import type { Colors } from '../theme/palettes';
 import { useT } from '../i18n/I18nProvider';
 
-export interface VerifyEmailScreenProps {
+export interface ChooseLoginScreenProps {
   client: SupabaseClient;
-  email: string;
-  onVerified: () => void;
-  onBack: () => void;
-  // What the code is for: it decides how "send again" sends it.
-  purpose?: 'signup' | 'login';
-  // Seconds before the first "send again"; a prop so tests need not wait a minute.
-  initialCooldown?: number;
+  onDone: () => void;
+  onSignOut: () => void;
 }
 
-const RESEND_SECONDS = 60;
-
-// The second step of a sign-up or a sign-in by code: the person types the 6-digit code that came to their email.
-export default function VerifyEmailScreen({ client, email, onVerified, onBack, initialCooldown = RESEND_SECONDS, purpose = 'signup' }: VerifyEmailScreenProps) {
+// Shown once to someone who signed in with a code from the email for the first time: they pick the login other players see.
+export default function ChooseLoginScreen({ client, onDone, onSignOut }: ChooseLoginScreenProps) {
   const t = useT();
   const insets = useSafeAreaInsets();
   const styles = useStyles(makeStyles);
-  const [code, setCode] = useState('');
+  const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ErrorCode | null>(null);
-  const [cooldown, setCooldown] = useState(initialCooldown);
   // A ref as well as the state: two quick taps run before the state has redrawn.
   const working = useRef(false);
+  const status = useLoginAvailability(client, value);
 
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const id = setTimeout(() => setCooldown((s) => s - 1), 1000);
-    return () => clearTimeout(id);
-  }, [cooldown]);
+  const canSubmit = !busy && status === 'free';
 
-  const canSubmit = !busy && validateCode(code) === null;
+  const note =
+    status === 'checking'
+      ? { text: t('signin.login.checking'), tone: 'muted' as const }
+      : status === 'free'
+        ? { text: t('signin.login.free'), tone: 'ok' as const }
+        : status === 'taken'
+          ? { text: t('signin.login.taken'), tone: 'bad' as const }
+          : status === 'invalid'
+            ? { text: t('signin.err.loginFormat'), tone: 'bad' as const }
+            : { text: t('signin.loginHint'), tone: 'muted' as const };
 
-  async function run(action: () => Promise<void>) {
-    if (working.current) return;
+  async function submit() {
+    if (working.current || status !== 'free') return;
     working.current = true;
     setBusy(true);
     setError(null);
     try {
-      await action();
+      await setLogin(client, normalizeLogin(value));
+      onDone();
     } catch (err) {
       setError(mapAuthError(err).code);
     } finally {
@@ -57,22 +57,6 @@ export default function VerifyEmailScreen({ client, email, onVerified, onBack, i
       setBusy(false);
     }
   }
-
-  const submit = () => {
-    if (validateCode(code) !== null) return;
-    void run(async () => {
-      await verifyEmail(client, email, normalizeCode(code));
-      onVerified();
-    });
-  };
-
-  const resend = () => {
-    if (cooldown > 0) return;
-    void run(async () => {
-      await (purpose === 'login' ? sendLoginCode(client, email) : resendCode(client, email));
-      setCooldown(RESEND_SECONDS);
-    });
-  };
 
   return (
     <ImageBackground source={require('../../assets/icon.png')} style={styles.fill} resizeMode="cover">
@@ -88,52 +72,40 @@ export default function VerifyEmailScreen({ client, email, onVerified, onBack, i
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.heading}>{t('verify.title')}</Text>
-            <Text style={styles.body}>{t('verify.body', { email })}</Text>
+            <Text style={styles.heading}>{t('chooseLogin.title')}</Text>
+            <Text style={styles.body}>{t('chooseLogin.body')}</Text>
 
             <AuthField
-              testID="verify-code"
-              label={t('verify.code')}
-              value={code}
+              testID="choose-login"
+              label={t('signin.login')}
+              prefix="@"
+              value={value}
               onChangeText={(x) => {
-                setCode(normalizeCode(x));
+                setValue(x);
                 setError(null);
               }}
               error={error ? t(ERROR_KEYS[error]) : null}
-              keyboardType="number-pad"
-              autoComplete="one-time-code"
-              textContentType="oneTimeCode"
+              note={note}
+              autoCapitalize="none"
               autoCorrect={false}
+              autoComplete="username-new"
               returnKeyType="go"
-              onSubmitEditing={submit}
+              onSubmitEditing={() => void submit()}
             />
 
             <Pressable
-              testID="verify-submit"
+              testID="choose-submit"
               style={[styles.submit, !canSubmit && styles.submitOff]}
-              onPress={submit}
+              onPress={() => void submit()}
               disabled={!canSubmit}
               accessibilityRole="button"
               accessibilityState={{ disabled: !canSubmit, busy }}
             >
-              <Text style={styles.submitText}>{t('verify.submit')}</Text>
+              <Text style={styles.submitText}>{t('chooseLogin.submit')}</Text>
             </Pressable>
 
-            <Pressable
-              testID="verify-resend"
-              onPress={resend}
-              disabled={cooldown > 0 || busy}
-              style={styles.link}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: cooldown > 0 || busy }}
-            >
-              <Text style={[styles.linkText, (cooldown > 0 || busy) && styles.linkOff]}>
-                {cooldown > 0 ? t('verify.resendIn', { n: cooldown }) : t('verify.resend')}
-              </Text>
-            </Pressable>
-
-            <Pressable testID="verify-back" onPress={onBack} style={styles.link} accessibilityRole="button">
-              <Text style={styles.linkText}>{t('verify.otherEmail')}</Text>
+            <Pressable testID="choose-signout" onPress={onSignOut} style={styles.link} accessibilityRole="button">
+              <Text style={styles.linkText}>{t('chooseLogin.signOut')}</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -161,11 +133,10 @@ const makeStyles = (c: Colors) =>
       elevation: 8,
     },
     heading: { color: c.text, fontSize: 20, fontWeight: '700' },
-    body: { color: c.textMuted, fontSize: 15, lineHeight: 21 },
+    body: { color: c.textMuted, fontSize: 14, lineHeight: 20 },
     submit: { backgroundColor: c.buttonBg, borderRadius: 14, minHeight: 52, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
     submitOff: { opacity: 0.5 },
     submitText: { color: c.buttonText, fontSize: 17, fontWeight: '700' },
-    link: { alignItems: 'center', paddingVertical: 8 },
-    linkText: { color: c.link, fontSize: 15, fontWeight: '600' },
-    linkOff: { opacity: 0.5 },
+    link: { alignItems: 'center', paddingVertical: 6 },
+    linkText: { color: c.link, fontSize: 14, fontWeight: '600' },
   });

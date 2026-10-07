@@ -11,7 +11,8 @@ import { ThemeProvider, useTheme } from './src/theme/ThemeProvider';
 import { I18nProvider } from './src/i18n/I18nProvider';
 import { tNow } from './src/i18n';
 import { getEnvSupabaseClient } from './src/lib/supabase/client';
-import { getSession } from './src/lib/supabase/auth';
+import { getSession, signOut, signOutLocal } from './src/lib/supabase/auth';
+import { performSignOut } from './src/lib/session/signOutFlow';
 import { getAccuracyProfile, onAccuracyProfileChange, DISTANCE_INTERVAL_METERS } from './src/lib/settings/accuracyProfile';
 import { createProgressStore } from './src/store/progressStore';
 import { startForegroundTracking, stopForegroundTracking } from './src/services/locationTracker';
@@ -25,9 +26,9 @@ import {
 import { useLocationPermissions } from './src/hooks/useLocationPermissions';
 import RootNavigator from './src/navigation/RootNavigator';
 import MainScreen from './src/screens/MainScreen';
-import BackgroundPermissionPrompt from './src/components/BackgroundPermissionPrompt';
 import OfflineBanner from './src/components/OfflineBanner';
 import LocationPermissionBanner from './src/components/LocationPermissionBanner';
+import LocationIntroPrompt from './src/components/LocationIntroPrompt';
 import type { LocationSubscription } from 'expo-location';
 import type { VisitedPoint } from './src/lib/supabase/visitedPoints';
 
@@ -40,7 +41,6 @@ try {
 
 const LIVE_POSITION_INTERVAL_METERS = 5;
 const BACKGROUND_PERMISSION_POLLS = 12;
-const BACKGROUND_PROMPT_DISMISSED_KEY = 'permissions.backgroundPrompt.dismissed.v1';
 
 export default function App() {
   const [fontsLoaded, fontError] = useFonts(FONT_ASSETS);
@@ -73,11 +73,10 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
   const [session, setSession] = useState<Session | null>(null);
   const [points, setPoints] = useState<VisitedPoint[]>([]);
   const [livePosition, setLivePosition] = useState<{ lat: number; lng: number } | null>(null);
-  const { stage, requestForeground, requestBackground } = useLocationPermissions();
+  const { stage, requestForeground, requestBackground, requestForegroundWithIntro, introVisible, continueIntro } = useLocationPermissions();
   const subscriptionRef = useRef<LocationSubscription | null>(null);
   const startBackgroundRef = useRef<(() => Promise<void>) | null>(null);
   const [backgroundEnabled, setBackgroundEnabled] = useState(false);
-  const [showBackgroundPrompt, setShowBackgroundPrompt] = useState(false);
 
   // iOS resolves the "Always" upgrade prompt asynchronously, so the status right
   // after requestBackground() can still be stale; re-check for a few seconds.
@@ -103,16 +102,6 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
     // iOS shows the system prompt only once; afterwards the user must use Settings.
     if (!granted) await Linking.openSettings();
     return granted;
-  }
-
-  async function handleAcceptPrompt() {
-    setShowBackgroundPrompt(false);
-    await activateBackground();
-  }
-
-  function handleDeclinePrompt() {
-    setShowBackgroundPrompt(false);
-    void AsyncStorage.setItem(BACKGROUND_PROMPT_DISMISSED_KEY, '1');
   }
 
   useEffect(() => {
@@ -177,7 +166,8 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
         }
       });
 
-      const foregroundOk = await requestForeground();
+      // The first time, the person reads why the location is needed and taps continue before the system asks.
+      const foregroundOk = await requestForegroundWithIntro();
       if (!cancelled && foregroundOk) {
         const startForeground = async () => {
           subscriptionRef.current = await startForegroundTracking(
@@ -217,13 +207,12 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
           })().catch((err) => console.warn('[App] failed to apply accuracy change', err));
         });
 
+        // Background tracking resumes when it was allowed before. It is not offered on the first launch: one explanation
+        // and one system prompt are enough there; the person can turn it on later in the profile.
         const existing = await Location.getBackgroundPermissionsAsync();
         if (existing.status === 'granted') {
           await startBackgroundRef.current();
           if (!cancelled) setBackgroundEnabled(true);
-        } else {
-          const dismissed = await AsyncStorage.getItem(BACKGROUND_PROMPT_DISMISSED_KEY);
-          if (!cancelled && !dismissed) setShowBackgroundPrompt(true);
         }
       }
     })();
@@ -238,19 +227,28 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
+  // Signing out from the choose-login screen: the location trackers already started with the session, so they stop here
+  // exactly as they do when MainScreen signs out.
+  function handleChooseLoginSignOut() {
+    return performSignOut({
+      stopForeground: () => stopForegroundTracking(subscriptionRef.current),
+      stopBackground: stopBackgroundTracking,
+      signOutRemote: () => signOut(client),
+      signOutLocal: () => signOutLocal(client),
+      onSignedOut: () => setSession(null),
+      onWarn: (message, err) => console.warn('[sign-out]', message, err),
+    });
+  }
+
   // Signed in, MainScreen handles the top inset itself so the map can run under the status bar.
   return (
     <SafeAreaProvider>
     <StatusBar barStyle={!session || scheme === 'dark' ? 'light-content' : 'dark-content'} />
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={[]}>
-      <RootNavigator client={client} session={session} onSignedIn={() => getSession(client).then(setSession)}>
+      <RootNavigator client={client} session={session} onSignedIn={() => getSession(client).then(setSession)} onSignOut={handleChooseLoginSignOut}>
         <OfflineBanner />
         <LocationPermissionBanner stage={stage} onRequestForeground={requestForeground} />
-        <BackgroundPermissionPrompt
-          visible={showBackgroundPrompt}
-          onAccept={() => void handleAcceptPrompt()}
-          onDecline={handleDeclinePrompt}
-        />
+        <LocationIntroPrompt visible={introVisible} onContinue={continueIntro} />
         <MainScreen
           backgroundEnabled={backgroundEnabled}
           onEnableBackground={enableBackground}
