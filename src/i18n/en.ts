@@ -234,7 +234,6 @@ export const en: Record<Key, Text> = {
   'menu.noEmail': 'No email',
   'menu.removePhoto': 'Remove photo',
   'menu.removePhotoFailed': 'Could not remove the photo',
-  'menu.inRating': 'Visible in the ranking',
   'menu.privacyPolicy': 'Privacy Policy',
   'menu.termsOfUse': 'Terms of Use',
   'menu.signOut': 'Sign out',

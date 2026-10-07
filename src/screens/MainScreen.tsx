@@ -512,8 +512,6 @@ export default function MainScreen({
                 onDeleteAccount={handleDeleteAccount}
                 onOpenBlocked={() => setShowBlocked(true)}
                 email={email}
-                leaderboardVisible={profileSync.profile?.isPublic ?? null}
-                onLeaderboardVisibleChange={profileSync.setVisible}
                 onSubmitFeedback={handleSubmitFeedback}
                 onBack={close}
               />

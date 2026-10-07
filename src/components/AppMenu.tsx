@@ -39,8 +39,6 @@ export interface AppMenuProps {
   onDeleteAccount: () => Promise<void>;
   onOpenBlocked: () => void;
   email: string;
-  leaderboardVisible: boolean | null;
-  onLeaderboardVisibleChange: (next: boolean) => Promise<void>;
   onSubmitFeedback: (message: string) => Promise<void>;
   // When given, the main page starts with a "Back" row (the menu is a page opened from the profile).
   onBack?: () => void;
@@ -66,8 +64,6 @@ export default function AppMenu({
   onDeleteAccount,
   onOpenBlocked,
   email,
-  leaderboardVisible,
-  onLeaderboardVisibleChange,
   onSubmitFeedback,
   onBack,
 }: AppMenuProps) {
@@ -141,23 +137,11 @@ export default function AppMenu({
     }
   }
 
-  const ratingItem: MenuItem =
-    leaderboardVisible === null
-      ? { key: 'rating', icon: 'award', label: t('menu.inRating'), value: '…', onPress: () => {} }
-      : {
-          key: 'rating',
-          icon: 'award',
-          label: t('menu.inRating'),
-          on: leaderboardVisible,
-          onPress: () => void onLeaderboardVisibleChange(!leaderboardVisible),
-        };
-
   const mainItems: MenuItem[] = [
     ...(onBack ? [{ key: 'back', icon: 'back' as const, label: t('common.back'), onPress: onBack }] : []),
     { key: 'email', icon: 'user', label: email || t('menu.noEmail'), onPress: () => {} },
     { key: 'settings', icon: 'settings', label: t('menu.settings'), onPress: () => setPage('settings') },
     { key: 'feedback', icon: 'mail', label: t('menu.feedback'), onPress: openFeedback },
-    ratingItem,
     { key: 'blocked', icon: 'flag', label: t('menu.blocked'), onPress: leaveThen(onOpenBlocked) },
     { key: 'privacyPolicy', icon: 'book', label: t('menu.privacyPolicy'), onPress: () => void Linking.openURL(PRIVACY_POLICY_URL) },
     { key: 'termsOfUse', icon: 'book', label: t('menu.termsOfUse'), onPress: () => void Linking.openURL(TERMS_OF_USE_URL) },
