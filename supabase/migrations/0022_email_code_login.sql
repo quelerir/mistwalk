@@ -80,4 +80,6 @@ end;
 $$;
 
 revoke all on function public.set_login(text) from public;
+-- Supabase grants new functions to anon and authenticated by name, which "from public" does not remove.
+revoke execute on function public.set_login(text) from anon;
 grant execute on function public.set_login(text) to authenticated;
