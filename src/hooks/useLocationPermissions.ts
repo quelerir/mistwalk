@@ -25,6 +25,8 @@ export function useLocationPermissions() {
   // The call in progress, shared by everyone who asks meanwhile, and the way to close its intro.
   const pending = useRef<Promise<boolean> | null>(null);
   const intro = useRef<{ done: () => void } | null>(null);
+  // Set once the person has been through the intro, so it can never come up again in this run of the app.
+  const introSeen = useRef(false);
 
   // The app only asks for the permission after it has loaded its data, which takes a few seconds. Until then it would
   // show "turn on location" even to someone who already allowed it, so read what is already set (this never prompts).
@@ -60,7 +62,8 @@ export function useLocationPermissions() {
     if (!pending.current) {
       pending.current = (async () => {
         const status = await initial.current!.promise;
-        if (status === 'undetermined') {
+        if (status === 'undetermined' && !introSeen.current) {
+          introSeen.current = true;
           let done!: () => void;
           const promise = new Promise<void>((resolve) => {
             done = resolve;
@@ -68,6 +71,13 @@ export function useLocationPermissions() {
           intro.current = { done };
           setIntroVisible(true);
           await promise;
+          // The intro stays on screen under the system prompt and closes after the answer: on iOS, closing a modal
+          // at the moment the system presents its alert can leave the modal stuck on screen.
+          try {
+            return await requestForeground();
+          } finally {
+            setIntroVisible(false);
+          }
         }
         return requestForeground();
       })().finally(() => {
@@ -78,8 +88,8 @@ export function useLocationPermissions() {
     return pending.current;
   }, [requestForeground]);
 
+  // The person tapped continue: lets the waiting request go on to the system prompt. The intro closes itself after.
   const continueIntro = useCallback(() => {
-    setIntroVisible(false);
     intro.current?.done();
   }, []);
 
