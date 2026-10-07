@@ -233,7 +233,9 @@ export default function MapScreen({
           onRegionDidChange={(e) => handleRegion(e, true)}
         >
           <Camera ref={cameraRef} initialViewState={{ zoom: FOLLOW_ZOOM }} />
-          {Platform.OS !== 'android' && <UserLocation />}
+          {/* UserLocation asks the system for the location by itself when it appears, so it waits for a first position:
+              that only exists once the person has allowed the location (see LocationIntroPrompt). */}
+          {Platform.OS !== 'android' && livePosition && <UserLocation />}
         </Map>
       )}
       {/* The map stays mounted under the other tabs; its fog and rain must not keep drawing frames nobody sees. */}

@@ -29,6 +29,7 @@ import MainScreen from './src/screens/MainScreen';
 import BackgroundPermissionPrompt from './src/components/BackgroundPermissionPrompt';
 import OfflineBanner from './src/components/OfflineBanner';
 import LocationPermissionBanner from './src/components/LocationPermissionBanner';
+import LocationIntroPrompt from './src/components/LocationIntroPrompt';
 import type { LocationSubscription } from 'expo-location';
 import type { VisitedPoint } from './src/lib/supabase/visitedPoints';
 
@@ -74,7 +75,7 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
   const [session, setSession] = useState<Session | null>(null);
   const [points, setPoints] = useState<VisitedPoint[]>([]);
   const [livePosition, setLivePosition] = useState<{ lat: number; lng: number } | null>(null);
-  const { stage, requestForeground, requestBackground } = useLocationPermissions();
+  const { stage, requestForeground, requestBackground, requestForegroundWithIntro, introVisible, continueIntro } = useLocationPermissions();
   const subscriptionRef = useRef<LocationSubscription | null>(null);
   const startBackgroundRef = useRef<(() => Promise<void>) | null>(null);
   const [backgroundEnabled, setBackgroundEnabled] = useState(false);
@@ -178,7 +179,8 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
         }
       });
 
-      const foregroundOk = await requestForeground();
+      // The first time, the person reads why the location is needed and taps continue before the system asks.
+      const foregroundOk = await requestForegroundWithIntro();
       if (!cancelled && foregroundOk) {
         const startForeground = async () => {
           subscriptionRef.current = await startForegroundTracking(
@@ -260,6 +262,7 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
       <RootNavigator client={client} session={session} onSignedIn={() => getSession(client).then(setSession)} onSignOut={handleChooseLoginSignOut}>
         <OfflineBanner />
         <LocationPermissionBanner stage={stage} onRequestForeground={requestForeground} />
+        <LocationIntroPrompt visible={introVisible} onContinue={continueIntro} />
         <BackgroundPermissionPrompt
           visible={showBackgroundPrompt}
           onAccept={() => void handleAcceptPrompt()}
