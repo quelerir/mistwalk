@@ -241,7 +241,6 @@ export const ru = {
   'menu.noEmail': 'Без почты',
   'menu.removePhoto': 'Удалить фото',
   'menu.removePhotoFailed': 'Не удалось удалить фото',
-  'menu.inRating': 'Виден в рейтинге',
   'menu.privacyPolicy': 'Политика конфиденциальности',
   'menu.termsOfUse': 'Условия использования',
   'menu.signOut': 'Выйти',

@@ -31,8 +31,6 @@ function props(over: Partial<AppMenuProps> = {}): AppMenuProps {
     onDeleteAccount: asyncVoid(),
     onOpenBlocked: jest.fn(),
     email: 'a@b.co',
-    leaderboardVisible: true,
-    onLeaderboardVisibleChange: asyncVoid(),
     onSubmitFeedback: asyncVoid(),
     ...over,
   } as AppMenuProps;
@@ -54,10 +52,10 @@ describe('AppMenu main page', () => {
   });
   afterEach(() => jest.restoreAllMocks());
 
-  it('lists the email, settings, feedback, rating, blocked, privacy, terms, sign out and delete account, in that order', () => {
+  it('lists the email, settings, feedback, blocked, privacy, terms, sign out and delete account, in that order', () => {
     const { getAllByLabelText } = render(<AppMenu {...props()} />);
     const onScreen = getAllByLabelText(/./).map((el) => String(el.props.accessibilityLabel));
-    const order = [/^a@b\.co$/, SETTINGS, FEEDBACK, RATING, BLOCKED, PRIVACY, TERMS, SIGN_OUT, DELETE];
+    const order = [/^a@b\.co$/, SETTINGS, FEEDBACK, BLOCKED, PRIVACY, TERMS, SIGN_OUT, DELETE];
     const found = order.map((pattern) => onScreen.findIndex((label) => pattern.test(label)));
     expect(found.every((i) => i >= 0)).toBe(true);
     expect(found).toEqual([...found].sort((a, b) => a - b));
@@ -77,22 +75,9 @@ describe('AppMenu main page', () => {
     expect(Linking.openURL).toHaveBeenCalledWith('https://quelerir.github.io/mistwalk-legal/terms.html');
   });
 
-  it('the rating row is a switch and pressing it passes the opposite value', () => {
-    const onLeaderboardVisibleChange = asyncVoid();
-    const { getByLabelText } = render(<AppMenu {...props({ leaderboardVisible: true, onLeaderboardVisibleChange })} />);
-    const row = getByLabelText(RATING);
-    expect(row.props.accessibilityRole).toBe('switch');
-    expect(row.props.accessibilityState).toEqual({ checked: true });
-    fireEvent.press(row);
-    expect(onLeaderboardVisibleChange).toHaveBeenCalledWith(false);
-  });
-
-  it('while the rating is unknown it shows … and pressing does nothing', () => {
-    const onLeaderboardVisibleChange = asyncVoid();
-    const { getByLabelText, getByText } = render(<AppMenu {...props({ leaderboardVisible: null, onLeaderboardVisibleChange })} />);
-    expect(getByText('…')).toBeTruthy();
-    fireEvent.press(getByLabelText(RATING));
-    expect(onLeaderboardVisibleChange).not.toHaveBeenCalled();
+  it('has no "visible in the ranking" row: everyone is visible there', () => {
+    const { queryByLabelText } = render(<AppMenu {...props()} />);
+    expect(queryByLabelText(RATING)).toBeNull();
   });
 
   it('a Back row appears only when onBack is given, and it calls onBack', () => {
