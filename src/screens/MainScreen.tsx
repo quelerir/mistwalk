@@ -41,6 +41,8 @@ import { useNotifications } from '../hooks/useNotifications';
 import CountryPlacesScreen from './CountryPlacesScreen';
 import { cellKey, groupPlacesByCountry, type CountryStat } from '../lib/geo/countryStats';
 import { countryCodeAt } from '../lib/geo/republics';
+import { citiesOfRegion, loadRegions, placesOfRegion, type RegionStat } from '../lib/geo/regionStats';
+import { loadWorldCities } from '../lib/geo/countryRegions';
 import { useRoute } from '../hooks/useRoute';
 import type { DiscoveredPlace, Poi, PoiKind } from '../lib/poi/types';
 import { getHiddenKinds, setHiddenKinds } from '../lib/poi/kindFilter';
@@ -106,6 +108,7 @@ export default function MainScreen({
   const [showCountries, setShowCountries] = useState(false);
   const [countriesMode, setCountriesMode] = useState<'list' | 'map'>('list');
   const [openCountry, setOpenCountry] = useState<CountryStat | null>(null);
+  const [openRegion, setOpenRegion] = useState<RegionStat | null>(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [openPlayer, setOpenPlayer] = useState<{ userId: string; displayName: string } | null>(null);
   const [showFollows, setShowFollows] = useState(false);
@@ -292,6 +295,18 @@ export default function MainScreen({
     openCountryCode !== null
   );
 
+  // On a region's own screen: the places and visited cities that lie inside the region.
+  const regionPlaces = useMemo(() => {
+    const regions = loadRegions();
+    if (!openRegion || !openCountry || !regions) return undefined;
+    return placesOfRegion(openRegion.code, openCountry.code, placesByCountry.get(openCountry.code), regions);
+  }, [openRegion, openCountry, placesByCountry]);
+  const regionCities = useMemo(() => {
+    const data = loadWorldCities();
+    if (!openRegion || !openCountry || !data) return undefined;
+    return citiesOfRegion(openRegion.code, openCountry.code, cityStats.cities, data);
+  }, [openRegion, openCountry, cityStats.cities]);
+
   useEffect(() => {
     void getFogStyle(AsyncStorage).then(setFogStyleState);
     const tick = setInterval(() => setHour(new Date().getHours()), 60000);
@@ -383,6 +398,7 @@ export default function MainScreen({
     setShowLeaderboard(false);
     setShowCountries(false);
     setOpenCountry(null);
+    setOpenRegion(null);
   }
 
   function handleDeleteAccount() {
@@ -573,13 +589,28 @@ export default function MainScreen({
           />
         ) : showCountries && openCountry ? (
           <CountryPlacesScreen
-            country={openCountry}
-            places={placesByCountry.get(openCountry.code)}
-            cities={cityStats.cities}
+            country={
+              openRegion
+                ? {
+                    code: openRegion.code,
+                    name: openRegion.name,
+                    exploredKm2: openRegion.exploredKm2,
+                    totalKm2: openRegion.totalKm2,
+                    percent: openRegion.percent,
+                  }
+                : openCountry
+            }
+            places={regionPlaces ?? placesByCountry.get(openCountry.code)}
+            points={openCountryPoints}
+            cities={regionCities ?? cityStats.cities}
             citiesPending={cityStats.pending}
             citiesFailed={cityStats.failed}
             origin={livePosition}
-            onBack={() => setOpenCountry(null)}
+            regionCode={openRegion?.code ?? null}
+            countryCode={openCountry.code}
+            emblemWikidata={openRegion?.wikidata ?? null}
+            onOpenRegion={setOpenRegion}
+            onBack={() => (openRegion ? setOpenRegion(null) : setOpenCountry(null))}
             onOpenFound={setDetailPlace}
             onSelectHidden={(poi) => {
               closeProfileOverlays();

@@ -72,6 +72,16 @@ describe('buildCountryCities visited', () => {
     expect(all.filter((c) => c.visited).map((c) => c.key)).toEqual(['XX:City0']);
   });
 
+  it('hands the Wikidata id of each city on, for the emblem badge', () => {
+    const data = make(12, ['XX-1', 'XX-2']);
+    data.cities[0].w = 'Q7';
+    const out = buildCountryCities('XX', [], data, 'ru');
+    if (out.mode !== 'regions') throw new Error('expected regions');
+    const entries = out.regions.flatMap((r) => r.cities);
+    expect(entries.find((c) => c.key === 'XX:City0')?.w).toBe('Q7');
+    expect(entries.find((c) => c.key === 'XX:City1')?.w).toBeNull();
+  });
+
   it('falls back to the name (case, ё/е, punctuation) when there is no Wikidata', () => {
     const data = make(11, ['XX-1', 'XX-2']);
     data.cities[0].ru = 'Орёл';

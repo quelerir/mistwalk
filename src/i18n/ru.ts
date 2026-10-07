@@ -149,12 +149,6 @@ export const ru = {
   'country.hiddenPlaces': 'Не посещено · {n}',
   'country.regions': 'Регионы · {n}',
   'country.unvisitedCities': 'Не посещённые города · {n}',
-  'country.regionProgress': {
-    one: '{done} из {n} города',
-    few: '{done} из {n} городов',
-    many: '{done} из {n} городов',
-    other: '{done} из {n} городов',
-  },
   'country.citiesFailed': 'Не удалось определить города. Проверьте интернет.',
   'country.noPlaces': 'Здесь пока нет известных мест. Пройдитесь по карте.',
   'country.areaOf': '{explored} из {total}',
