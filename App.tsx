@@ -243,7 +243,7 @@ function AuthenticatedApp({ client }: { client: SupabaseClient }) {
     <SafeAreaProvider>
     <StatusBar barStyle={!session || scheme === 'dark' ? 'light-content' : 'dark-content'} />
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={[]}>
-      <RootNavigator client={client} session={session} onSignedIn={() => getSession(client).then(setSession)}>
+      <RootNavigator client={client} session={session} onSignedIn={() => getSession(client).then(setSession)} onSignedOut={() => setSession(null)}>
         <OfflineBanner />
         <LocationPermissionBanner stage={stage} onRequestForeground={requestForeground} />
         <BackgroundPermissionPrompt
