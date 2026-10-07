@@ -4,10 +4,8 @@ import { act, render } from '@testing-library/react-native';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import RootNavigator from './RootNavigator';
 import { useLoginChosen } from '../hooks/useLoginChosen';
-import { signOut } from '../lib/supabase/auth';
 
 jest.mock('../hooks/useLoginChosen', () => ({ useLoginChosen: jest.fn() }));
-jest.mock('../lib/supabase/auth', () => ({ signOut: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../screens/SignInScreen', () => () => require('react').createElement(require('react-native').Text, null, 'SIGNIN'));
 
 let chooseProps: { onDone: () => void; onSignOut: () => void } | null = null;
@@ -20,13 +18,13 @@ const client = {} as SupabaseClient;
 const session = { user: { id: 'u1' } } as Session;
 const mockStatus = useLoginChosen as jest.Mock;
 
-function renderNav(s: Session | null = session, onSignedOut = jest.fn()) {
+function renderNav(s: Session | null = session, onSignOut = jest.fn()) {
   const utils = render(
-    <RootNavigator client={client} session={s} onSignedIn={jest.fn()} onSignedOut={onSignedOut}>
+    <RootNavigator client={client} session={s} onSignedIn={jest.fn()} onSignOut={onSignOut}>
       <Text>APP</Text>
     </RootNavigator>,
   );
-  return { ...utils, onSignedOut };
+  return { ...utils, onSignOut };
 }
 
 beforeEach(() => {
@@ -42,9 +40,10 @@ describe('RootNavigator', () => {
     expect(queryByText('APP')).toBeNull();
   });
 
-  it('shows nothing while the login state loads', () => {
+  it('shows a spinner, not the app or a blank screen, while the login state loads', () => {
     mockStatus.mockReturnValue('loading');
-    const { queryByText } = renderNav();
+    const { queryByText, getByTestId } = renderNav();
+    expect(getByTestId('login-gate-loading')).toBeTruthy();
     expect(queryByText('APP')).toBeNull();
     expect(queryByText('CHOOSE')).toBeNull();
     expect(queryByText('SIGNIN')).toBeNull();
@@ -71,11 +70,10 @@ describe('RootNavigator', () => {
     expect(queryByText('CHOOSE')).toBeNull();
   });
 
-  it('sign out on the choose-login screen signs out and tells the app', async () => {
+  it('sign out on the choose-login screen calls the onSignOut of the app', async () => {
     mockStatus.mockReturnValue('needed');
-    const { onSignedOut } = renderNav();
+    const { onSignOut } = renderNav();
     await act(async () => chooseProps!.onSignOut());
-    expect(signOut).toHaveBeenCalledWith(client);
-    expect(onSignedOut).toHaveBeenCalled();
+    expect(onSignOut).toHaveBeenCalledTimes(1);
   });
 });
